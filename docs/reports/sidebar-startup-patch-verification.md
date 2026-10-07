@@ -64,4 +64,23 @@ inference, Safari/Firefox/native build, fresh install prompt or disconnected
 offline reload is claimed for this patch. The no-JavaScript fallback was checked
 as an HTML contract, not with JavaScript disabled in a browser.
 
-Publication evidence is recorded after GitHub CI and Pages complete.
+## Published release
+
+Source commit `a6baa715609a5a4c06516e0474f7c3d81c2c591b` passed
+[CI run 37656283785](https://github.com/consciontologic/wfform/actions/runs/37656283785),
+including app tests, repository-operation tests, real Chromium storage checks,
+release build and artifact validation. It published destination commit
+`b496b4f76e99bc85427cc4abc0c09e339eaf2969` through the existing pipeline.
+[Pages run 37656759609](https://github.com/consciontologic/wfform.com/actions/runs/37656759609)
+completed successfully and serves the resulting release.
+
+Live HTTPS returned the same release hash as the locally tested build. The
+homepage no longer contains the old loading introduction; About, Terms and
+Liability display version 0.1.3. Each of the four public HTML pages retains one
+Google loader. Existing clients can use **Save & update** to adopt the release.
+
+A separate live browser tab first exposed no introductory content, then rendered
+Flutter version 0.1.3 with the sidebar filled to its divider. No console warnings
+or errors were captured. The query used for verification bypassed an older cached
+shell; user tabs were left open. Temporary browser tabs and local containers were
+closed after verification.
