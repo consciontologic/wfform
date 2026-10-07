@@ -156,4 +156,6 @@ Scope ID: footer-focus-patch. Requested 2026-10-07.
 - [x] Remove GitHub artwork everywhere and place a plain source link beside the left-aligned app version, preserving responsive navigation.
 - [x] Remove unused documentation templates and repair their active links/instructions.
 - [x] Fix the composer's stale blinking caret when focus moves elsewhere; preserve draft, selection, keyboard/touch behavior and resize continuity.
-- [ ] Verify and publish version 0.1.2 with tests, release build and browser evidence.
+- [x] Verify and publish version 0.1.2 with tests, release build and browser evidence.
+
+Completed patch evidence: [0.1.2 verification](../reports/footer-focus-patch-verification.md).

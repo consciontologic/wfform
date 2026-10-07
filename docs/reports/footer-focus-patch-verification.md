@@ -59,7 +59,7 @@ are deterministic fixtures, not authenticated provider requests or physical
 mobile-device evidence. No fresh offline reload, installation prompt, Safari,
 Firefox, native build or authenticated inference is claimed for this patch.
 
-Publication evidence is recorded after the GitHub workflow completes.
+## Publication and upgrade recovery
 
 The first source run, [37651193228](https://github.com/consciontologic/wfform/actions/runs/37651193228),
 passed 421 app/tool tests, 14 repository-operation tests, six real Chromium
@@ -76,3 +76,23 @@ of the real destination changed 52 files, removed its owned root SVG and kept
 two previous immutable copies. A second run changed zero files. Those old
 generations remain available only for existing clients; the 0.1.2 root and
 immutable manifest contain no GitHub artwork.
+
+Source commit `99f853ec4dd4f4a99f2a159acd025ee5df02cee0` passed
+[CI run 37652350549](https://github.com/consciontologic/wfform/actions/runs/37652350549):
+429 app/tool tests, 14 repository tests, six real Chrome storage checks, release
+build and artifact validation. It published destination commit
+`1350874bfc1513c102e75aca55bb988c17ea7218`.
+[Pages run 37652784258](https://github.com/consciontologic/wfform.com/actions/runs/37652784258)
+completed successfully. The CI release hash and byte total match the locally
+tested build exactly.
+
+Live HTTPS returned the expected release hash, version 0.1.2 on all four public
+documents, one Google loader per document and no artwork references. The old
+root `github-mark.svg` returns 404. Existing installed clients can adopt this
+release through the draft-preserving update action.
+
+A separate public browser tab rendered the Flutter Version 0.1.2 footer with
+the plain source link on the left and no captured console warnings/errors.
+The query used for this read-only check bypassed the older cached shell;
+existing user tabs were left open. Disposable QA tabs and the local nginx
+container were closed after verification.

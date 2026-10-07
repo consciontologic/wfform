@@ -17,3 +17,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-07T15:58:57Z,wfform-patch-011-evidence,codex,sidebar-passport-patch,commit,completed,docs(release): record verified 0.1.1 publication,docs/reports/sidebar-passport-patch-verification.md,pending
 2026-10-07T16:19:32Z,wfform-footer-focus-012,codex,footer-focus-patch,commit,completed,fix(ui): simplify source links and composer focus for 0.1.2,docs/reports/footer-focus-patch-verification.md,pending
 2026-10-07T16:28:43Z,wfform-retired-artwork-012,codex,footer-focus-patch,commit,completed,fix(deploy): migrate retired artwork ownership safely,docs/reports/footer-focus-patch-verification.md,pending
+2026-10-07T16:34:04Z,wfform-footer-focus-012-evidence,codex,footer-focus-patch,commit,completed,docs(release): record verified 0.1.2 deployment,docs/reports/footer-focus-patch-verification.md,pending
