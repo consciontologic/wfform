@@ -19,12 +19,12 @@ Run these commands from the repository root with **Flutter 3.38.5 / Dart 3.10.4*
 flutter pub get
 # For a fresh checkout only; do not overwrite an existing local configuration:
 cp -n config/example.json config/local.json
-# Edit config/local.json and set apiKey, or paste a session key in Settings.
+# Edit config/local.json and set apiKey, or save a key in Settings.
 dart run tool/build.dart
 dart run tool/serve.dart --port=8765
 ```
 
-Open **http://localhost:8765**. Use the same origin to retain access to local history; changing the port opens a separate browser store. Keep the development credential in ignored `config/local.json` or enter a session key in Settings; never put it in source fixtures. Do not publish that file or a release config copy with a shared credential. Credentials delivered to a browser are accessible to that browser's user. This is a development demo, not a production secret-management design.
+Open **http://localhost:8765**. Use the same origin to retain access to local history; changing the port opens a separate browser store. Keep the development credential in ignored `config/local.json` or save a key in Settings; never put it in source fixtures. Do not publish that file or a release config copy with a shared credential. Credentials delivered to a browser are accessible to that browser's user. This is a development demo, not a production secret-management design.
 
 The helper runs exactly:
 
@@ -40,7 +40,7 @@ Development UI iteration:
 flutter run -d chrome --web-port=8080
 ```
 
-Flutter's development server does not map the ignored runtime configuration. Paste a key in Settings for that session. Test PWA behavior on the release build.
+Flutter's development server does not map the ignored runtime configuration. Save a key in Settings; it is remembered in this browser. Test PWA behavior on the release build.
 
 ## Checks
 
@@ -67,13 +67,13 @@ CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome \
 flutter test tool/history_benchmark.dart --reporter expanded
 ```
 
-The six Chromium storage checks passed against isolated generated databases. They exercise real IndexedDB migration, binary media, incremental rows, rollback, competing repository revisions, `BroadcastChannel`, reads with suppressed transaction-completion delivery, and pending-read aborts; they do not send API requests or establish Safari/Firefox behavior. The benchmark uses two synthetic decoder-validated PNG files totaling 12 MiB and ten response checkpoints. It writes `outputs/history-performance.json`: VM codec preparation and modeled write-payload sizes, **not** browser frame time, disk throughput or IndexedDB latency. See [history](../history.md) for results and scope.
+The seven Chromium storage checks passed against isolated generated databases and a namespaced credential preference. They exercise real IndexedDB migration, binary media, incremental rows, rollback, competing repository revisions, `BroadcastChannel`, reads with suppressed transaction-completion delivery, pending-read aborts, and real localStorage credential save/restore/clear; they do not send API requests or establish Safari/Firefox behavior. The benchmark uses two synthetic decoder-validated PNG files totaling 12 MiB and ten response checkpoints. It writes `outputs/history-performance.json`: VM codec preparation and modeled write-payload sizes, **not** browser frame time, disk throughput or IndexedDB latency. See [history](../history.md) for results and scope.
 
 The ordinary API/widget tests use fixtures, controlled clients or fake clocks. No automated test silently sends user content or embeds a credential. For live chat, select a current text-compatible model in the running app and send a short message; stale selected-model health triggers a small probe before the conversation is submitted. The [reports index](../reports/README.md) preserves dated release evidence; it does not certify every later build.
 
 ## Configuration
 
-[`config/example.json`](../../config/example.json) documents every option; `config/local.json` is ignored. The runtime file is network-only and excluded from service-worker caching. The session key is kept only in memory. Catalog, small preferences and bounded health/endpoint observations use localStorage. The immediate text recovery draft and active-conversation ID use tab-local sessionStorage; earlier localStorage recovery values are read only as migration sources. Conversation metadata and individual messages use IndexedDB, with immutable attachment bytes stored separately and referenced by ID. These are application-managed data, never service-worker cached. An explicit update waits for a durable history save under the existing conversation ID; it does not create a separate legacy localStorage session snapshot. Clearing browser site data can remove both history and offline assets.
+[`config/example.json`](../../config/example.json) documents every option; `config/local.json` is ignored. The runtime file is network-only and excluded from service-worker caching. A key explicitly saved in Settings is stored in browser localStorage and restored after reload or browser restart. It takes precedence over the runtime file; clearing the saved key persists an empty override so the runtime file cannot silently restore it. Failed writes stay visible in Settings. If the saved preference cannot be read, the connection stays disabled until a key can be saved successfully. The browser key remains until replaced, explicitly cleared or site data is removed. Other already-open tabs pick up replacements on their next reload. Catalog, small preferences and bounded health/endpoint observations use localStorage. The immediate text recovery draft and active-conversation ID use tab-local sessionStorage; earlier localStorage recovery values are read only as migration sources. Conversation metadata and individual messages use IndexedDB, with immutable attachment bytes stored separately and referenced by ID. These are application-managed data, never service-worker cached. An explicit update waits for a durable history save under the existing conversation ID; it does not create a separate legacy localStorage session snapshot. Clearing browser site data can remove both history and offline assets.
 
 | Key | Default | Meaning |
 |---|---:|---|

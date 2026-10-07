@@ -255,6 +255,10 @@ void main() {
       addTearDown(first.dispose);
       addTearDown(second.dispose);
       await first.initialize();
+      // Blank workspaces are not stored. Both tabs must read the same durable
+      // draft before competing writes can exercise revision conflict recovery.
+      first.setDraft('Shared initial draft');
+      expect(await first.flushHistory(), true);
       final original = first.activeConversationId!;
       await secondRepo.setActive(original);
       await second.initialize();

@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Conversation drafts and saved connection 0.2.0](conversation-drafts-verification.md): separate Drafts, response activity, writable archive recovery and saved-key behavior; final local gates, release/container and live API/browser evidence, with remaining browser checks and publication pending.
+
 - [Sidebar surface and quiet startup patch 0.1.3](sidebar-startup-patch-verification.md): continuous sidebar fill, removal of the transient intro, bootstrap-download recovery and release/browser checks.
 
 - [Footer and composer focus patch 0.1.2](footer-focus-patch-verification.md): plain source links, removed documentation templates, explicit outside focus handling and release/browser checks.

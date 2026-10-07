@@ -143,7 +143,7 @@ disabled. See
 [Google's current CSP guidance](https://developers.google.com/tag-platform/security/guides/csp)
 (verified 2026-10-07) and the [Docker guide](guides/DOCKER.md).
 
-The Flutter footer and public documents display version **0.1.3**. When bumping
+The Flutter footer and public documents display version **0.2.0**. When bumping
 a release, update `pubspec.yaml`, `lib/app/app_identity.dart`, the static page
 footers and any structured version metadata together; deterministic tests
 check consistency. Footer information links open separately to retain the chat

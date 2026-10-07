@@ -30,6 +30,12 @@ The catalog feature separately stores its normalized last successful public cata
 
 The explicit Work offline setting persists across reloads, suppresses catalog/probe/chat requests and cancels active remote work. On reconnection the app refreshes the catalog and reloads network-only local configuration if an offline startup could not obtain it; it never automatically resends a chat message.
 
+A key explicitly saved in Settings survives reloads and browser restarts in
+origin-local storage, independently of the offline shell. Saved values, including
+an explicitly cleared key, take precedence over runtime configuration. No key or
+authenticated response enters service-worker Cache Storage. Browser site-data
+clearing and private-browsing policies can remove the saved connection and drafts.
+
 Shell assets are cache-first and pinned to immutable `__releases/<hash>/` URLs. A new release installs in the background and waits. Update detection is available on launch and through the explicit update-check control; there is no polling. The app saves history/drafts before applying an update and prevents refresh during an active chat request or file selection. Only user-triggered activation sends `APPLY_UPDATE` and reloads; other tabs are not automatically reloaded. Cleanup retains current, previous and any releases still used by open tabs; an unidentified legacy/sleeping tab defers deletion. Build publication places complete immutable assets before replacing launch pointers. See [performance.md](performance.md) for exact reuse, cleanup, measurement and deployment-retention rules.
 
 ## Installation and browser differences

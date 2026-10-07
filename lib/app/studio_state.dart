@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import '../config/app_config.dart';
+import '../config/credential_preference.dart';
 import '../features/chat/chat_controller.dart';
 import '../features/chat/attachment.dart';
 import '../features/models/catalog.dart';
@@ -33,6 +34,12 @@ class StudioState extends ChangeNotifier {
     this.recoveryStore = recoveryStore == null
         ? this.store
         : GuardedStore(recoveryStore, diagnostics);
+    credentialPreference = CredentialPreference(store, diagnostics)..load();
+    config = config.copyWith(
+      apiKey: credentialPreference.resolve(config.apiKey),
+    );
+    _keyOverride = credentialPreference.overrideValue != null;
+    diagnostics.updateConfig(config);
     _createControllers();
     workOffline = this.store.read('freeform.workOffline') == 'true';
     draft = this.store.read('freeform.draft.v1') ?? '';
@@ -94,6 +101,7 @@ class StudioState extends ChangeNotifier {
   final ApiTransport transport;
   late final GuardedStore store;
   late final GuardedStore recoveryStore;
+  late final CredentialPreference credentialPreference;
   late final HistoryRepository historyRepository;
   late final AttachmentPicker attachmentPicker;
   final PlatformBridge platform;
@@ -134,12 +142,15 @@ class StudioState extends ChangeNotifier {
   String? conversationNotice;
   ConversationRecord? _activeRecord;
   String? get activeConversationId => _activeRecord?.id;
+  bool isConversationResponding(String id) =>
+      id == activeConversationId && chat.busy;
   bool get activeConversationArchived => _activeRecord?.archived ?? false;
   bool _historySwitching = false;
   String? _legacyUpdateSession;
   bool get historyBusy => historyLoading || _historySwitching;
   bool _suppressHistory = false;
   bool _previousChatBusy = false;
+  bool _previousChatDispatched = false;
   int _revision = 0, _savedRevision = 0;
   bool get hasUnsavedHistoryChanges => _savedRevision != _revision;
   Timer? _historyTimer;
@@ -295,8 +306,10 @@ class StudioState extends ChangeNotifier {
     if (configuration != null) {
       final next = await configuration;
       if (_disposed) return;
-      if (next != null && !_keyOverride) {
-        await _replaceConfig(next);
+      if (next != null) {
+        await _replaceConfig(
+          next.copyWith(apiKey: credentialPreference.resolve(next.apiKey)),
+        );
       } else if (online) {
         await catalog.refresh();
       }
@@ -341,6 +354,11 @@ class StudioState extends ChangeNotifier {
       jsonEncode({
         'id': activeConversationId,
         'draft': draft,
+        'workspace':
+            _activeRecord != null &&
+            !_history.any((entry) => entry.id == activeConversationId),
+        'modelId': _activeRecord?.modelId,
+        'modelName': _activeRecord?.modelName,
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       }),
     );
@@ -477,6 +495,43 @@ class StudioState extends ChangeNotifier {
       if (index.issues.isNotEmpty) {
         _historyFailure(historyFailure(index.issues.join('\n')));
       }
+      // Empty workspaces are not history records. This small tab-local marker
+      // restores their selected model and any text typed before a checkpoint.
+      final workspaceText = recoveryStore.read('freeform.pendingDraft.v1');
+      if (workspaceText != null) {
+        Object? decodedWorkspace;
+        try {
+          decodedWorkspace = jsonDecode(workspaceText);
+        } catch (_) {
+          diagnostics.record(
+            'draft.recovery',
+            failure: historyFailure(
+              'The workspace recovery marker could not be parsed. Valid saved history remains available.',
+            ),
+          );
+        }
+        final workspace = decodedWorkspace;
+        if (workspace is Map &&
+            workspace['workspace'] == true &&
+            workspace['id'] is String &&
+            (workspace['id'] as String).isNotEmpty &&
+            (workspace['id'] as String).length <= 100 &&
+            workspace['draft'] is String &&
+            (workspace['draft'] as String).length <= 32000 &&
+            (workspace['modelId'] == null || workspace['modelId'] is String) &&
+            (workspace['modelName'] == null ||
+                workspace['modelName'] is String) &&
+            !index.entries.any((entry) => entry.id == workspace['id'])) {
+          final record = _blankRecord(null).copyWith(
+            id: workspace['id'] as String,
+            draft: workspace['draft'] as String,
+            modelId: workspace['modelId'] as String?,
+            modelName: workspace['modelName'] as String?,
+          );
+          _activateRecord(record, needsCheckpoint: record.draft.isNotEmpty);
+          return;
+        }
+      }
       if (index.activeId != null) {
         final loaded = await historyRepository.read(index.activeId!);
         if (loaded == null) {
@@ -578,10 +633,14 @@ class StudioState extends ChangeNotifier {
     if (_disposed || _suppressHistory) return;
     final started = !_previousChatBusy && chat.busy;
     final completed = _previousChatBusy && !chat.busy;
+    final dispatched =
+        !_previousChatDispatched && chat.hasDispatchedUserContent;
     _previousChatBusy = chat.busy;
+    _previousChatDispatched = chat.hasDispatchedUserContent;
     _markHistoryDirty();
-    // Commit accepted turns immediately; only incremental output is throttled.
-    if (started || completed) unawaited(flushHistory());
+    if (dispatched) _upsertHistory(_snapshotRecord().summary);
+    // Persist accepted work as a draft; only transport dispatch promotes it.
+    if (started || completed || dispatched) unawaited(flushHistory());
   }
 
   void _markHistoryDirty() {
@@ -611,6 +670,7 @@ class StudioState extends ChangeNotifier {
       updatedAt: now,
       draft: '',
       session: _emptySession,
+      isDraft: true,
     );
   }
 
@@ -649,10 +709,62 @@ class StudioState extends ChangeNotifier {
       sessionData: chat.exportSessionData(),
       draftAttachments: _draftAttachments,
       messageCount: chat.messages.length,
+      isDraft: !chat.hasDispatchedUserContent,
       updatedAt: DateTime.now().toUtc(),
     );
     _activeRecord = record;
     return record;
+  }
+
+  bool _isEmptyUnstoredWorkspace(ConversationRecord record) =>
+      record.isDraft &&
+      record.draft.isEmpty &&
+      record.draftAttachments.isEmpty &&
+      (record.sessionData['messages'] as List).isEmpty &&
+      !_history.any((entry) => entry.id == record.id);
+
+  Future<void> _activateWorkspace(ConversationRecord record) async {
+    if (_isEmptyUnstoredWorkspace(record)) {
+      await historyRepository.setActive(null);
+    } else {
+      await historyRepository.save(record, makeActive: true);
+      _upsertHistory(record.summary);
+    }
+    if (!_activateRecord(record)) {
+      throw historyFailure(
+        'The draft could not be opened. Stored work was retained.',
+      );
+    }
+  }
+
+  Future<void> _resumeDraftWorkspace(FreeModel? model) async {
+    if (_activeRecord?.isDraft == true &&
+        !activeConversationArchived &&
+        _activeRecord?.modelId == model?.id) {
+      return;
+    }
+    final candidate = _history
+        .where(
+          (entry) =>
+              entry.isDraft && !entry.archived && entry.modelId == model?.id,
+        )
+        .firstOrNull;
+    if (candidate != null) {
+      final record = await historyRepository.read(candidate.id);
+      if (record == null) {
+        throw historyFailure(
+          'This draft was removed in another tab. Refresh history before continuing.',
+        );
+      }
+      if (!_activateRecord(record)) {
+        throw historyFailure(
+          'The draft could not be restored. Its stored work was retained.',
+        );
+      }
+      await historyRepository.setActive(record.id);
+      return;
+    }
+    await _activateWorkspace(_blankRecord(model));
   }
 
   Future<bool> flushHistory() {
@@ -680,10 +792,18 @@ class StudioState extends ChangeNotifier {
         final revision = _revision;
         attemptedRevision = revision;
         final snapshot = _snapshotRecord();
+        if (_isEmptyUnstoredWorkspace(snapshot)) {
+          _savedRevision = revision;
+          _persistDraft();
+          continue;
+        }
         await historyRepository.save(snapshot, makeActive: true);
         if (_disposed) return true;
         _savedRevision = revision;
-        _upsertHistory(snapshot.summary);
+        // A dispatched request may have promoted this draft while its earlier
+        // preflight snapshot was saving. Never publish that obsolete identity.
+        if (revision == _revision) _upsertHistory(snapshot.summary);
+        _persistDraft();
         historyError = null;
         // Only a successful durable commit retires the update migration source.
         store.remove('freeform.updateSession.v1');
@@ -863,7 +983,16 @@ class StudioState extends ChangeNotifier {
   }) {
     _suppressHistory = true;
     try {
-      if (!chat.restoreSession(record.session)) return false;
+      final session = Map<String, dynamic>.from(record.sessionData);
+      session.putIfAbsent(
+        'hasDispatchedUserContent',
+        () =>
+            !record.isDraft ||
+            (session['messages'] as List).any(
+              (message) => message is Map && message['role'] == 'user',
+            ),
+      );
+      if (!chat.restoreSession(jsonEncode(session))) return false;
       _activeRecord = record;
       draft = record.draft;
       _draftAttachments = List.unmodifiable(record.draftAttachments);
@@ -873,6 +1002,7 @@ class StudioState extends ChangeNotifier {
       _revision = needsCheckpoint ? 1 : 0;
       historyStatus.value = needsCheckpoint ? 'Unsaved changes' : 'Saved';
       _previousChatBusy = false;
+      _previousChatDispatched = chat.hasDispatchedUserContent;
       conversationNotice = record.archived
           ? 'Archived conversation. Restore it to continue.'
           : null;
@@ -948,17 +1078,17 @@ class StudioState extends ChangeNotifier {
         return true;
       }
       if (!await flushHistory()) return false;
-      final emptyUnbound =
+      final unboundDraft =
           _activeRecord?.modelId == null &&
-          chat.messages.isEmpty &&
-          _draftAttachments.isEmpty &&
-          draft.isEmpty;
-      final record = emptyUnbound && _activeRecord != null
-          ? _activeRecord!.copyWith(modelId: model.id, modelName: model.name)
-          : _blankRecord(model);
-      await historyRepository.save(record, makeActive: true);
-      _activateRecord(record);
-      _upsertHistory(record.summary);
+          !chat.hasDispatchedUserContent &&
+          chat.messages.isEmpty;
+      if (unboundDraft && _activeRecord != null) {
+        await _activateWorkspace(
+          _activeRecord!.copyWith(modelId: model.id, modelName: model.name),
+        );
+      } else {
+        await _resumeDraftWorkspace(model);
+      }
       historyError = null;
       return true;
     } catch (error) {
@@ -974,10 +1104,7 @@ class StudioState extends ChangeNotifier {
     if (!_beginHistoryNavigation()) return false;
     try {
       if (!await flushHistory()) return false;
-      final record = _blankRecord(catalog.selected);
-      await historyRepository.save(record, makeActive: true);
-      _activateRecord(record);
-      _upsertHistory(record.summary);
+      await _resumeDraftWorkspace(catalog.selected);
       historyError = null;
       return true;
     } catch (error) {
@@ -1029,15 +1156,18 @@ class StudioState extends ChangeNotifier {
       if (record == null) {
         throw historyFailure('This conversation was not found.');
       }
+      if (record.isDraft) {
+        conversationNotice =
+            'Unsent work stays in Drafts. It becomes a conversation when a message is dispatched.';
+        return false;
+      }
+      final wasActive = id == activeConversationId;
       final updated = record.copyWith(
         archived: value,
         updatedAt: DateTime.now().toUtc(),
       );
-      await historyRepository.save(
-        updated,
-        makeActive: id == activeConversationId,
-      );
-      if (id == activeConversationId) {
+      await historyRepository.save(updated, makeActive: wasActive);
+      if (wasActive) {
         _activeRecord = updated;
         conversationNotice = value
             ? 'Archived conversation. Restore it to continue.'
@@ -1045,6 +1175,7 @@ class StudioState extends ChangeNotifier {
         if (!value) _bindOriginalModel();
       }
       _upsertHistory(updated.summary);
+      if (wasActive && value) await _resumeDraftWorkspace(catalog.selected);
       historyError = null;
       return true;
     } catch (error) {
@@ -1066,6 +1197,13 @@ class StudioState extends ChangeNotifier {
     final pending = _conversationDeletions[id];
     if (pending != null) return pending;
     if (_disposed || historyBusy) return Future.value(false);
+    if ((_activeRecord?.id == id && _activeRecord!.isDraft) ||
+        _history.any((entry) => entry.id == id && entry.isDraft)) {
+      conversationNotice =
+          'Unsent work is kept in Drafts and cannot be deleted as a chat.';
+      notifyListeners();
+      return Future.value(false);
+    }
     final deletingActive = id == activeConversationId;
     if (deletingActive && !_beginHistoryNavigation()) {
       return Future.value(false);
@@ -1104,6 +1242,7 @@ class StudioState extends ChangeNotifier {
       if (id == activeConversationId) {
         _suppressHistory = true;
         chat.clear();
+        _previousChatDispatched = false;
         draft = '';
         _draftAttachments = const [];
         store.write('freeform.draft.v1', '');
@@ -1197,17 +1336,35 @@ class StudioState extends ChangeNotifier {
   }
 
   Future<void> changeKey(String key) async {
-    _keyOverride = true;
+    if (chat.busy || historyBusy || attachmentPicking) {
+      throw const AppFailure(
+        FailureKind.configuration,
+        'Finish the current request or conversation operation before saving a key.',
+      );
+    }
     final next = config.copyWith(apiKey: key.trim());
     final problems = next.validate();
     if (problems.isNotEmpty) {
       throw AppFailure(FailureKind.configuration, problems.join('; '));
     }
-    await _replaceConfig(next);
+    if (!await _replaceConfig(next, saveKey: true)) {
+      throw historyFailure(
+        'The key was not changed because conversation storage could not save your work. Resolve the storage error and try again.',
+      );
+    }
   }
 
-  Future<void> _replaceConfig(AppConfig next) async {
-    if (!await flushHistory()) return;
+  Future<bool> _replaceConfig(AppConfig next, {bool saveKey = false}) async {
+    if (!await flushHistory()) return false;
+    if (saveKey) {
+      credentialPreference.save(next.apiKey);
+      _keyOverride = true;
+    } else {
+      // Runtime/reconnect work may have started before a save or explicit
+      // clear. Resolve only after the awaited checkpoint, immediately before
+      // applying configuration, so a late response cannot resurrect an old key.
+      next = next.copyWith(apiKey: credentialPreference.resolve(next.apiKey));
+    }
     final session = chat.exportSession();
     catalog.dispose();
     health.dispose();
@@ -1221,6 +1378,7 @@ class StudioState extends ChangeNotifier {
     notifyListeners();
     await catalog.initialize(refresh: online);
     _bindOriginalModel();
+    return true;
   }
 
   Future<void> _restoreConnection() {
@@ -1230,8 +1388,8 @@ class StudioState extends ChangeNotifier {
   }
 
   Future<void> _reconnectOnce() async {
-    // Runtime credentials are intentionally not cached. Recover them from the
-    // local network-only file after an offline launch, without losing the draft.
+    // A saved browser key (including an explicit clear) takes precedence. Only
+    // recover network-only local configuration when no saved override exists.
     if (kIsWeb && config.apiKey.isEmpty && !_keyOverride) {
       try {
         final response = await transport.send(
@@ -1340,6 +1498,12 @@ bool _sameLegacySession(String legacy, Map<String, dynamic> current) {
     session.putIfAbsent('retryModelId', () => null);
     session.putIfAbsent('contextStartIndex', () => 0);
     session.putIfAbsent('outputTokenLimit', () => null);
+    session.putIfAbsent(
+      'hasDispatchedUserContent',
+      () => (session['messages'] as List).any(
+        (message) => message is Map && message['role'] == 'user',
+      ),
+    );
     session['messages'] = (session['messages'] as List).map((value) {
       final message = Map<String, dynamic>.from(value as Map);
       message.putIfAbsent('modelId', () => null);

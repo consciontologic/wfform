@@ -49,15 +49,36 @@ class ConversationHistory extends StatefulWidget {
   State<ConversationHistory> createState() => _ConversationHistoryState();
 }
 
+enum _HistoryView { chats, drafts, archived }
+
 class _ConversationHistoryState extends State<ConversationHistory> {
   final search = TextEditingController();
   final searchFocus = FocusNode();
-  bool archived = false;
+  _HistoryView view = _HistoryView.chats;
+  String? _observedConversation;
+  bool _observedDraft = false;
   StudioState get state => widget.state;
   @override
   void initState() {
     super.initState();
     searchFocus.addListener(_searchFocusChanged);
+    state.addListener(_followSentDraft);
+    state.historyIndexChanges.addListener(_followSentDraft);
+    _followSentDraft();
+  }
+
+  void _followSentDraft() {
+    final active = state.history
+        .where((entry) => entry.id == state.activeConversationId)
+        .firstOrNull;
+    if (active == null) return;
+    final promoted =
+        _observedConversation == active.id && _observedDraft && !active.isDraft;
+    _observedConversation = active.id;
+    _observedDraft = active.isDraft;
+    if (promoted && view == _HistoryView.drafts) {
+      setState(() => view = _HistoryView.chats);
+    }
   }
 
   void _searchFocusChanged() {
@@ -65,7 +86,22 @@ class _ConversationHistoryState extends State<ConversationHistory> {
   }
 
   @override
+  void didUpdateWidget(covariant ConversationHistory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state == state) return;
+    oldWidget.state.removeListener(_followSentDraft);
+    oldWidget.state.historyIndexChanges.removeListener(_followSentDraft);
+    _observedConversation = null;
+    _observedDraft = false;
+    state.addListener(_followSentDraft);
+    state.historyIndexChanges.addListener(_followSentDraft);
+    _followSentDraft();
+  }
+
+  @override
   void dispose() {
+    state.removeListener(_followSentDraft);
+    state.historyIndexChanges.removeListener(_followSentDraft);
     search.dispose();
     searchFocus.dispose();
     super.dispose();
@@ -103,7 +139,11 @@ class _ConversationHistoryState extends State<ConversationHistory> {
       final entries = state.history
           .where(
             (entry) =>
-                entry.archived == archived &&
+                (switch (view) {
+                  _HistoryView.chats => !entry.isDraft && !entry.archived,
+                  _HistoryView.drafts => entry.isDraft,
+                  _HistoryView.archived => !entry.isDraft && entry.archived,
+                }) &&
                 (query.isEmpty ||
                     '${entry.title} ${entry.modelName ?? ''} ${entry.modelId ?? ''}'
                         .toLowerCase()
@@ -135,18 +175,26 @@ class _ConversationHistoryState extends State<ConversationHistory> {
               children: [
                 ChoiceChip(
                   label: const Text('Chats'),
-                  selected: !archived,
+                  selected: view == _HistoryView.chats,
                   onSelected: (_) {
                     widget.onInteracted?.call();
-                    setState(() => archived = false);
+                    setState(() => view = _HistoryView.chats);
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Drafts'),
+                  selected: view == _HistoryView.drafts,
+                  onSelected: (_) {
+                    widget.onInteracted?.call();
+                    setState(() => view = _HistoryView.drafts);
                   },
                 ),
                 ChoiceChip(
                   label: const Text('Archived'),
-                  selected: archived,
+                  selected: view == _HistoryView.archived,
                   onSelected: (_) {
                     widget.onInteracted?.call();
-                    setState(() => archived = true);
+                    setState(() => view = _HistoryView.archived);
                   },
                 ),
                 TextButton.icon(
@@ -184,9 +232,14 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                             ? 'Opening your history…'
                             : query.isNotEmpty
                             ? 'No matching conversations.'
-                            : archived
-                            ? 'No archived conversations.'
-                            : 'Your conversations will appear here. Drafts are saved too.',
+                            : switch (view) {
+                                _HistoryView.archived =>
+                                  'No archived conversations.',
+                                _HistoryView.drafts =>
+                                  'No drafts yet. Start a new conversation to write one.',
+                                _HistoryView.chats =>
+                                  'Sent conversations appear here. Unsent work is in Drafts.',
+                              },
                         textAlign: TextAlign.center,
                         style: TextStyle(color: colors.muted),
                       ),
@@ -224,6 +277,11 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                 selected: active,
                                 selectedColor: colors.ink,
                                 enabled: !busy && !deleting,
+                                leading:
+                                    state.isConversationResponding(entry.id)
+                                    ? _RespondingIndicator(id: entry.id)
+                                    : null,
+                                minLeadingWidth: 16,
                                 contentPadding: const EdgeInsets.fromLTRB(
                                   12,
                                   4,
@@ -245,7 +303,7 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 5),
                                   child: Text(
-                                    '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.messageCount} messages',
+                                    '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.isDraft ? 'Draft' : '${entry.messageCount} messages'}',
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -280,7 +338,7 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                       size: 19,
                                     ),
                                   ),
-                                  if (entry.archived) ...[
+                                  if (!entry.isDraft && entry.archived) ...[
                                     SelectableIconButton(
                                       tooltip: 'Restore ${entry.title}',
                                       onPressed: busy || deleting
@@ -321,7 +379,7 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                               size: 19,
                                             ),
                                     ),
-                                  ] else
+                                  ] else if (!entry.isDraft)
                                     SelectableIconButton(
                                       tooltip: 'Archive ${entry.title}',
                                       onPressed: busy || deleting
@@ -368,4 +426,34 @@ class _ConversationHistoryState extends State<ConversationHistory> {
       );
     },
   );
+}
+
+class _RespondingIndicator extends StatelessWidget {
+  const _RespondingIndicator({required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final reducedMotion = media.disableAnimations || media.accessibleNavigation;
+    return Semantics(
+      key: ValueKey('history-responding-$id'),
+      container: true,
+      label: 'Responding',
+      liveRegion: true,
+      child: ExcludeSemantics(
+        child: RepaintBoundary(
+          child: SizedBox.square(
+            dimension: 16,
+            child: reducedMotion
+                ? const Icon(Icons.sync, size: 16)
+                : CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: StudioPalette.of(context).ink,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }

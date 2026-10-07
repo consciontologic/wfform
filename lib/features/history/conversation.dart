@@ -13,12 +13,18 @@ class ConversationSummary {
     this.modelName,
     this.archived = false,
     this.messageCount = 0,
-  });
+    bool? isDraft,
+  }) : _isDraft = isDraft;
   final String id, title;
   final String? modelId, modelName;
   final DateTime createdAt, updatedAt;
   final bool archived;
   final int messageCount;
+  final bool? _isDraft;
+
+  /// Old archived work must remain accessible through its existing actions.
+  /// New records carry an explicit dispatch-derived marker.
+  bool get isDraft => _isDraft ?? (messageCount == 0 && !archived);
 
   Map<String, Object?> toJson() => {
     'version': 1,
@@ -30,6 +36,7 @@ class ConversationSummary {
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'archived': archived,
     'messageCount': messageCount,
+    'isDraft': isDraft,
   };
 
   factory ConversationSummary.fromJson(Object? value) {
@@ -45,6 +52,7 @@ class ConversationSummary {
         value['archived'] is! bool ||
         value['messageCount'] is! int ||
         (value['messageCount'] as int) < 0 ||
+        (value.containsKey('isDraft') && value['isDraft'] is! bool) ||
         value['createdAt'] is! String ||
         value['updatedAt'] is! String) {
       throw historyFailure(
@@ -67,6 +75,7 @@ class ConversationSummary {
       createdAt: created,
       updatedAt: updated,
       messageCount: value['messageCount'] as int,
+      isDraft: value['isDraft'] as bool?,
     );
   }
 }
@@ -81,6 +90,7 @@ class ConversationRecord extends ConversationSummary {
     super.modelName,
     super.archived,
     super.messageCount,
+    super.isDraft,
     required this.draft,
     String? session,
     Map<String, dynamic>? sessionData,
@@ -107,6 +117,7 @@ class ConversationRecord extends ConversationSummary {
     modelName: modelName,
     archived: archived,
     messageCount: messageCount,
+    isDraft: isDraft,
   );
   @override
   Map<String, Object?> toJson() => {
@@ -129,6 +140,7 @@ class ConversationRecord extends ConversationSummary {
     String? modelName,
     DateTime? updatedAt,
     int? messageCount,
+    bool? isDraft,
     List<ChatAttachment>? draftAttachments,
   }) => ConversationRecord(
     id: id ?? this.id,
@@ -142,6 +154,7 @@ class ConversationRecord extends ConversationSummary {
     session: session ?? (sessionData == null ? _session : null),
     sessionData: session == null ? sessionData ?? _sessionData : null,
     messageCount: messageCount ?? this.messageCount,
+    isDraft: isDraft ?? this.isDraft,
     draftAttachments: draftAttachments ?? this.draftAttachments,
   );
 
@@ -193,6 +206,7 @@ class ConversationRecord extends ConversationSummary {
       modelName: summary.modelName,
       archived: summary.archived,
       messageCount: summary.messageCount,
+      isDraft: summary.isDraft,
       draft: map['draft'] as String,
       session: map['session'] as String,
       draftAttachments: draftAttachments,

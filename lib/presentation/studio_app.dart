@@ -625,7 +625,7 @@ class _SidePanel extends StatelessWidget {
         // below the drawer. The inner history list retains its bounded viewport.
         height: math.max(
           box.maxHeight,
-          440 * MediaQuery.textScalerOf(context).scale(1),
+          520 * MediaQuery.textScalerOf(context).scale(1),
         ),
         child: _content(context),
       ),

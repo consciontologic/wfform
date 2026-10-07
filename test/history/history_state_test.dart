@@ -138,6 +138,8 @@ void main() {
       findsOneWidget,
     );
     repository.failReads = false;
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Drafts'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Saved conversation'));
     await tester.pumpAndSettle();
     expect(h.state.historyError, isNull);
@@ -282,7 +284,7 @@ void main() {
       await h.state.selectModel(testModel);
       final first = h.state.activeConversationId!;
       h.state.setDraft('First saved draft');
-      await h.state.newConversation();
+      await h.state.selectModel(secondModel);
       final second = h.state.activeConversationId!;
       h.state.setDraft('Second departing draft');
       repository.gate = Completer<void>();
@@ -307,6 +309,9 @@ void main() {
       addTearDown(h.state.dispose);
       await h.initialize();
       await h.state.selectModel(testModel);
+      h.state.health.recordSuccess(testModel.id);
+      await h.state.chat.send(testModel, 'A sent conversation to delete');
+      await h.state.flushHistory();
       final id = h.state.activeConversationId!;
       h.state.setDraft('Deleting this draft deliberately');
       repository.gate = Completer<void>();
@@ -359,13 +364,25 @@ void main() {
       await h.initialize();
       await h.state.selectModel(testModel);
       final id = h.state.activeConversationId!;
+      h.state.health.recordSuccess(testModel.id);
+      await h.state.chat.send(testModel, 'A sent conversation to archive');
+      await h.state.flushHistory();
+      final sentRequests = h.transport.requests
+          .where((r) => r.method == 'POST')
+          .length;
       h.state.setDraft('Archived draft');
       expect(await h.state.archiveConversation(id), isTrue);
+      expect(h.state.activeConversationArchived, isFalse);
+      expect(h.state.activeConversationId, isNot(id));
+      expect(await h.state.openConversation(id), isTrue);
       expect(h.state.activeConversationArchived, isTrue);
       h.state.setDraft('Must not overwrite archived data');
       expect(h.state.draft, 'Archived draft');
       await h.state.chat.send(testModel, 'Should refuse');
-      expect(h.transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      expect(
+        h.transport.requests.where((r) => r.method == 'POST').length,
+        sentRequests,
+      );
       expect(await h.state.restoreConversation(id), isTrue);
       expect(h.state.activeConversationArchived, isFalse);
       expect(await h.state.deleteConversation(id), isTrue);
@@ -426,7 +443,7 @@ void main() {
       await restored.initialize();
       expect(restored.state.activeConversationId, original);
       expect(restored.state.draft, 'Latest character 🌿');
-      await restored.state.newConversation();
+      await restored.state.selectModel(secondModel);
       final other = restored.state.activeConversationId!;
       expect(other, isNot(original));
       expect(restored.state.draft, isEmpty);
@@ -472,13 +489,16 @@ void main() {
       final before = h.repo.writes;
       final pending = h.state.chat.send(testModel, 'Question');
       await Future<void>.delayed(Duration.zero);
-      expect(h.repo.writes, before + 1);
+      expect(
+        h.repo.writes,
+        before + 2,
+      ); // Accepted draft, then content dispatch.
       expect((await h.repo.read(id!))!.session, contains('Question'));
       for (var i = 0; i < 10; i++) {
         source.add(utf8.encode(delta('x')));
       }
       await Future<void>.delayed(Duration.zero);
-      expect(h.repo.writes, before + 1);
+      expect(h.repo.writes, before + 2);
       expect(await h.state.selectModel(secondModel), isFalse);
       expect(await h.state.newConversation(), isFalse);
       expect(h.state.activeConversationId, id);
@@ -487,7 +507,7 @@ void main() {
       await pending;
       await h.state.flushHistory();
       expect((await h.repo.read(id))!.session, contains('xxxxxxxxxx'));
-      expect(h.repo.writes - before, lessThanOrEqualTo(2));
+      expect(h.repo.writes - before, 3); // One final completion checkpoint.
     },
   );
 

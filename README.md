@@ -6,7 +6,7 @@
 
 - Search the live free-model catalog and inspect pricing, capabilities and recent availability.
 - Stream responses, edit and resend messages, and attach supported text, source files or media.
-- Save conversations locally; archive, restore, export and import them.
+- Resume unsent drafts and saved chats; archive, restore, export and import conversations.
 - Use responsive layouts, a resizable desktop sidebar, light/dark themes and text sizes up to 200%.
 - Install the PWA for an offline app shell and cached history/catalog. Chat requires a connection.
 
@@ -24,7 +24,7 @@ make build
 make serve
 ```
 
-Open [localhost:8765](http://localhost:8765/) and paste your OpenRouter API key in **Settings**. For persistent local configuration, copy `config/example.json` to ignored `config/local.json` before building. Browser-delivered credentials are visible to that browser’s user. Conversations stay in browser-local storage; export a backup before clearing site data or changing origins.
+Open [localhost:8765](http://localhost:8765/) and save your OpenRouter API key in **Settings**. This browser remembers it until you replace or clear it. Optional development configuration uses ignored `config/local.json`, copied from `config/example.json`. Browser-delivered credentials are visible to that browser’s user. Conversations stay in browser-local storage; export a backup before clearing site data or changing origins.
 
 For hot-reload development, run `flutter run -d chrome --web-port=8080`. Test installation and offline behavior using the release build above.
 

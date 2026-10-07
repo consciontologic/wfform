@@ -119,31 +119,38 @@ void main() {
     },
   );
 
-  testWidgets('touch preview New conversation executes on the first tap', (
-    tester,
-  ) async {
-    final h = Harness();
-    await h.mount(tester, const Size(1440, 1000));
-    await tester.enterText(composer, 'Save my first draft');
-    final oldId = h.state.activeConversationId;
-    await _collapse(tester);
-    await tester.tap(_edge);
-    await tester.pumpAndSettle();
-    final newConversation = find
-        .descendant(
-          of: _preview,
-          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
-        )
-        .first;
-    await tester.tap(newConversation);
-    await tester.pumpAndSettle();
-    expect(h.state.activeConversationId, isNot(oldId));
-    expect(h.state.draft, isEmpty);
-    expect(tester.getSize(_sidebar).width, 290);
-    expect(_preview, findsNothing);
-    expect(tester.takeException(), isNull);
-    await h.dispose(tester);
-  });
+  testWidgets(
+    'touch preview New conversation resumes the draft on the first tap',
+    (tester) async {
+      final h = Harness();
+      await h.mount(tester, const Size(1440, 1000));
+      await tester.enterText(composer, 'Save my first draft');
+      final oldId = h.state.activeConversationId;
+      await _collapse(tester);
+      await tester.tap(_edge);
+      await tester.pumpAndSettle();
+      final newConversation = find
+          .descendant(
+            of: _preview,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is FilledButton,
+            ),
+          )
+          .first;
+      await tester.tap(newConversation);
+      await tester.pumpAndSettle();
+      expect(h.state.activeConversationId, oldId);
+      expect(h.state.draft, 'Save my first draft');
+      expect(
+        tester.widget<TextField>(composer).controller!.text,
+        'Save my first draft',
+      );
+      expect(tester.getSize(_sidebar).width, 290);
+      expect(_preview, findsNothing);
+      expect(tester.takeException(), isNull);
+      await h.dispose(tester);
+    },
+  );
 
   testWidgets(
     'keyboard collapse reveal Escape and item activation are accessible',

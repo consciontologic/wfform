@@ -42,7 +42,7 @@ void main() {
       );
       final probe = api.requestBody(testModel, input, probe: true);
       expect(probe['max_tokens'], 16);
-      expect(probe['reasoning'], {'enabled': false});
+      expect(probe.containsKey('reasoning'), isFalse);
     },
   );
 

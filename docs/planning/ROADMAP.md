@@ -11,7 +11,14 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Native application identifier clarification | 1 | 1 | Complete; native configuration and web regression checks passed; native binaries unverified |
 | Search metadata, web publishing and brand mark | 3 | 3 | Complete locally; public hosting and search indexing remain separate |
 | GitHub account migration | 3 | 3 | Complete; fresh history and real compiled-artifact publication verified |
-| Free GitHub Pages hosting | 2 | 1 | Public subpath build verified; live publication and browser checks in progress |
+| Free GitHub Pages hosting | 2 | 2 | Complete; verified public subpath hosting, later superseded by the custom domain |
+| Owned custom domain | 2 | 2 | Complete; HTTPS, redirects, catalog and PWA verified |
+| Sidebar resizing and model readability | 4 | 4 | Complete; adaptive and source-description checks recorded |
+| Public information and version 0.1.0 | 4 | 4 | Complete; public pages and deployment verified |
+| Sidebar and model passport patch 0.1.1 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
+| Footer, documentation and composer focus patch 0.1.2 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
+| Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
+| Conversation drafts and saved connection 0.2.0 | 5 | 4 | Implementation and local release gates passed; remaining browser checks and publication pending |
 
 ## Established application baseline
 
@@ -169,3 +176,13 @@ Scope ID: sidebar-startup-patch. Requested 2026-10-07.
 - [x] Verify and publish version 0.1.3 with regression tests, release build and browser evidence.
 
 Completed patch evidence: [0.1.3 verification](../reports/sidebar-startup-patch-verification.md).
+
+## Phase 13 — Conversation drafts and saved connection 0.2.0
+
+Scope ID: conversation-drafts. Requested 2026-10-07.
+
+- [x] Show response activity on the corresponding sidebar conversation row.
+- [x] Separate unsent drafts from sent conversations, with durable text and attachment recovery across navigation and reload.
+- [x] Return to a writable draft after archiving the active conversation, preserving archived history.
+- [x] Remember the explicitly saved OpenRouter key across browser restarts, including replacement and removal, with visible storage failures.
+- [ ] Verify and publish version 0.2.0 with regression tests, a release build and browser evidence.

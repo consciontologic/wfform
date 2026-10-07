@@ -21,7 +21,7 @@ The hosts were generated without overwriting application files using Flutter's `
 
 - Non-web history and preference adapters currently use memory. They do not provide the browser's durable history/settings behavior.
 - Native attachment selection and file export need adapters. PWA install/update operations are browser features; the native bridge is a stub.
-- Loading `config/local.json` is web-only; it is not bundled into native assets. Non-web startup uses typed defaults and existing `API_BASE_URL`/`API_KEY` Dart defines; Settings can accept a runtime key. Loading and persisting native configuration needs a platform implementation.
+- Loading `config/local.json` is web-only; it is not bundled into native assets. Non-web startup uses typed defaults and existing `API_BASE_URL`/`API_KEY` Dart defines; Settings can accept a key, but the native LocalStore is an in-memory stub; durable native credential/configuration storage still needs a platform implementation. Browser key persistence is verified separately.
 - Generated native launcher/splash assets and Android debug signing are development defaults. iOS has no configured signing team. Store signing, release artwork and device acceptance are not completed by this identifier change.
 
 On this Linux workstation, `flutter doctor -v` reports unaccepted Android SDK licenses. No license acceptance or system changes were made. iOS requires macOS and Xcode. Neither APK/AAB nor iOS builds/device runs were executed; the native configuration was checked structurally and reviewed separately.

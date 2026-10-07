@@ -36,7 +36,7 @@ WFFORM_CONFIG_FILE="$PWD/config/local.json" make up
 WFFORM_CONFIG_FILE="$PWD/config/local.json" make check
 ```
 
-When adding/removing a mount on an existing container, use the same command with `make restart`. Without this setting `/config/local.json` returns 404 and the app uses defaults/session-key entry. A mount is served only at that exact path with `Cache-Control: no-store`; other `/config/` paths stay 404. It never enters the image or PWA cache. The access log omits this endpoint, query strings and headers. Credentials delivered to a browser remain accessible to that browser's user; a shared mounted key is not a production secret boundary. Prefer each user's session key for shared hosting.
+When adding/removing a mount on an existing container, use the same command with `make restart`. Without this setting `/config/local.json` returns 404 and the app uses defaults or a saved browser key. A mount is served only at that exact path with `Cache-Control: no-store`; other `/config/` paths stay 404. It never enters the image or PWA cache. The access log omits this endpoint, query strings and headers. Credentials delivered to a browser remain accessible to that browser's user; a shared mounted key is not a production secret boundary. Prefer each user's own saved browser key for shared hosting.
 
 ## HTTPS for local checks
 

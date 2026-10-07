@@ -80,6 +80,69 @@ void main() {
     expect(transport.requests.length, 2);
   });
 
+  test(
+    'probe respects mandatory reasoning and accepts reasoning output',
+    () async {
+      transport = FakeTransport((request) {
+        if (request.method == 'GET') return endpoints();
+        final reasoning = request.json['reasoning'];
+        if (reasoning is Map && reasoning['enabled'] == false) {
+          return jsonResponse({
+            'error': {
+              'code': 400,
+              'message': 'Reasoning is mandatory and cannot be disabled.',
+            },
+          }, status: 400);
+        }
+        return streamResponse(delta('', reasoning: 'Probe reasoning'));
+      });
+      health.dispose();
+      health = HealthController(
+        config: config,
+        transport: transport,
+        diagnostics: diagnostics,
+        now: () => now,
+      );
+      final observation = await health.check(testModel);
+      expect(observation.status, HealthStatus.responsive);
+      final inference = transport.requests.where((r) => r.method == 'POST');
+      expect(inference, hasLength(1));
+      expect(inference.single.json.containsKey('reasoning'), isFalse);
+      expect(inference.single.json['max_tokens'], 16);
+      expect(inference.single.cancel!.isCancelled, isTrue);
+    },
+  );
+
+  testWidgets('silent probe retains its configured deadline and cancellation', (
+    tester,
+  ) async {
+    final source = StreamController<List<int>>();
+    transport = FakeTransport(
+      (request) => request.method == 'GET'
+          ? endpoints()
+          : ApiResponse(200, {
+              'content-type': 'text/event-stream',
+            }, source.stream),
+    );
+    health.dispose();
+    health = HealthController(
+      config: config,
+      transport: transport,
+      diagnostics: diagnostics,
+      now: () => now,
+    );
+    final pending = health.check(testModel);
+    await tester.pump();
+    expect(transport.requests.where((r) => r.method == 'POST'), hasLength(1));
+    await tester.pump(config.probeTimeout + const Duration(milliseconds: 1));
+    final observation = await pending;
+    expect(observation.failure?.kind, FailureKind.timeout);
+    expect(transport.requests.last.cancel!.isCancelled, isTrue);
+    expect(transport.requests.where((r) => r.method == 'POST'), hasLength(1));
+    unawaited(source.close());
+    await tester.pump();
+  });
+
   test('limits concurrent selected checks to two', () async {
     final gates = <Completer<ApiResponse>>[];
     transport = FakeTransport((r) {

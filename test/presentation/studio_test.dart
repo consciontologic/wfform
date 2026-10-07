@@ -261,8 +261,11 @@ void main() {
       );
       await tester.tap(find.byTooltip('Archive Alpha conversation'));
       await tester.pumpAndSettle();
-      expect(h.state.activeConversationArchived, true);
-      expect(tester.widget<TextField>(composer).readOnly, true);
+      expect(h.state.activeConversationId, isNot(firstId));
+      expect(h.state.activeConversationArchived, false);
+      expect(tester.widget<TextField>(composer).readOnly, false);
+      await tester.enterText(composer, 'Keep writing after archive');
+      expect(h.state.draft, 'Keep writing after archive');
       await tester.tap(find.widgetWithText(ChoiceChip, 'Archived'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Restore Alpha conversation'));

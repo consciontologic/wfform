@@ -74,7 +74,9 @@ class ChatApi {
           'pdf': {'engine': 'native'},
         },
       ],
-    if (model.supportsReasoning) 'reasoning': {'enabled': !probe},
+    // A probe must not disable a model's mandatory reasoning. Keep its default
+    // behavior; the small output limit and probe timeout still bound the check.
+    if (model.supportsReasoning && !probe) 'reasoning': {'enabled': true},
     if (probe && model.supportedParameters.contains('max_tokens'))
       'max_tokens': 16,
     if (!probe && model.supportedParameters.contains('max_tokens'))
@@ -89,6 +91,7 @@ class ChatApi {
     int? outputTokens,
     void Function(int status, String? requestId)? onResponse,
     void Function(Map<String, String> headers)? onHeaders,
+    void Function()? onDispatch,
   }) {
     final requestCancel = CancelToken();
     final unlink = cancel.listen(requestCancel.cancel);
@@ -100,6 +103,7 @@ class ChatApi {
       outputTokens: outputTokens,
       onResponse: onResponse,
       onHeaders: onHeaders,
+      onDispatch: onDispatch,
     );
     return withPhaseTimeouts(
       source,
@@ -128,6 +132,7 @@ class ChatApi {
     int? outputTokens,
     void Function(int status, String? requestId)? onResponse,
     void Function(Map<String, String> headers)? onHeaders,
+    void Function()? onDispatch,
   }) async* {
     if (config.apiKey.trim().isEmpty) {
       throw AppFailure(
@@ -142,7 +147,7 @@ class ChatApi {
       );
     }
     cancel.throwIfCancelled();
-    final response = await transport.send(
+    final request = transport.send(
       'POST',
       Uri.parse('${config.apiBaseUrl}/chat/completions'),
       headers: headers,
@@ -152,6 +157,10 @@ class ChatApi {
       timeout: probe ? config.probeTimeout : config.streamOverallTimeout,
       cancel: cancel,
     );
+    // The marker belongs at the transport boundary, after local validation and
+    // body encoding. A health probe has its own request and never supplies it.
+    onDispatch?.call();
+    final response = await request;
     var requestId =
         response.headers['x-generation-id'] ?? response.headers['x-request-id'];
     onResponse?.call(response.status, requestId);

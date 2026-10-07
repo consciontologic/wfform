@@ -194,6 +194,7 @@ class PackedHistoryRecord {
       updatedAt: summary.updatedAt,
       archived: summary.archived,
       messageCount: summary.messageCount,
+      isDraft: summary.isDraft,
       draft: document['draft'] as String,
       sessionData: {
         ...Map<String, dynamic>.from(document['sessionFields'] as Map),

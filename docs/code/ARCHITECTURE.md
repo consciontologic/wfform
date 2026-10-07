@@ -35,7 +35,7 @@ Widgets consume controllers and domain values. HTTP requests and response parsin
 2. A cached catalog is validated and displayed immediately where available. Once configuration is settled, one deduplicated public refresh discovers all output modalities. Bad refreshes retain the last valid catalog. Provisional empty-key configuration cannot overwrite durable real-key health observations.
 3. The user explicitly selects a compatible free model. A different model starts another conversation. If selection disappears or relevant metadata changes, the application requires a valid selection instead of switching models.
 4. Send validates the current model, context estimate, attachment compatibility and cooldown before accepting a turn. Stale selected-model health triggers a small bounded probe; there is no mass inference probing at startup.
-5. Accepted draft text and attachments become a user message and the composer clears. The adapter sends the chosen ID with zero-price provider guards and no provider fallback. Incremental response text and optional returned reasoning are batched into the active assistant message.
+5. Accepted draft text and attachments become a user message and the composer clears. The adapter sends the chosen ID with zero-price provider guards and no provider fallback. Its dispatch callback promotes a draft to chat history; accepting input or probing health alone does not. Incremental response text and optional returned reasoning are batched into the active assistant message.
 6. Terminal success or failure preserves received output, usage and timing where supplied. Retrying, continuing or editing/resending is explicit. History checkpoints persist changes without rewriting unchanged attachment bytes.
 
 ## Persistence boundaries
@@ -43,7 +43,7 @@ Widgets consume controllers and domain values. HTTP requests and response parsin
 | Store | Data | Important property |
 |---|---|---|
 | Memory | Active conversation, runtime key, current catalog/controllers | Reload recovery requires the stores below |
-| localStorage | Catalog, appearance/preferences, bounded scoped health/endpoint/allowance observations | Synchronous small metadata only; runtime key is not stored as a preference |
+| localStorage | Saved browser key, catalog, appearance/preferences, bounded scoped health/endpoint/allowance observations | Synchronous small metadata only; an explicitly saved browser key overrides runtime configuration |
 | sessionStorage | Tab-local active conversation and immediate unsent-text recovery marker | Draft attachments are not copied into this marker |
 | IndexedDB | Conversation summaries/documents, individual message rows and binary attachment records | Browser-local durability, transactional writes and revision checks |
 | Cache Storage | Content-verified release shell and release/client metadata | No API, configuration, conversation or attachment response caching |

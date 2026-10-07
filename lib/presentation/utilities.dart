@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/studio_state.dart';
 import '../app/theme.dart';
+import '../config/credential_preference.dart';
 import '../shared/diagnostics.dart';
 import 'model_browser.dart';
 import 'selectable_surface.dart';
@@ -174,6 +175,42 @@ class _SettingsState extends State<_Settings> {
   late final keyInput = TextEditingController(text: widget.state.config.apiKey);
   String? error;
   bool saving = false;
+
+  bool get connectionBusy =>
+      saving ||
+      widget.state.chat.busy ||
+      widget.state.historyBusy ||
+      widget.state.attachmentPicking;
+
+  Future<void> saveKey(String value) async {
+    setState(() {
+      saving = true;
+      error = null;
+    });
+    try {
+      await widget.state.changeKey(value);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            value.trim().isEmpty
+                ? 'API key cleared. Local configuration will not restore it.'
+                : 'API key saved in this browser.',
+          ),
+        ),
+      );
+    } catch (failure) {
+      if (mounted) {
+        setState(() {
+          error = AppFailure.from(failure).message;
+          saving = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     keyInput.dispose();
@@ -254,11 +291,17 @@ class _SettingsState extends State<_Settings> {
                     obscureText: true,
                     autocorrect: false,
                     enableSuggestions: false,
+                    maxLength: CredentialPreference.maxKeyLength,
+                    enabled: !saving,
                     decoration: const InputDecoration(
                       labelText: 'OpenRouter API key',
-                      helperText:
-                          'Used only for this session. Local config loads on restart.',
+                      counterText: '',
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Save keeps this key in this browser after reloads and closing the app, until you replace or clear it. Clear also overrides a key in local configuration. Clearing browser site data removes this preference.',
+                    style: TextStyle(fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -273,42 +316,45 @@ class _SettingsState extends State<_Settings> {
                       color: StudioPalette.of(context).muted,
                     ),
                   ),
-                  if (error != null)
+                  if (error ?? widget.state.credentialPreference.error?.message
+                      case final String message)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          message,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ),
                     ),
                   const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: saving || widget.state.chat.busy
-                        ? null
-                        : () async {
-                            setState(() => saving = true);
-                            try {
-                              await widget.state.changeKey(keyInput.text);
-                              if (context.mounted) Navigator.pop(context);
-                            } catch (e) {
-                              if (mounted) {
-                                setState(() {
-                                  error = AppFailure.from(e).message;
-                                  saving = false;
-                                });
-                              }
-                            }
-                          },
-                    child: Text(
-                      saving
-                          ? 'Saving…'
-                          : widget.state.chat.busy
-                          ? 'Finish or cancel request first'
-                          : 'Use this key',
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton(
+                        onPressed: connectionBusy
+                            ? null
+                            : () => saveKey(keyInput.text),
+                        child: Text(saving ? 'Saving…' : 'Save key'),
+                      ),
+                      OutlinedButton(
+                        onPressed: connectionBusy ? null : () => saveKey(''),
+                        child: const Text('Clear saved key'),
+                      ),
+                    ],
                   ),
+                  if (connectionBusy && !saving)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Finish or cancel the current request or conversation operation before changing the key.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
                   const SizedBox(height: 28),
                   const Text(
                     'Reading & connectivity',

@@ -41,7 +41,7 @@ Flutter/Dart owns UI and domain logic. Minimal web host/PWA glue and static ngin
 
 Use the official structured OpenRouter API, never website scraping. Missing/malformed prices never become zero. The observed -1 sentinel is unresolved; applicable unresolved charges are excluded as informational eligibility results. Explicit zero-price guards, exact selected ID, no paid fallback and no automatic content resend remain mandatory.
 
-Keep health separate from catalog presence and media capability. Avoid startup probe/allowance polling. Preserve conversation/model/draft/focus across resize; changing models starts a new conversation. Preserve accepted turns/partial output on failure and use explicit retry/edit/continue actions.
+Keep health separate from catalog presence and media capability. Avoid startup probe/allowance polling. Preserve conversation/model/draft/focus across resize; changing models resumes that model's unsent draft or opens a fresh workspace. Preserve accepted turns/partial output on failure and use explicit retry/edit/continue actions.
 
 Browser-local history is origin-scoped. IndexedDB stores normalized messages/media and uses atomic revision-checked writes. Preserve recovered conflicts, legacy migration data and archived histories; do not silently discard data to make a test pass. PWA Cache Storage is shell-only, without keys/config/API responses/chat/media.
 
@@ -145,3 +145,34 @@ preview with complete descriptions and grouped technical details available
 on demand. Archived-row deletion is direct, independent of row selection,
 and does not disturb an unrelated active conversation. See Phase 10 of the
 roadmap for verification acceptance.
+
+## Conversation drafts and saved connection 0.2.0 — 2026-10-07
+
+Unsent work is separate from Chats and Archived. Empty workspaces are not
+indexed; actual user-content transport dispatch promotes a draft to chat
+history. Model changes and New conversation resume a matching unsent draft
+when available. Drafts preserve text and attachments across navigation/reload
+and offer no archive/delete controls. Archiving the active sent chat opens a
+writable draft. Response activity appears on the corresponding row, with a
+static accessible alternative for reduced motion. One request at a time remains
+the supported behavior.
+
+Settings explicitly saves/replaces or clears the browser-local key. An explicit
+empty saved override prevents runtime configuration from restoring a cleared
+key. Read-back validation and late-configuration race regressions preserve the
+user's saved choice. Browser storage failures are visible and do not falsely
+report success. Site-data removal can still remove local preferences/history;
+native persistent adapter parity remains unverified.
+
+The final local gate passed 476 tests with one opt-in live test skipped,
+14 repository-operation tests and seven actual Chromium storage tests.
+CodeGraph queries verified 151 files, 2,048 nodes, 8,568 edges and eight tools.
+The bounded real catalog check observed 663 entries, 68 free-price candidates,
+17 chat-compatible models, seven unresolved-price exclusions and no quarantine.
+The final release has 40 assets / 18,270,168 bytes and passed actual nginx
+headers and immutable-asset integrity checks. Local browser evidence includes
+an explicit successful authenticated LiquidAI stream after a mandatory-reasoning
+probe fix, responsive/200% layouts, imported archive fixtures and two PWA
+updates preserving drafts. Remaining browser offline/key checks and publication
+are pending; see the [0.2.0 verification report](../reports/conversation-drafts-verification.md)
+and Phase 13 before claiming deployment completion.

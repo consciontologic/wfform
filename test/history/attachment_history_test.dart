@@ -247,7 +247,7 @@ void main() {
   );
 
   test(
-    'new chats and model switches isolate files; reopening restores and removals persist',
+    'New resumes unsent files and model switches isolate them; removals persist',
     () async {
       final h = AttachmentHarness();
       addTearDown(h.state.dispose);
@@ -256,9 +256,7 @@ void main() {
       final original = h.state.activeConversationId!;
       final firstFile = h.state.draftAttachments.single.id;
       expect(await h.state.newConversation(), true);
-      expect(h.state.activeConversationId, isNot(original));
-      expect(h.state.draftAttachments, isEmpty);
-      expect(await h.state.openConversation(original), true);
+      expect(h.state.activeConversationId, original);
       expect(h.state.draftAttachments.single.id, firstFile);
       expect(await h.state.selectModel(otherModel), true);
       expect(h.state.draftAttachments, isEmpty);
@@ -289,7 +287,7 @@ void main() {
       await h.initialize();
       await h.pick();
       final damagedId = h.state.activeConversationId!;
-      await h.state.newConversation();
+      await h.state.selectModel(otherModel);
       final active = h.state.activeConversationId!;
       h.state.setDraft('Keep the current draft');
       await h.state.flushHistory();
@@ -394,6 +392,8 @@ void main() {
       final h = AttachmentHarness();
       addTearDown(h.state.dispose);
       await h.initialize();
+      h.state.setDraft('A stored legacy draft');
+      await h.state.flushHistory();
       final id = h.state.activeConversationId!;
       final json =
           jsonDecode(h.repository.records[id]!) as Map<String, dynamic>;

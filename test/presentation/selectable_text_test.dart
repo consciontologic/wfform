@@ -167,6 +167,8 @@ void main() {
       await h.state.flushHistory();
       await tester.pumpAndSettle();
       final original = h.state.activeConversationId;
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Drafts'));
+      await tester.pumpAndSettle();
       await _selectText(tester, 'Saved title');
       await _shortcut(tester, LogicalKeyboardKey.keyC);
       expect(copied, 'Saved title');

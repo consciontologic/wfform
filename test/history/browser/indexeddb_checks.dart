@@ -7,9 +7,13 @@ import 'dart:js_interop';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
+import 'package:wfform/config/app_config.dart';
+import 'package:wfform/config/credential_preference.dart';
 import 'package:wfform/features/history/conversation.dart';
 import 'package:wfform/features/history/history_repository.dart';
 import 'package:wfform/features/history/history_repository_web.dart';
+import 'package:wfform/shared/diagnostics.dart';
+import 'package:wfform/shared/platform.dart';
 
 import '../history_codec_test.dart' as fixture;
 
@@ -79,6 +83,19 @@ Future<void> put(
 
 JSAny key(Object part) => jsonEncode(['one', part]).toJS;
 
+/// Never reads or modifies the browser's real app credential preference.
+class NamespacedCredentialStore implements LocalStore {
+  NamespacedCredentialStore(this.prefix);
+  final String prefix;
+  final LocalStore inner = createLocalStore();
+  @override
+  String? read(String key) => inner.read('$prefix.$key');
+  @override
+  void write(String key, String value) => inner.write('$prefix.$key', value);
+  @override
+  void remove(String key) => inner.remove('$prefix.$key');
+}
+
 void main() {
   String name = '';
   final repositories = <IndexedDbHistoryRepository>[];
@@ -98,6 +115,46 @@ void main() {
     repositories.add(repo);
     return repo;
   }
+
+  test(
+    'browser localStorage restores a saved credential and explicit clear',
+    () {
+      final prefix = '$name.credentials';
+      final store = NamespacedCredentialStore(prefix);
+      final diagnostics = Diagnostics(const AppConfig());
+      try {
+        final first = CredentialPreference(store, diagnostics)..load();
+        expect(first.overrideValue, isNull);
+        first.save('browser-storage-test-key');
+        // A new store and preference instance model the next app launch.
+        final restored = CredentialPreference(
+          NamespacedCredentialStore(prefix),
+          diagnostics,
+        )..load();
+        expect(
+          restored.resolve('runtime-test-key'),
+          'browser-storage-test-key',
+        );
+        restored.save('');
+        final cleared = CredentialPreference(
+          NamespacedCredentialStore(prefix),
+          diagnostics,
+        )..load();
+        expect(cleared.overrideValue, '');
+        expect(cleared.resolve('runtime-test-key'), '');
+        expect(
+          web.window.localStorage.getItem(
+            '$prefix.${CredentialPreference.storageKey}',
+          ),
+          '',
+        );
+        expect(diagnostics.events, isEmpty);
+      } finally {
+        store.remove(CredentialPreference.storageKey);
+        diagnostics.dispose();
+      }
+    },
+  );
 
   test(
     'readonly snapshot restores media without waiting for completion delivery',

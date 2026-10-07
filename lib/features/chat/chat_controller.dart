@@ -88,6 +88,8 @@ class ChatController extends ChangeNotifier {
   final _messages = <ChatMessage>[];
   List<ChatMessage> get messages => List.unmodifiable(_messages);
   bool busy = false;
+  bool _hasDispatchedUserContent = false;
+  bool get hasDispatchedUserContent => _hasDispatchedUserContent;
   String progress = '';
   AppFailure? error;
   bool get canRetry => !busy && _retryUserIndex != null;
@@ -423,6 +425,11 @@ class ChatController extends ChangeNotifier {
         history,
         cancel: token,
         outputTokens: budget.outputTokens,
+        onDispatch: () {
+          if (_hasDispatchedUserContent) return;
+          _hasDispatchedUserContent = true;
+          _notify();
+        },
         onResponse: (code, id) {
           status = code;
           requestId = id;
@@ -547,6 +554,7 @@ class ChatController extends ChangeNotifier {
     _generation++;
     _token = null;
     _messages.clear();
+    _hasDispatchedUserContent = false;
     _textTokenEstimates.clear();
     _contextStartIndex = 0;
     _outputTokenLimit = null;
@@ -560,6 +568,7 @@ class ChatController extends ChangeNotifier {
 
   Map<String, dynamic> exportSessionData() => {
     'version': 1,
+    'hasDispatchedUserContent': _hasDispatchedUserContent,
     'messages': _messages.map((message) => message.toJson()).toList(),
     'retryUserIndex': _retryUserIndex,
     'retryModelId': _retryModelId,
@@ -585,7 +594,9 @@ class ChatController extends ChangeNotifier {
       final object = jsonDecode(serialized);
       if (object is! Map ||
           object['version'] != 1 ||
-          object['messages'] is! List) {
+          object['messages'] is! List ||
+          (object.containsKey('hasDispatchedUserContent') &&
+              object['hasDispatchedUserContent'] is! bool)) {
         throw const FormatException('Unsupported session format.');
       }
       final list = object['messages'] as List;
@@ -692,6 +703,9 @@ class ChatController extends ChangeNotifier {
       }
       _messages.clear();
       _messages.addAll(restored);
+      _hasDispatchedUserContent =
+          object['hasDispatchedUserContent'] as bool? ??
+          restored.any((message) => message.role == 'user');
       final start = object['contextStartIndex'];
       _contextStartIndex =
           start is int &&
