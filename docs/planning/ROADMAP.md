@@ -145,6 +145,6 @@ Scope ID: sidebar-passport-patch. Requested 2026-10-07.
 - [x] Replace resize grip with a plain divider; support collapse, edge reveal and default-width restoration on sidebar actions without losing drafts or requests.
 - [x] Present a concise, readable model passport with full source descriptions and technical details available on demand.
 - [x] Delete an archived row directly without requiring selection; preserve unrelated active conversations and report failures.
-- [ ] Publish patch 0.1.1 with concise Open app labels; verify regressions, release build, responsive browser behavior and deployment.
+- [x] Publish patch 0.1.1 with concise Open app labels; verify regressions, release build, responsive browser behavior and deployment.
 
-Local patch evidence: [0.1.1 verification](../reports/sidebar-passport-patch-verification.md).
+Completed patch evidence: [0.1.1 verification](../reports/sidebar-passport-patch-verification.md).

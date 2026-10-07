@@ -77,3 +77,24 @@ The final Gemma passport at 125% showed its 116-character first sentence,
 and Pricing expanded the zero prompt/completion values. The browser console
 had no captured warnings/errors. Current live counts were observed only, not
 asserted as fixtures or a permanent catalog guarantee.
+
+## Published release
+
+Source commit `4984e207c3b928c13c7d93b5fdc1d93bb20caa13` passed
+[GitHub CI run 37647775708](https://github.com/consciontologic/wfform/actions/runs/37647775708):
+411 app/tool tests, 14 repository tests, six real Chrome storage checks,
+release build and artifact validation. It published web files in destination
+commit `c19956b70a8042da81acd1a5dfddced73f9e676d`;
+[Pages run 37648127689](https://github.com/consciontologic/wfform.com/actions/runs/37648127689)
+also succeeded.
+
+Live HTTPS served the same release hash, all four public documents returned
+200 with version 0.1.1 and one Google loader each, and the three return buttons
+used Open app. The local and GitHub builds had identical release hashes and
+asset byte totals. Installed clients may retain their earlier shell until
+they accept the app's safe update action.
+
+A temporary public browser tab rendered the Flutter **Version 0.1.1** footer
+with no captured console warnings/errors. A query bypass avoided pinning to an
+older shell during this read-only check; existing public tabs and conversations
+were left untouched. Temporary QA tabs and the local test container were closed.
