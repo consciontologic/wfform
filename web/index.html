@@ -80,36 +80,37 @@
   <style>
     /* Match StudioPalette until Flutter takes ownership of the application. */
     html,body{margin:0;background:#f8f5fc;color:#29243b}
-    #loading{max-width:680px;margin:0 auto;padding:clamp(24px,6vw,64px);font:18px/1.6 system-ui,sans-serif}
-    #loading h1{font-size:clamp(28px,5vw,40px);line-height:1.15}
-    #loading a{color:inherit;text-underline-offset:4px}
-    #loading [role=status]{font-weight:700}
+    .startup-message{max-width:680px;margin:0 auto;padding:clamp(24px,6vw,64px);font:18px/1.6 system-ui,sans-serif}
+    .startup-message h1{font-size:clamp(28px,5vw,40px);line-height:1.15}
+    .startup-message a{color:inherit;text-underline-offset:4px}
+    .startup-message pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
     @media(prefers-color-scheme:dark){html,body{background:#191722;color:#f4edff}}
   </style>
 </head>
 <body>
-  <main id="loading">
-    <img src="icons/Icon-192.png" width="64" height="64" alt="">
-    <h1>wfform: chat with free OpenRouter models</h1>
-    <p>Discover free AI models, compare their capabilities, and choose the model for each conversation. Save your conversations in this browser and attach files when the selected model supports them.</p>
-    <p role="status">Opening wfform…</p>
-    <p><a href="about.html">About wfform and how to get started</a></p>
-    <noscript><p>JavaScript is required for the chat application. The getting-started page works without JavaScript.</p></noscript>
-    <footer class="site-footer">
-      <div class="footer-row">
-        <div class="footer-origin">
-          <p class="footer-version">wfform <span>0.1.2</span></p>
-          <a class="source-link" href="https://github.com/consciontologic/wfform">GitHub</a>
-        </div>
-        <nav class="footer-nav" aria-label="Information pages">
-          <a href="about.html">About</a>
-          <a href="terms.html">Terms and conditions</a>
-          <a href="liability.html">Liability</a>
-        </nav>
-      </div>
-      <p class="footer-note">An independent OpenRouter client. Website usage is measured with Google Analytics; <a href="terms.html#data">read how data is handled</a>.</p>
-    </footer>
+  <main id="startup-error" class="startup-message" hidden role="alert">
+    <h1>wfform could not start</h1>
+    <p>Check your connection, then <a href="./">reload wfform</a>. If the problem continues, read the <a href="about.html">setup guide</a>.</p>
+    <details>
+      <summary>Technical details</summary>
+      <pre id="startup-error-details"></pre>
+    </details>
   </main>
-  <script src="flutter_bootstrap.js" async></script>
+  <noscript>
+    <main class="startup-message">
+      <h1>JavaScript is required</h1>
+      <p>Enable JavaScript to open wfform. The <a href="about.html">setup guide</a> works without JavaScript.</p>
+    </main>
+  </noscript>
+  <script id="bootstrap-load-guard">
+    window.addEventListener('error', function (event) {
+      if (!(event.target instanceof HTMLScriptElement) || event.target.id !== 'flutter-bootstrap') return;
+      const failure = document.getElementById('startup-error');
+      const details = document.getElementById('startup-error-details');
+      if (details) details.textContent = 'The application startup file could not be loaded.';
+      if (failure) failure.hidden = false;
+    }, true);
+  </script>
+  <script id="flutter-bootstrap" src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -134,14 +134,29 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
               },
               child: SizedBox(
                 width: SidebarResizeHandle.extent,
-                child: Center(
-                  child: SizedBox(
-                    width: active ? 3 : 1.5,
-                    height: double.infinity,
-                    child: ColoredBox(
-                      color: active ? palette.ink : palette.border,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // The generous drag target straddles the visual boundary.
+                    // Match both adjoining surfaces up to the centered line;
+                    // Row mirrors the sidebar half in right-to-left layouts.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: ColoredBox(color: palette.cream)),
+                        Expanded(child: ColoredBox(color: palette.paper)),
+                      ],
                     ),
-                  ),
+                    Center(
+                      child: SizedBox(
+                        width: active ? 3 : 1.5,
+                        height: double.infinity,
+                        child: ColoredBox(
+                          color: active ? palette.ink : palette.border,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

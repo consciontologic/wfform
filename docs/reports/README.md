@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Sidebar surface and quiet startup patch 0.1.3](sidebar-startup-patch-verification.md): continuous sidebar fill, removal of the transient intro, bootstrap-download recovery and release/browser checks.
+
 - [Footer and composer focus patch 0.1.2](footer-focus-patch-verification.md): plain source links, removed documentation templates, explicit outside focus handling and release/browser checks.
 
 - [Sidebar and passport patch 0.1.1](sidebar-passport-patch-verification.md): collapse/edge reveal, concise model metadata, direct archived deletion, accessibility regression fixes and release checks.

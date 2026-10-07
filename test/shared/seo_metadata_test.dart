@@ -52,7 +52,9 @@ void main() {
         expect(meta(html, 'og:title'), title);
         expect(meta(html, 'twitter:title'), title);
         expect(html, contains('<html lang="en">'));
-        expect(RegExp('<h1[ >]').allMatches(html), hasLength(1));
+        if (path != 'index.html') {
+          expect(RegExp('<h1[ >]').allMatches(html), hasLength(1));
+        }
         final image = Uri.parse(meta(html, 'og:image'));
         expect(image.origin, siteUri.origin);
         expect(image.path, startsWith(siteUri.path));
@@ -126,9 +128,40 @@ void main() {
     }
     expect(about, contains('limits'));
     final index = document('index.html');
-    expect(index, contains('id="loading"'));
+    expect(index, contains('id="startup-error"'));
     expect(index, contains('href="about.html"'));
     expect(index, contains('<noscript>'));
+  });
+
+  test('normal startup is quiet with actionable failure-only alternatives', () {
+    final index = document('index.html');
+    final body = RegExp(
+      r'<body>([\s\S]*?)</body>',
+    ).firstMatch(index)!.group(1)!;
+    final failure = RegExp(
+      r'<main id="startup-error"[^>]* hidden[^>]*>([\s\S]*?)</main>',
+    ).firstMatch(body);
+    expect(failure, isNotNull);
+    expect(failure!.group(0), contains('role="alert"'));
+    expect(failure.group(1), contains('wfform could not start'));
+    expect(failure.group(1), contains('href="./"'));
+    expect(failure.group(1), contains('href="about.html"'));
+    expect(failure.group(1), contains('id="startup-error-details"'));
+    final noScript = RegExp(
+      r'<noscript>([\s\S]*?)</noscript>',
+    ).firstMatch(body);
+    expect(noScript, isNotNull);
+    expect(noScript!.group(1), contains('JavaScript is required'));
+    expect(noScript.group(1), contains('href="about.html"'));
+    final visibleStartup = body
+        .replaceFirst(failure.group(0)!, '')
+        .replaceFirst(noScript.group(0)!, '')
+        .replaceAll(RegExp(r'<script\b[^>]*>[\s\S]*?</script>'), '')
+        .trim();
+    expect(visibleStartup, isEmpty);
+    expect(body, isNot(contains('<footer')));
+    expect(body, isNot(contains('<img')));
+    expect(body, isNot(contains('Opening wfform')));
   });
 
   test(
@@ -210,9 +243,9 @@ void main() {
   });
 
   test(
-    'every public page links useful information and versioned source footer',
+    'information pages link useful information and versioned source footer',
     () {
-      for (final path in publicPages) {
+      for (final path in publicPages.skip(1)) {
         final html = document(path);
         for (final target in ['about.html', 'terms.html', 'liability.html']) {
           expect(html, contains('href="$target"'), reason: '$path → $target');

@@ -35,13 +35,19 @@ Google tag is the only added third-party analytics integration. All chat, storag
 
 ## Flutter boundary
 
-Flutter renders an application rather than a conventional document site. The
-homepage now supplies meaningful, visible HTML while Flutter starts; the
-existing bootstrap removes that loading surface after the app takes over. The
-Flutter app preserves the descriptive browser title. Search engines may not
-index text drawn by Flutter, so `about.html` provides persistent crawlable
-product information. It is an explanatory document, not a second application or
-a special response served only to bots.
+Flutter renders an application rather than a conventional document site. Normal
+homepage startup uses a quiet, theme-matched shell without a product introduction
+or About content flashing before the app. The bootstrap removes that startup
+surface after Flutter takes over. A small inline guard runs before the bootstrap
+script so a failed bootstrap download can reveal recovery guidance even when
+Flutter cannot load. Bootstrap/engine startup failures use the same recovery
+surface, and a no-JavaScript fallback links to the static About page.
+
+The homepage retains its descriptive title, search/sharing metadata and JSON-LD;
+the Flutter app preserves the browser title. Search engines may not index text
+drawn by Flutter, so `about.html` provides persistent crawlable product and
+getting-started information. It is an explanatory document, not a second
+application or a special response served only to bots.
 
 The sitemap never includes conversations, model-search results, private browser
 state or versioned release paths. No current model count or fixed list of free
@@ -79,7 +85,7 @@ claim eligibility for a particular Google rich result.
 Keep the canonical URL `https://wfform.com/` consistent across HTML,
 JSON-LD, sharing images, sitemap, pubspec and deployment configuration. If the
 public URL changes, update these together and the metadata tests. Local links
-and startup images stay relative, so root localhost development still works.
+and icon paths stay relative, so root localhost development still works.
 For publicly reachable temporary previews, configure the preview host to send
 `X-Robots-Tag: noindex`; localhost verification does not need this.
 
@@ -98,7 +104,8 @@ make build.public
 The focused tests validate canonical/sharing agreement, descriptive metadata,
 JSON-LD structure, local preview assets, public sitemap scope, readable static
 content and preserved PWA identity. Release/browser verification separately
-checks serving and Flutter startup; public indexing requires a reachable Pages site.
+checks serving, quiet startup and the failure/no-JavaScript fallbacks; public
+indexing requires a reachable Pages site.
 
 ## Sources checked on 2026-10-07
 
@@ -126,13 +133,17 @@ certify jurisdiction-specific legal compliance.
 
 The PWA only caches approved same-origin shell files. Google scripts, requests
 and responses are not included in that shell cache. Nginx permits the Google
-loader, a hash of the exact inline snippet and the specified analytics
-connection/image origins. Changing inline whitespace requires updating the
-CSP hash; regression tests check the actual snippet on every page. See
+loader, a hash of the exact analytics snippet and the specified analytics
+connection/image origins. The homepage's bootstrap-download guard has a separate
+exact script hash. When either inline snippet changes, including whitespace,
+update its hash in `deploy/nginx/headers.conf`; leave the other snippet's hash
+unchanged. Regression tests calculate both hashes from the HTML. Script execution
+does not allow `unsafe-inline`, and inline event-handler attributes remain
+disabled. See
 [Google's current CSP guidance](https://developers.google.com/tag-platform/security/guides/csp)
 (verified 2026-10-07) and the [Docker guide](guides/DOCKER.md).
 
-The Flutter footer and public documents display version **0.1.2**. When bumping
+The Flutter footer and public documents display version **0.1.3**. When bumping
 a release, update `pubspec.yaml`, `lib/app/app_identity.dart`, the static page
 footers and any structured version metadata together; deterministic tests
 check consistency. Footer information links open separately to retain the chat

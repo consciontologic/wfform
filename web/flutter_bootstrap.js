@@ -19,8 +19,10 @@ if (releaseBase) {
   }
 }
 function showStartupError(error) {
-  const loading = document.getElementById('loading');
-  if (loading) loading.textContent = 'wfform could not start. Reconnect and reload. ' + String(error).slice(0, 300);
+  const failure = document.getElementById('startup-error');
+  const details = document.getElementById('startup-error-details');
+  if (details) details.textContent = String(error).slice(0, 300);
+  if (failure) failure.hidden = false;
 }
 _flutter.loader.load({
   config: flutterConfiguration,
@@ -28,7 +30,7 @@ _flutter.loader.load({
     try {
       const appRunner = await engineInitializer.initializeEngine(flutterConfiguration);
       await appRunner.runApp();
-      document.getElementById('loading')?.remove();
+      document.getElementById('startup-error')?.remove();
     } catch (error) {
       showStartupError(error);
     }

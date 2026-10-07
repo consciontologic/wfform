@@ -159,3 +159,11 @@ Scope ID: footer-focus-patch. Requested 2026-10-07.
 - [x] Verify and publish version 0.1.2 with tests, release build and browser evidence.
 
 Completed patch evidence: [0.1.2 verification](../reports/footer-focus-patch-verification.md).
+
+## Phase 12 — Sidebar surface and quiet startup patch 0.1.3
+
+Scope ID: sidebar-startup-patch. Requested 2026-10-07.
+
+- [x] Extend the sidebar surface to its resize divider without changing accessible drag or collapse behavior.
+- [x] Remove the brief introductory startup screen while preserving failure recovery, metadata and public information pages.
+- [ ] Verify and publish version 0.1.3 with regression tests, release build and browser evidence.

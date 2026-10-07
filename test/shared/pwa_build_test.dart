@@ -217,6 +217,23 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
     expect(release.worker, isNot(contains('__BUILD_ID__')));
     expect(release.worker, isNot(contains('__PRECACHE_MANIFEST__')));
   });
+  test('real host keeps its bootstrap guard identity after URL stamping', () {
+    File('${source.path}/index.html').writeAsStringSync(
+      File(
+        'web/index.html',
+      ).readAsStringSync().replaceAll(r'$FLUTTER_BASE_HREF', '/'),
+    );
+    final release = build.prepareRelease(source, template);
+    final index = utf8.decode(release.assets['index.html']!);
+    expect(index, contains('<script id="bootstrap-load-guard">'));
+    expect(
+      index,
+      contains(
+        '<script id="flutter-bootstrap" src="__releases/${release.version}/flutter_bootstrap.js" async>',
+      ),
+    );
+    expect(index, isNot(contains('src="flutter_bootstrap.js"')));
+  });
   test('publishing creates complete immutable release before pointer files', () {
     final release = build.prepareRelease(source, template);
     final target = Directory('${scratch.path}/published');

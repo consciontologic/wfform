@@ -20,6 +20,9 @@ Text scaling can select a less dense arrangement. Controllers and focus nodes su
 
 The sidebar divider supports pointer/touch dragging and keyboard adjustment.
 The plain line has no grip icon. Arrow keys adjust in 16-pixel steps; Home/End select limits, Enter resets, and Escape collapses. Dragging to the left edge also collapses it. Hover the outermost left edge to preview navigation; moving away hides the preview. A keyboard-focusable edge target and tap access provide the same action without hover. Activating any sidebar item restores its default width and performs that action.
+The sidebar color extends through its half of the divider's touch target to
+the visible line; the other half matches the conversation surface. This avoids
+a light gutter without narrowing the draggable area and follows text direction.
 Its preferred width is saved locally on release, rather than writing storage
 on each pointer move. Width is bounded by the viewport and text size so the
 conversation retains usable space; switching to a drawer or navigation rail
@@ -58,6 +61,11 @@ The product mark encloses a conversation bubble in brackets, representing a wrap
 The footer groups the version and a plain GitHub text link on the left.
 Information links remain on the right, using an Info menu when space is limited.
 No GitHub logo or doodle is shipped on app or information pages.
+
+The web host shows only its theme-matched background before Flutter starts.
+There is no introductory product screen or transient footer. About remains a
+separate readable document. Startup failures and disabled JavaScript expose
+actionable fallback messages instead of failing silently.
 
 ## Resilience and trade-offs
 

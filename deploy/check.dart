@@ -130,7 +130,7 @@ void validateHeaders(Map<String, String> headers, {required bool https}) {
   final csp = headers['content-security-policy'] ?? '';
   for (final directive in [
     "default-src 'none'",
-    "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo='",
+    "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo=' 'sha256-ceOprgawj2RQrm546DhERntcne7eurN77Kn5b5l2zns='",
     "script-src-attr 'none'",
     "connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/ https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://analytics.google.com",
     "font-src 'self' data: https://fonts.gstatic.com/s/",
