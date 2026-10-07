@@ -22,14 +22,15 @@ String canonical(String html) {
 }
 
 void main() {
-  const origin = 'https://wfform.com';
+  const site = 'https://consciontologic.github.io/wfform.com/';
+  final siteUri = Uri.parse(site);
 
   test(
     'public documents agree on canonical, sharing and crawlable identity',
     () {
       for (final path in ['index.html', 'about.html']) {
         final html = document(path);
-        final url = '$origin/${path == 'index.html' ? '' : path}';
+        final url = '$site${path == 'index.html' ? '' : path}';
         expect(canonical(html), url);
         expect(meta(html, 'og:url'), url);
         expect(meta(html, 'og:site_name'), 'wfform');
@@ -45,8 +46,10 @@ void main() {
         expect(html, contains('<html lang="en">'));
         expect(RegExp('<h1[ >]').allMatches(html), hasLength(1));
         final image = Uri.parse(meta(html, 'og:image'));
-        expect(image.origin, origin);
-        expect(File('web${image.path}').existsSync(), isTrue);
+        expect(image.origin, siteUri.origin);
+        expect(image.path, startsWith(siteUri.path));
+        final imagePath = image.path.substring(siteUri.path.length);
+        expect(File('web/$imagePath').existsSync(), isTrue);
         expect(meta(html, 'twitter:image'), image.toString());
         expect(meta(html, 'og:image:alt'), isNotEmpty);
       }
@@ -63,9 +66,11 @@ void main() {
     final graph = (data['@graph'] as List).cast<Map<String, dynamic>>();
     final website = graph.singleWhere((node) => node['@type'] == 'WebSite');
     final app = graph.singleWhere((node) => node['@type'] == 'WebApplication');
-    expect(website['url'], '$origin/');
+    expect(website['url'], site);
+    expect(website['@id'], '$site#website');
     expect(website['name'], 'wfform');
-    expect(app['url'], '$origin/');
+    expect(app['url'], site);
+    expect(app['@id'], '$site#application');
     expect(app['applicationCategory'], 'ProductivityApplication');
     expect(app['browserRequirements'], contains('JavaScript'));
     expect(app['featureList'], isNotEmpty);
@@ -79,8 +84,9 @@ void main() {
     'sitemap publishes only public pages and robots permits app resources',
     () {
       final robots = document('robots.txt');
-      expect(robots, contains('Sitemap: $origin/sitemap.xml'));
+      expect(robots, contains('Sitemap: ${site}sitemap.xml'));
       expect(robots, contains('User-agent: *'));
+      expect(robots, contains('Disallow: /wfform.com/config/'));
       expect(robots, isNot(contains('Disallow: /\n')));
       expect(robots, isNot(contains('Disallow: /assets/')));
       expect(robots, isNot(contains('Disallow: /__releases/')));
@@ -88,7 +94,7 @@ void main() {
           .allMatches(document('sitemap.xml'))
           .map((match) => match.group(1))
           .toList();
-      expect(locations, unorderedEquals(['$origin/', '$origin/about.html']));
+      expect(locations, unorderedEquals([site, '${site}about.html']));
       expect(document('sitemap.xml'), isNot(contains('<lastmod>')));
     },
   );
@@ -104,6 +110,37 @@ void main() {
     expect(index, contains('href="about.html"'));
     expect(index, contains('<noscript>'));
   });
+
+  test(
+    'local navigation and icons work at the project subpath and localhost',
+    () {
+      for (final base in [siteUri, Uri.parse('http://localhost:8765/')]) {
+        final about = base.resolve('about.html');
+        expect(about.resolve('./'), base);
+        expect(
+          base.resolve('icons/Icon-192.png').path,
+          '${base.path}icons/Icon-192.png',
+        );
+        for (final path in ['index.html', 'about.html']) {
+          final html = document(path);
+          final localResources = RegExp('(?:src|href)="([^":]+)"')
+              .allMatches(html)
+              .map((match) => match.group(1)!)
+              .where((value) => !value.contains(r'$FLUTTER_BASE_HREF'));
+          for (final relative in localResources) {
+            expect(
+              relative,
+              isNot(startsWith('/')),
+              reason: '$path: $relative',
+            );
+            expect(base.resolve(relative).path, startsWith(base.path));
+          }
+        }
+      }
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('homepage: $site'));
+    },
+  );
 
   test(
     'PWA categories enrich discovery without changing installation identity',

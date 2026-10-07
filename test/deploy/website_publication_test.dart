@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../tool/build.dart';
+import '../../tool/content_hash.dart';
 import '../../tool/prepare_website.dart';
 
 void main() {
@@ -44,11 +45,69 @@ void main() {
       final first = prepareWebsite(source, target);
       expect(first.version, built.version);
       expect(first.changedPaths, contains('index.html'));
-      expect(File('${target.path}/CNAME').readAsStringSync(), 'wfform.com\n');
+      expect(File('${target.path}/CNAME').existsSync(), isFalse);
       expect(File('${target.path}/.nojekyll').existsSync(), isTrue);
       expect(prepareWebsite(source, target).changedPaths, isEmpty);
     },
   );
+
+  for (final alreadyRemoved in [false, true]) {
+    test('retires previously owned CNAME, already removed: $alreadyRemoved', () {
+      final prior = release('prior');
+      prepareWebsite(source, target);
+      // This is the actual format-1 ownership entry written by older releases.
+      final cname = File('${target.path}/CNAME')
+        ..writeAsStringSync('wfform.com\n');
+      final ownership = File('${target.path}/.wfform-deployment.json');
+      final previous =
+          jsonDecode(ownership.readAsStringSync()) as Map<String, dynamic>;
+      (previous['files'] as Map<String, dynamic>)['CNAME'] = sha256(
+        cname.readAsBytesSync(),
+      );
+      ownership.writeAsStringSync(jsonEncode(previous));
+      if (alreadyRemoved) cname.deleteSync();
+      release('next');
+      final result = prepareWebsite(source, target);
+      expect(cname.existsSync(), isFalse);
+      expect(result.changedPaths.contains('CNAME'), !alreadyRemoved);
+      expect(
+        (jsonDecode(ownership.readAsStringSync()) as Map)['files'],
+        isNot(contains('CNAME')),
+      );
+      expect(
+        File(
+          '${target.path}/__releases/${prior.version}/index.html',
+        ).existsSync(),
+        isTrue,
+      );
+      expect(prepareWebsite(source, target).changedPaths, isEmpty);
+    });
+  }
+
+  test('unowned custom-domain file stops publication without deleting it', () {
+    release('first');
+    final cname = File('${target.path}/CNAME')
+      ..writeAsStringSync('another.example\n');
+    expect(() => prepareWebsite(source, target), throwsStateError);
+    expect(cname.readAsStringSync(), 'another.example\n');
+    expect(target.listSync().length, 1);
+  });
+
+  test('manually changed owned CNAME is preserved and reported', () {
+    release('first');
+    prepareWebsite(source, target);
+    final ownership = File('${target.path}/.wfform-deployment.json');
+    final previous =
+        jsonDecode(ownership.readAsStringSync()) as Map<String, dynamic>;
+    (previous['files'] as Map<String, dynamic>)['CNAME'] = sha256(
+      utf8.encode('wfform.com\n'),
+    );
+    ownership.writeAsStringSync(jsonEncode(previous));
+    final cname = File('${target.path}/CNAME')
+      ..writeAsStringSync('human-edit.example\n');
+    expect(() => prepareWebsite(source, target), throwsStateError);
+    expect(cname.readAsStringSync(), 'human-edit.example\n');
+  });
 
   test(
     'preserves unmanaged files and old immutable assets, removes owned aliases',

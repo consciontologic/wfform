@@ -2,7 +2,7 @@
 # configured separately as com.wfform in their platform projects.
 name: wfform
 description: Discover free OpenRouter AI models and chat with streaming responses, local conversation history, and supported file attachments.
-homepage: https://wfform.com/
+homepage: https://consciontologic.github.io/wfform.com/
 repository: https://github.com/consciontologic/wfform
 issue_tracker: https://github.com/consciontologic/wfform/issues
 topics:

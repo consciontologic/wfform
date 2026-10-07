@@ -11,6 +11,7 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Native application identifier clarification | 1 | 1 | Complete; native configuration and web regression checks passed; native binaries unverified |
 | Search metadata, web publishing and brand mark | 3 | 3 | Complete locally; public hosting and search indexing remain separate |
 | GitHub account migration | 3 | 3 | Complete; fresh history and real compiled-artifact publication verified |
+| Free GitHub Pages hosting | 2 | 1 | Public subpath build verified; live publication and browser checks in progress |
 
 ## Established application baseline
 
@@ -96,3 +97,11 @@ authorized a fresh Git history, source push and pipeline launch.
 - [x] Start the new account's workflow and verify the compiled web files reach the new publication repository; report any external blocker precisely.
 
 Completed evidence: [account migration and real publication](../reports/account-migration-verification.md). Public Pages/DNS serving remains a separate hosting step.
+
+## Phase 6 — Free GitHub Pages hosting
+
+Scope ID: github-pages. Requested 2026-10-07; the user clarified that they do
+not own `wfform.com` and chose the free GitHub project URL.
+
+- [x] Adapt the public build, publishing ownership, metadata and guides for `https://consciontologic.github.io/wfform.com/`, keeping root local/Docker serving intact.
+- [ ] Enable Pages with no custom domain, publish the release and verify live HTTPS, browser startup, catalog and PWA scope.

@@ -65,3 +65,13 @@ The verification report records the actual browsers and outcomes. Manifest/unit 
 Settings offers an explicit offline-cache inspection. The browser adapter reads service-worker registration/controller states and counts request keys in this application's cache generations. It reports counts of configuration paths, API paths, authorization-bearing requests, query-bearing requests and cross-origin requests as possible cache-policy violations. It does not read cached response content, header values, API credentials or URL queries. Only application-owned generations are inspected, with bounds on exceptionally large damaged storage.
 
 The same snapshot aggregates the browser's Resource Timing entries since the current navigation: same-origin/configuration request counts, OpenRouter catalog/endpoint/chat counts and loaded same-origin JavaScript transfer/body sizes. These are observations from the browser's bounded timing buffer, not an assertion that every request since startup was retained. Service-worker installation requests are not included in the page's resource buffer, and cached delivery or timing restrictions may report zero bytes. Inspect immediately after launch for startup observations; later inspections include subsequent interactions. The snapshot can be recorded in the normal sanitized diagnostics surface and exported without conversation content.
+
+## GitHub Pages project path
+
+The public deployment uses `https://consciontologic.github.io/wfform.com/`.
+`make build.public` sets `/wfform.com/` as Flutter's base. Manifest `id`,
+`start_url`, icons and scope stay relative; the worker is registered under
+`/wfform.com/service_worker.js` and caches release assets under the same scope.
+Local development and Docker keep their root deployment behavior. Browser-local
+history is origin-scoped: localhost conversations do not automatically appear
+on `consciontologic.github.io`; use history export/import to transfer them.

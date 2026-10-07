@@ -72,3 +72,12 @@ the new account. The new account's API-triggered run completed successfully and
 published compiled files. See the [migration report](../reports/account-migration-verification.md)
 for root commit, workflow run, destination commit and integrity evidence. Pages/DNS
 serving remains separate.
+
+## Free public hosting — 2026-10-07
+
+The user clarified they do not own `wfform.com` and requested the free URL
+`https://consciontologic.github.io/wfform.com/`. This supersedes custom-domain
+assumptions in dated reports. Publish with base `/wfform.com/`, leave Pages'
+custom domain empty and do not generate `CNAME`. Public SEO metadata uses the
+GitHub URL. Localhost/Docker remain rooted at `/`; history stays origin-scoped.
+The user authorized hosting and the associated source/publication updates.

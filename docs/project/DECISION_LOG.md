@@ -50,3 +50,12 @@ using the same `WFFORM_DEPLOY_TOKEN` secret name. This is a source/account
 migration; the canonical website origin, PWA identity, stored conversations
 and application behavior remain unchanged. The user authorized the source push
 and API-triggered pipeline for this migration.
+
+## Free GitHub Pages address — 2026-10-07
+
+After Pages was enabled, DNS checks found `wfform.com` undelegated. The user
+confirmed they do not own it and chose the free project address
+`https://consciontologic.github.io/wfform.com/`. Use that canonical URL, build
+public releases under `/wfform.com/`, and remove the custom-domain setting and
+legacy owned `CNAME`. The publication repository remains `consciontologic/wfform.com`.
+No domain purchase or DNS administration is needed.

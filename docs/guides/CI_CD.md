@@ -61,27 +61,31 @@ provide their own key in Settings. Local `config/local.json` is excluded by
 `--public`; the publisher also refuses configuration directories and recognizable
 credential-bearing output.
 
-## Enable the website
+## Free GitHub Pages hosting
 
-1. Add the source secret, then push the workflow to source `main` or use
-   **Actions → Web checks and publish → Run workflow** on `main`.
-2. After the first successful publication creates destination `main`, open
-   `consciontologic/wfform.com` **Settings → Pages**. Choose **Deploy from a branch**,
-   branch **main**, folder **/(root)**, and save.
-3. Set the custom domain to **wfform.com** in those Pages settings. Configure
-   and verify the domain's DNS using GitHub's
-   [custom-domain guide](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
-   Enable **Enforce HTTPS** once GitHub issues the certificate.
-4. Check destination **Actions** for the Pages deployment and visit
-   `https://wfform.com/`. Verify the catalog, Settings, offline shell and update
-   flow on the public origin before calling the public deployment verified.
+The public URL is **https://consciontologic.github.io/wfform.com/**. The user
+does not own `wfform.com`; that name identifies the publication repository,
+not a custom domain. No domain registration or DNS changes are needed.
 
-The workflow writes `CNAME` and `.nojekyll`. The latter allows the static
-`__releases/` directory to be served without Jekyll processing. A repository
-named `wfform.com` alone does not configure DNS or a custom domain. The build's
-root base path and canonical metadata assume `https://wfform.com/`; the default
-project URL `https://consciontologic.github.io/wfform.com/` is not the supported base path.
-See [Pages publishing settings](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+1. In `consciontologic/wfform.com` **Settings → Pages**, select
+   **Deploy from a branch**, branch **main**, folder **/(root)**.
+2. Leave **Custom domain** empty and use HTTPS. The publisher must not create
+   a `CNAME` file; GitHub supplies the `github.io` domain and certificate.
+3. Push source changes to `consciontologic/wfform` main or manually dispatch
+   **Web checks and publish**. The compiled files are committed to the website
+   repository; its separate **pages build and deployment** run serves them.
+4. Visit **https://consciontologic.github.io/wfform.com/** with the trailing
+   slash. Verify the catalog, model chooser, Settings and offline shell.
+
+`make build.public` and CI build with **`--base-href=/wfform.com/`**. Flutter
+bootstrap, fonts, CanvasKit, manifest and service worker resolve under that
+subpath. Local `make build`, `make serve` and Docker builds retain the `/` base.
+Do not serve the public subpath build at an unrelated root URL.
+
+The publisher writes `.nojekyll` so immutable `__releases/` assets are served.
+During migration it retires an unchanged, previously owned `CNAME`; an unowned
+or manually changed `CNAME` is a visible conflict. Prior immutable releases
+remain available to old clients. See [Pages publishing settings](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 This uses a personal token because destination commits made using the built-in
 `GITHUB_TOKEN` do not trigger branch-based Pages builds. The source workflow
@@ -92,7 +96,8 @@ publishes files; the destination's Pages deployment is a separate status check.
 [`prepare_website.dart`](../../tool/prepare_website.dart) validates the format-2
 release manifest, byte sizes and SHA-256 hashes for both root aliases and their
 immutable counterparts. Only allowlisted release files, worker/manifest files,
-`CNAME`, `.nojekyll` and `.wfform-deployment.json` can be managed. The latter
+`.nojekyll` and `.wfform-deployment.json` can be managed; a legacy owned `CNAME`
+can be removed during migration. The latter
 records owned paths and hashes and must stay in the destination repository.
 
 Unrelated files, `.git`, documentation and existing history are preserved.
@@ -121,7 +126,7 @@ From the project root:
 flutter pub get --enforce-lockfile
 make verify
 python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v
-dart run tool/build.dart --public --output=build/publish-web --base-href=/
+dart run tool/build.dart --public --output=build/publish-web --base-href=/wfform.com/
 dart run tool/prepare_website.dart build/publish-web work/website-preview
 flutter test test/deploy/website_publication_test.dart test/deploy/website_workflow_test.dart --reporter expanded
 bash -n deploy/scripts/publish-website.sh

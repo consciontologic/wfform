@@ -29,8 +29,8 @@ Future<void> main(List<String> args) async {
   }
   if (baseHref != null &&
       (skip ||
-          !RegExp(r'^/[A-Za-z0-9_/-]*$').hasMatch(baseHref) ||
-          !baseHref.endsWith('/'))) {
+          !RegExp(r'^/(?:[A-Za-z0-9_.-]+/)*$').hasMatch(baseHref) ||
+          baseHref.split('/').any((part) => part == '.' || part == '..'))) {
     throw ArgumentError(
       '--base-href needs a full build and an absolute directory path ending in /.',
     );

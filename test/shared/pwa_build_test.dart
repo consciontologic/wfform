@@ -31,6 +31,61 @@ void main() {
   });
   tearDown(() => scratch.deleteSync(recursive: true));
 
+  test(
+    'CLI forwards a dotted Pages base and rejects traversal before compiling',
+    () async {
+      final bin = Directory('${scratch.path}/bin')..createSync();
+      final arguments = File('${scratch.path}/flutter-arguments').absolute;
+      final flutter = File('${bin.path}/flutter')
+        ..writeAsStringSync(r'''#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$@" > "$TEST_BUILD_ARGUMENTS"
+for arg in "$@"; do
+  case "$arg" in
+    --output=*) output="${arg#--output=}" ;;
+    --base-href=*) base="${arg#--base-href=}" ;;
+  esac
+done
+mkdir -p "$output"
+printf '<base href="%s"><script src="flutter_bootstrap.js" async></script>' "$base" > "$output/index.html"
+printf 'const releasePath = "__RELEASE_BASE__";' > "$output/flutter_bootstrap.js"
+printf 'fixture' > "$output/main.dart.js"
+printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
+''');
+      expect((await Process.run('chmod', ['700', flutter.path])).exitCode, 0);
+      final target = Directory('${scratch.path}/cli-public');
+      Future<ProcessResult> compile(String base) => Process.run(
+        'dart',
+        [
+          'tool/build.dart',
+          '--public',
+          '--output=${target.path}',
+          '--base-href=$base',
+        ],
+        environment: {
+          'PATH': '${bin.absolute.path}:${Platform.environment['PATH']}',
+          'TEST_BUILD_ARGUMENTS': arguments.path,
+        },
+      );
+      final result = await compile('/wfform.com/');
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      expect(
+        arguments.readAsStringSync(),
+        contains('--base-href=/wfform.com/'),
+      );
+      expect(
+        File('${target.path}/index.html').readAsStringSync(),
+        contains('<base href="/wfform.com/">'),
+      );
+      expect(File('${target.path}/config/local.json').existsSync(), isFalse);
+      arguments.deleteSync();
+      for (final invalid in ['/../', '/./', '//', '/wfform.com']) {
+        expect((await compile(invalid)).exitCode, isNot(0), reason: invalid);
+        expect(arguments.existsSync(), isFalse, reason: invalid);
+      }
+    },
+  );
+
   test('public SEO documents are hashed and published with the shell', () {
     for (final path in ['about.html', 'robots.txt', 'sitemap.xml']) {
       File('${source.path}/$path').writeAsStringSync('public fixture $path');
