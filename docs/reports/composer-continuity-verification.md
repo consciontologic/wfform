@@ -1,7 +1,7 @@
 # Composer continuity patch 0.2.1 — 2026-10-07
 
-Status: implementation, local release gates and browser checks passed;
-publication is pending. The baseline is source
+Status: implementation, local release gates, browser checks and publication
+passed. The baseline is source
 commit `3d92924`. Package version is `0.2.1+6`; app and static page footers show
 0.2.1. Earlier release evidence remains in the
 [0.2.0 report](conversation-drafts-verification.md).
@@ -79,9 +79,19 @@ retained both attachments. No browser console errors were observed. Screenshots
 are retained in ignored `outputs/021-mobile-draft.jpg` and
 `outputs/021-desktop-draft.jpg`.
 
-## Remaining verification and publication
+## Publication and verification limits
 
-Publication and public-release verification remain pending.
+Source commit `2c755b5` passed GitHub CI
+[37675339117](https://github.com/consciontologic/wfform/actions/runs/37675339117),
+including analysis/tests, repository operations, Chromium storage, release build,
+artifact validation and publishing. Website commit `94b24a2` passed GitHub Pages
+[37675720016](https://github.com/consciontologic/wfform.com/actions/runs/37675720016).
+The website repository and `https://wfform.com/release.json` match the exact local
+release above. Downloaded public JavaScript, index, About, Terms, Liability and
+manifest SHA-256 hashes all match the local release manifest.
+An isolated verification tab on the public origin offered **Save & update**
+from cached 0.2.0 and displayed **Version 0.2.1** after applying it. The existing
+user tab was left untouched. Public screenshot: `outputs/021-public-release.jpg`.
 
 No new live chat POST was made for this patch. Saved-key continuity is covered
 by the executed regression/storage tests, not a new manual key-entry test. No new

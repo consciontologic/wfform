@@ -203,4 +203,5 @@ analysis, repository checks, seven Chromium storage checks, 14 operation tests,
 CodeGraph and the final public build passed. Actual browser checks retained typed
 text and Markdown/PNG attachments through model changes, same-tab About → Open
 app, Save & update, browser Back and reload. File previews reopened and live
-resizing passed at 390×844, 820×1180 and 1440×900. Publication remains pending.
+resizing passed at 390×844, 820×1180 and 1440×900. CI run 37675339117 and Pages
+run 37675720016 passed; public release and checked asset hashes match the local build.

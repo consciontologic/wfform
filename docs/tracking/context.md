@@ -197,3 +197,7 @@ Back, reload, PWA update and compact/medium/expanded resizing. File previews
 reopened after reload. No new inference POST was needed for this patch. See the
 [0.2.1 report](../reports/composer-continuity-verification.md) for the exact build
 identity and publication status.
+
+Source `2c755b5` passed CI 37675339117; website `94b24a2` passed Pages
+37675720016. The public release manifest and checked JavaScript, HTML and web
+manifest hashes match the locally verified 0.2.1 build.
