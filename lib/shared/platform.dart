@@ -52,6 +52,12 @@ abstract class PlatformBridge extends ChangeNotifier {
     throw UnsupportedError('Opening links requires a platform adapter.');
   }
 
+  /// Leave for an information page in this browser tab, preserving tab-local
+  /// recovery metadata. Caller must finish pending work and save drafts first.
+  void navigateTo(Uri url) {
+    throw UnsupportedError('Page navigation requires a platform adapter.');
+  }
+
   /// A user-selected local text export; no network operation is performed.
   Future<String?> importText({int maxBytes = 64 * 1024 * 1024}) async => null;
 }

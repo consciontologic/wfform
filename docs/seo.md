@@ -143,10 +143,12 @@ disabled. See
 [Google's current CSP guidance](https://developers.google.com/tag-platform/security/guides/csp)
 (verified 2026-10-07) and the [Docker guide](guides/DOCKER.md).
 
-The Flutter footer and public documents display version **0.2.0**. When bumping
+The Flutter footer and public documents display version **0.2.1**. When bumping
 a release, update `pubspec.yaml`, `lib/app/app_identity.dart`, the static page
 footers and any structured version metadata together; deterministic tests
-check consistency. Footer information links open separately to retain the chat
-and draft. A plain GitHub source link sits beside the version on the left,
+check consistency. Footer information links open in the same tab after a
+successful draft checkpoint, retaining that tab's restoration identity. Active
+requests, file picking and failed saves prevent leaving the app. The GitHub
+source link opens separately and sits beside the version on the left,
 without logo artwork on any page. Compact layouts use an Info menu; the footer yields space while
 a software keyboard is open.

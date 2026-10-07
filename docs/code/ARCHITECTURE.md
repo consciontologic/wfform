@@ -1,6 +1,6 @@
 # wfform architecture
 
-Updated 2026-10-06. This describes the implemented Flutter application; active additions and their acceptance gates are tracked in the [roadmap](../planning/ROADMAP.md).
+Updated 2026-10-07. This describes the implemented Flutter application; active additions and their acceptance gates are tracked in the [roadmap](../planning/ROADMAP.md).
 
 ## System boundary
 
@@ -33,7 +33,7 @@ Widgets consume controllers and domain values. HTTP requests and response parsin
 
 1. Bootstrap creates defaults and renders Flutter before waiting for network configuration. Local history loading, PWA registration and configuration loading have separate readiness. A failed local history operation does not erase its database.
 2. A cached catalog is validated and displayed immediately where available. Once configuration is settled, one deduplicated public refresh discovers all output modalities. Bad refreshes retain the last valid catalog. Provisional empty-key configuration cannot overwrite durable real-key health observations.
-3. The user explicitly selects a compatible free model. A different model starts another conversation. If selection disappears or relevant metadata changes, the application requires a valid selection instead of switching models.
+3. The user explicitly selects a compatible free model. Model changes retain unsent composer text and files: an empty-history workspace changes model in place, while message-bearing histories stay separate and the composer is carried to a new workspace. An empty composer can resume a saved target-model draft. If selection disappears or relevant metadata changes, the application requires a valid selection instead of switching models.
 4. Send validates the current model, context estimate, attachment compatibility and cooldown before accepting a turn. Stale selected-model health triggers a small bounded probe; there is no mass inference probing at startup.
 5. Accepted draft text and attachments become a user message and the composer clears. The adapter sends the chosen ID with zero-price provider guards and no provider fallback. Its dispatch callback promotes a draft to chat history; accepting input or probing health alone does not. Incremental response text and optional returned reasoning are batched into the active assistant message.
 6. Terminal success or failure preserves received output, usage and timing where supplied. Retrying, continuing or editing/resending is explicit. History checkpoints persist changes without rewriting unchanged attachment bytes.
@@ -53,6 +53,8 @@ History belongs to an origin, including its port. Moving the source directory do
 ## Lifetimes and bounded work
 
 Controllers outlive responsive layout branches, preserving draft, selection, focus and pending work while resizing. Catalog refreshes, quota reads and health probes deduplicate in-flight work. Health concurrency is two. Chat has first-useful-output, idle and overall deadlines, with immediate cancellation and terminal flushing. Content retries are never automatic.
+
+Internal information-page navigation shares the same tab and waits for a successful history checkpoint. It refuses active requests, file picking and competing history transitions. This preserves the tab-local restoration identity through About and its Open app link without introducing a global active conversation across tabs. External source links remain separate-tab actions.
 
 Conversation length, response text, catalog bytes/pages, attachment count/size, stored histories and diagnostics are bounded. The current defaults and validation constraints are listed in the [configuration reference](../guides/README.md#configuration). Long model/history lists build lazily. Narrow status notifications avoid treating every streamed character as an application-wide state change.
 

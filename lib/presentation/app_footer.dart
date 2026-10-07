@@ -7,7 +7,7 @@ import '../app/theme.dart';
 import '../shared/diagnostics.dart';
 import 'selectable_surface.dart';
 
-/// A compact route to product information without replacing the active chat.
+/// Information pages reuse this tab so their return links recover its draft.
 class AppFooter extends StatelessWidget {
   const AppFooter({super.key, required this.state});
   final StudioState state;
@@ -18,12 +18,31 @@ class AppFooter extends StatelessWidget {
     'Liability': 'liability.html',
   };
 
-  void _open(BuildContext context, String destination) {
+  Future<void> _open(BuildContext context, String destination) async {
     final uri = Uri.base.resolve(destination);
     try {
-      // Synchronous activation preserves the browser's user-gesture allowance.
-      state.platform.openUrl(uri);
+      if (_information.containsValue(destination)) {
+        final ready = await state.prepareToLeave();
+        if (!context.mounted) return;
+        if (!ready) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.historyError?.message ??
+                    state.conversationNotice ??
+                    'Your draft could not be saved. Stay here and try again.',
+              ),
+            ),
+          );
+          return;
+        }
+        state.platform.navigateTo(uri);
+      } else {
+        // External links retain synchronous activation for popup allowance.
+        state.platform.openUrl(uri);
+      }
     } catch (_) {
+      if (!context.mounted) return;
       state.diagnostics.record(
         'link.open',
         failure: const AppFailure(
@@ -108,7 +127,7 @@ class AppFooter extends StatelessWidget {
                       value: entry.value,
                       child: Semantics(
                         link: true,
-                        hint: 'Opens in a new tab',
+                        hint: 'Saves your draft and opens in this tab',
                         child: Text(entry.key),
                       ),
                     ),
@@ -145,7 +164,7 @@ class AppFooter extends StatelessWidget {
                     'footer-${entry.key.toLowerCase().split(' ').first}',
                   ),
                   link: true,
-                  hint: 'Opens in a new tab',
+                  hint: 'Saves your draft and opens in this tab',
                   child: TextButton(
                     onPressed: () => _open(context, entry.value),
                     style: buttonStyle,

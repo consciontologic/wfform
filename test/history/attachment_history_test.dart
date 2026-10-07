@@ -247,7 +247,7 @@ void main() {
   );
 
   test(
-    'New resumes unsent files and model switches isolate them; removals persist',
+    'New and model switches retain unsent files; removals persist',
     () async {
       final h = AttachmentHarness();
       addTearDown(h.state.dispose);
@@ -259,8 +259,10 @@ void main() {
       expect(h.state.activeConversationId, original);
       expect(h.state.draftAttachments.single.id, firstFile);
       expect(await h.state.selectModel(otherModel), true);
-      expect(h.state.draftAttachments, isEmpty);
-      expect(await h.state.openConversation(original), true);
+      expect(h.state.draftAttachments.single.id, firstFile);
+      expect(h.state.attachmentError?.kind, FailureKind.configuration);
+      expect(await h.state.selectModel(imageModel), true);
+      expect(h.state.attachmentError, isNull);
       expect(h.state.draftAttachments.single.id, firstFile);
 
       h.picker.files = [pickedPng('second.png')];
@@ -287,7 +289,15 @@ void main() {
       await h.initialize();
       await h.pick();
       final damagedId = h.state.activeConversationId!;
-      await h.state.selectModel(otherModel);
+      await h.repository.save(
+        (await h.repository.read(damagedId))!.copyWith(
+          id: 'separate-active-draft',
+          draftAttachments: [],
+          modelId: otherModel.id,
+          modelName: otherModel.name,
+        ),
+      );
+      await h.state.openConversation('separate-active-draft');
       final active = h.state.activeConversationId!;
       h.state.setDraft('Keep the current draft');
       await h.state.flushHistory();

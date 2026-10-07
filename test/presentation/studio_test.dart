@@ -247,7 +247,10 @@ void main() {
       expect(h.state.catalog.selectedId, 'test/second');
       expect(h.state.activeConversationId, isNot(firstId));
       expect(h.state.chat.messages, isEmpty);
-      expect(tester.widget<TextField>(composer).controller!.text, isEmpty);
+      expect(
+        tester.widget<TextField>(composer).controller!.text,
+        'Continue Alpha later',
+      );
       await tester.enterText(composer, 'Beta draft');
       await h.state.flushHistory();
       await tester.pumpAndSettle();

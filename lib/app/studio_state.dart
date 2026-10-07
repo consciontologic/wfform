@@ -1078,16 +1078,53 @@ class StudioState extends ChangeNotifier {
         return true;
       }
       if (!await flushHistory()) return false;
-      final unboundDraft =
-          _activeRecord?.modelId == null &&
+      final hasComposition = draft.isNotEmpty || _draftAttachments.isNotEmpty;
+      final carriesComposition = !activeConversationArchived && hasComposition;
+      final hasDestinationDraft = _history.any(
+        (entry) =>
+            entry.id != activeConversationId &&
+            entry.isDraft &&
+            !entry.archived &&
+            entry.modelId == currentModel.id,
+      );
+      final canRebindDraft =
+          _activeRecord != null &&
+          !activeConversationArchived &&
           !chat.hasDispatchedUserContent &&
           chat.messages.isEmpty;
-      if (unboundDraft && _activeRecord != null) {
+      if (canRebindDraft && (hasComposition || !hasDestinationDraft)) {
+        // Before a turn is accepted, the model belongs to the composition.
+        // Keep its identity and files instead of opening an unrelated draft.
         await _activateWorkspace(
-          _activeRecord!.copyWith(modelId: model.id, modelName: model.name),
+          _activeRecord!.copyWith(
+            modelId: currentModel.id,
+            modelName: currentModel.name,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+      } else if (carriesComposition) {
+        // Accepted turns keep their original model. Carry only the composer
+        // into a new workspace; existing source/destination records stay intact.
+        await _activateWorkspace(
+          _blankRecord(
+            currentModel,
+          ).copyWith(draft: draft, draftAttachments: _draftAttachments),
         );
       } else {
-        await _resumeDraftWorkspace(model);
+        await _resumeDraftWorkspace(currentModel);
+      }
+      if (carriesComposition && hasDestinationDraft) {
+        conversationNotice =
+            'Your current composition followed the selected model. Its other saved draft is still available in Drafts.';
+      }
+      if (_draftAttachments.isNotEmpty) {
+        try {
+          validateAttachments(_draftAttachments, model: currentModel);
+        } on AppFailure catch (failure) {
+          // Changing capabilities must not discard already selected files.
+          // Sending validates them again; users can remove them or switch back.
+          attachmentError = failure;
+        }
       }
       historyError = null;
       return true;
@@ -1110,6 +1147,18 @@ class StudioState extends ChangeNotifier {
     } catch (error) {
       _historyFailure(error);
       return false;
+    } finally {
+      _historySwitching = false;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
+  /// Same-tab information navigation must commit the composition before the
+  /// Flutter page is unloaded. Active work follows the normal navigation guard.
+  Future<bool> prepareToLeave() async {
+    if (_disposed || !_beginHistoryNavigation()) return false;
+    try {
+      return await flushHistory() && !_disposed;
     } finally {
       _historySwitching = false;
       if (!_disposed) notifyListeners();

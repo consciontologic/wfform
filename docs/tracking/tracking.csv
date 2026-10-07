@@ -23,3 +23,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-07T18:20:06Z,wfform-drafts-020,codex,codegraph,note,completed,"Refreshed Dart graph: 151 files, 2048 nodes, 8579 edges; eight MCP tools verified.",docs/reports/conversation-drafts-verification.md,
 2026-10-07T18:20:06Z,wfform-drafts-020,codex,conversation-drafts,commit,completed,feat(chat): preserve drafts and saved connections in 0.2.0,docs/reports/conversation-drafts-verification.md,pending
 2026-10-07T18:29:39Z,wfform-drafts-020-evidence,codex,release-evidence,commit,completed,docs(release): record verified 0.2.0 publication,docs/reports/conversation-drafts-verification.md;https://github.com/consciontologic/wfform/actions/runs/37666068066,pending
+2026-10-07T19:32:56Z,wfform-composer-021,codex,codegraph,note,completed,Refreshed CodeGraph and verified eight tools for composer continuity changes,docs/reports/composer-continuity-verification.md,
+2026-10-07T19:32:56Z,wfform-composer-021,codex,composer-continuity,commit,completed,fix(chat): preserve compositions across navigation in 0.2.1,docs/reports/composer-continuity-verification.md,pending

@@ -284,7 +284,16 @@ void main() {
       await h.state.selectModel(testModel);
       final first = h.state.activeConversationId!;
       h.state.setDraft('First saved draft');
-      await h.state.selectModel(secondModel);
+      await h.state.flushHistory();
+      await repository.save(
+        (await repository.read(first))!.copyWith(
+          id: 'separate-departing-draft',
+          modelId: secondModel.id,
+          modelName: secondModel.name,
+          draft: '',
+        ),
+      );
+      await h.state.openConversation('separate-departing-draft');
       final second = h.state.activeConversationId!;
       h.state.setDraft('Second departing draft');
       repository.gate = Completer<void>();
@@ -333,18 +342,35 @@ void main() {
   );
 
   test(
-    'model changes save old draft and create isolated model-bound histories',
+    'model changes retain sent history and carry the current composer',
     () async {
       final h = HistoryHarness();
       addTearDown(h.state.dispose);
       await h.initialize();
       expect(await h.state.selectModel(testModel), isTrue);
       final originalId = h.state.activeConversationId!;
+      expect(
+        h.state.chat.restoreSession(
+          jsonEncode({
+            'version': 1,
+            'messages': [
+              {
+                'role': 'user',
+                'content': 'Find this saved draft',
+                'reasoning': '',
+                'complete': true,
+                'modelId': testModel.id,
+              },
+            ],
+          }),
+        ),
+        isTrue,
+      );
       h.state.setDraft('Find this saved draft');
       expect(await h.state.selectModel(secondModel), isTrue);
       final secondId = h.state.activeConversationId!;
       expect(secondId, isNot(originalId));
-      expect(h.state.draft, isEmpty);
+      expect(h.state.draft, 'Find this saved draft');
       expect((await h.repo.read(originalId))!.draft, 'Find this saved draft');
       expect((await h.repo.read(originalId))!.title, 'Find this saved draft');
       h.state.setDraft('Second draft');
@@ -443,7 +469,15 @@ void main() {
       await restored.initialize();
       expect(restored.state.activeConversationId, original);
       expect(restored.state.draft, 'Latest character 🌿');
-      await restored.state.selectModel(secondModel);
+      await h.repo.save(
+        (await h.repo.read(original))!.copyWith(
+          id: 'other-conversation',
+          modelId: secondModel.id,
+          modelName: secondModel.name,
+          draft: '',
+        ),
+      );
+      await restored.state.openConversation('other-conversation');
       final other = restored.state.activeConversationId!;
       expect(other, isNot(original));
       expect(restored.state.draft, isEmpty);
@@ -519,6 +553,23 @@ void main() {
       await h.initialize();
       await h.state.selectModel(testModel);
       final id = h.state.activeConversationId!;
+      expect(
+        h.state.chat.restoreSession(
+          jsonEncode({
+            'version': 1,
+            'messages': [
+              {
+                'role': 'user',
+                'content': 'Historical turn',
+                'reasoning': '',
+                'complete': true,
+                'modelId': testModel.id,
+              },
+            ],
+          }),
+        ),
+        isTrue,
+      );
       h.state.setDraft('Keep original');
       await h.state.selectModel(secondModel);
       h.state.catalog.models = [secondModel];

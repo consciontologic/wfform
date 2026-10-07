@@ -493,6 +493,14 @@ class BrowserPlatformBridge extends PlatformBridge {
   }
 
   @override
+  void navigateTo(Uri url) {
+    if (url.scheme != 'https' && url.scheme != 'http') {
+      throw ArgumentError.value(url.scheme, 'url.scheme', 'Expected HTTP(S)');
+    }
+    web.window.location.assign(url.toString());
+  }
+
+  @override
   void exportText(String filename, String content) {
     final blob = web.Blob(
       [content.toJS].toJS,

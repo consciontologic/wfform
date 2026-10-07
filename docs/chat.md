@@ -82,7 +82,7 @@ Retry reuses the original user turn/files/model and keeps old failed attempts vi
 
 Attachment formats, size/signature checks and capability validation are described in [multimodal.md](multimodal.md). Attachment-only messages are supported. Retained outbound PDFs force native file parsing, preventing a paid OCR fallback. Conversation/message/response/session limits remain bounded; at the message count limit start a new conversation rather than silently deleting turns.
 
-`exportSessionData()` exposes a structured session; `exportSession()`/`restoreSession()` retain JSON compatibility. `lib/features/history/` owns record validation/IndexedDB; `StudioState` coordinates checkpoints and navigation. Reloaded unfinished attempts are interrupted and never resume automatically. Another model starts another saved conversation. Archived histories are read-only until restored. See [history.md](history.md).
+`exportSessionData()` exposes a structured session; `exportSession()`/`restoreSession()` retain JSON compatibility. `lib/features/history/` owns record validation/IndexedDB; `StudioState` coordinates checkpoints and navigation. Reloaded unfinished attempts are interrupted and never resume automatically. Changing models retains unsent composer input while keeping message-bearing histories separate; incompatible files remain visible and block sending. Archived histories are read-only until restored. See [history.md](history.md).
 
 Diagnostics omit prompts, answers, reasoning, attachments and raw upstream bodies. Structural codes, field paths, HTTP status, provider/correlation metadata, and aggregate timing/usage remain available.
 

@@ -19,6 +19,7 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Footer, documentation and composer focus patch 0.1.2 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
 | Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
 | Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
+| Composer continuity patch 0.2.1 | 3 | 2 | Implemented; local gates/build and main browser paths passed, additional browser checks and publication pending |
 
 ## Established application baseline
 
@@ -186,3 +187,20 @@ Scope ID: conversation-drafts. Requested 2026-10-07.
 - [x] Return to a writable draft after archiving the active conversation, preserving archived history.
 - [x] Remember the explicitly saved OpenRouter key across browser restarts, including replacement and removal, with visible storage failures.
 - [x] Verify and publish version 0.2.0 with regression tests, a release build and browser evidence.
+
+## Phase 14 — Composer continuity patch 0.2.1
+
+Scope ID: composer-continuity-patch. Requested 2026-10-07.
+
+- [x] Keep unsent text and files visible when changing models, without mixing existing message histories or overwriting a destination draft.
+- [x] Preserve the current workspace through About, Terms and Liability navigation by saving first and returning within the same tab; refuse unsafe navigation and expose failures.
+- [x] Verify version 0.2.1 with regression tests, release build and actual browser return/reload checks before publication.
+
+Current findings and verification status: [0.2.1 composer continuity](../reports/composer-continuity-verification.md).
+
+Local evidence: 488 deterministic tests passed with one opt-in skip; formatting,
+analysis, repository checks, seven Chromium storage checks, 14 operation tests,
+CodeGraph and the final public build passed. Actual browser checks retained typed
+text and Markdown/PNG attachments through model changes, same-tab About → Open
+app, Save & update, browser Back and reload. File previews reopened and live
+resizing passed at 390×844, 820×1180 and 1440×900. Publication remains pending.

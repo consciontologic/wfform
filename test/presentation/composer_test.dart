@@ -45,6 +45,98 @@ Future<void> choose(fixture.Harness h, WidgetTester tester) async {
 }
 
 void main() {
+  for (final hasSentMessages in [false, true]) {
+    testWidgets(
+      'model dropdown preserves visible text and file from ${hasSentMessages ? 'a sent chat' : 'an unsent workspace'}',
+      (tester) async {
+        final picker = Picker();
+        final h = fixture.Harness(picker: picker);
+        final first = fixture.modelFixture();
+        final second = fixture.modelFixture(
+          id: 'test/second-image',
+          name: 'Second Image Model',
+        );
+        for (final model in [first, second]) {
+          (model['architecture'] as Map)['input_modalities'] = [
+            'text',
+            'image',
+          ];
+        }
+        h.transport.catalogBody = {
+          'data': [first, second],
+        };
+        await h.mount(
+          tester,
+          hasSentMessages ? const Size(1440, 1000) : const Size(390, 844),
+        );
+        await choose(h, tester);
+        if (hasSentMessages) {
+          h.state.chat.restoreSession(
+            jsonEncode({
+              'version': 1,
+              'messages': [
+                const ChatMessage(
+                  role: 'user',
+                  content: 'Earlier question',
+                  modelId: 'test/chat',
+                ).toJson(),
+                const ChatMessage(
+                  role: 'assistant',
+                  content: 'Earlier reply',
+                  modelId: 'test/chat',
+                ).toJson(),
+              ],
+            }),
+          );
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(fixture.composer, 'Compare this image with me');
+        await tester.tap(find.text('Add files'));
+        await tester.pumpAndSettle();
+        await h.state.flushHistory();
+        final originalId = h.state.activeConversationId;
+        final attachment = h.state.draftAttachments.single;
+        expect(find.byTooltip('Remove example-0.png'), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('model-selector')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Second Image Model'));
+        await tester.pumpAndSettle();
+
+        expect(h.state.catalog.selectedId, 'test/second-image');
+        expect(
+          h.state.activeConversationId,
+          hasSentMessages ? isNot(originalId) : originalId,
+        );
+        expect(h.state.chat.messages, isEmpty);
+        expect(h.state.draft, 'Compare this image with me');
+        expect(
+          tester.widget<TextField>(fixture.composer).controller!.text,
+          'Compare this image with me',
+        );
+        expect(find.byTooltip('Remove example-0.png'), findsOneWidget);
+        expect(find.text('example-0.png · 1 KB'), findsOneWidget);
+        expect(h.state.draftAttachments.single.id, attachment.id);
+        expect(h.state.draftAttachments.single.base64Data, png);
+        expect(picker.calls, 1);
+        expect(h.transport.sends, 0);
+        if (hasSentMessages) {
+          expect(await h.state.openConversation(originalId!), isTrue);
+          await tester.pumpAndSettle();
+          expect(h.state.chat.messages.map((message) => message.content), [
+            'Earlier question',
+            'Earlier reply',
+          ]);
+          expect(
+            h.state.chat.messages.every((m) => m.modelId == 'test/chat'),
+            isTrue,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'accepted sends clear immediately; later failure keeps the next draft',
     (tester) async {

@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Composer continuity patch 0.2.1](composer-continuity-verification.md): corrected information-page and model-switch continuity; local gates/build and main browser paths passed, with additional browser checks and publication pending.
+
 - [Conversation drafts and saved connection 0.2.0](conversation-drafts-verification.md): separate Drafts, response activity, writable archive recovery and saved-key behavior; final local gates, release/container and live API/browser evidence, with remaining browser checks and publication pending.
 
 - [Sidebar surface and quiet startup patch 0.1.3](sidebar-startup-patch-verification.md): continuous sidebar fill, removal of the transient intro, bootstrap-download recovery and release/browser checks.

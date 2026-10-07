@@ -29,17 +29,26 @@ void main() {
     },
   );
 
-  test('model drafts resume independently and survive reload', () async {
+  test('saved drafts reopen independently and survive reload', () async {
     final h = HistoryHarness();
     await h.state.initialize();
     await h.state.selectModel(testModel);
     final first = h.state.activeConversationId;
     h.state.setDraft('First draft');
-    await h.state.selectModel(secondModel);
+    await h.state.flushHistory();
+    await h.repo.save(
+      (await h.repo.read(first!))!.copyWith(
+        id: 'second-independent-draft',
+        modelId: secondModel.id,
+        modelName: secondModel.name,
+        draft: '',
+      ),
+    );
+    await h.state.openConversation('second-independent-draft');
     h.state.setDraft('Second draft');
     await h.state.newConversation();
     expect(h.state.draft, 'Second draft');
-    await h.state.selectModel(testModel);
+    await h.state.openConversation(first);
     expect(h.state.activeConversationId, first);
     expect(h.state.draft, 'First draft');
     expect(h.state.history, hasLength(2));

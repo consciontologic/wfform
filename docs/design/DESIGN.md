@@ -41,14 +41,14 @@ are not made to fetch identical descriptions. The repetitive instruction to
 open details is omitted from model-row hover previews; their explicit details
 buttons remain accessible.
 
-The composer grows over several lines and clears when a valid send is accepted. A next draft can be written while the answer streams. Explicit retry reuses the failed user turn; edit/resend appends a revised copy. Returned reasoning is separate and collapsible. Context exclusions and continuation are explicit actions, preserving earlier records.
+The composer grows over several lines and clears when a valid send is accepted. A next draft can be written while the answer streams. Changing models keeps unsent composer text and files visible. An empty-history workspace changes model in place; a message-bearing conversation keeps its original history while a separate workspace carries the composer input. Existing destination drafts are not overwritten. Incompatible files remain visible and prevent sending until resolved. Explicit retry reuses the failed user turn; edit/resend appends a revised copy. Returned reasoning is separate and collapsible. Context exclusions and continuation are explicit actions, preserving earlier records.
 
 Clicking or tapping outside the composer releases its editing focus and input
 connection, so its caret stops blinking. Keyboard focus transfer and browser
 view blur also stop editing without erasing the draft. Dragging the sidebar
 divider is an intentional exception: resizing preserves the typing target.
 
-History offers current and archived views, search, restore, export/import and direct permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
+History offers Chats, Drafts and Archived views, search, restore, export/import and direct permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
 
 ## Visual and content design
 
@@ -61,6 +61,9 @@ The product mark encloses a conversation bubble in brackets, representing a wrap
 The footer groups the version and a plain GitHub text link on the left.
 Information links remain on the right, using an Info menu when space is limited.
 No GitHub logo or doodle is shipped on app or information pages.
+About, Terms and Liability use the same tab after a successful draft checkpoint,
+so Open app returns to that tab's text and files. Active requests, file picking,
+history transitions or a failed save keep the app open. GitHub opens separately.
 
 The web host shows only its theme-matched background before Flutter starts.
 There is no introductory product screen or transient footer. About remains a

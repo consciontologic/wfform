@@ -179,3 +179,21 @@ CI run 37666068066 and Pages run 37666482966 passed. The public release matches
 the local build, including checked JavaScript/page/manifest hashes. See the
 [0.2.0 verification report](../reports/conversation-drafts-verification.md) and
 Phase 13 for scope and remaining platform limits.
+
+## Composer continuity 0.2.1 — 2026-10-07
+
+Model changes now carry unsent text and attachments instead of replacing the
+composer with a target model's draft. Unsent workspaces retain their identity;
+message-bearing conversations keep their history in a separate record. Existing
+destination drafts remain recoverable, and incompatible files stay visible.
+About, Terms and Liability checkpoint the draft before same-tab navigation;
+failed saves or active work prevent departure. GitHub still opens separately.
+
+The 0.2.1 local gate passed 488 tests (one opt-in skip), seven Chromium storage
+checks, 14 operation tests, formatting, analyzer and repository checks. CodeGraph
+was refreshed and its eight tools verified. Actual release-browser fixtures kept
+text and Markdown/PNG files through model changes, About → Open app, browser
+Back, reload, PWA update and compact/medium/expanded resizing. File previews
+reopened after reload. No new inference POST was needed for this patch. See the
+[0.2.1 report](../reports/composer-continuity-verification.md) for the exact build
+identity and publication status.

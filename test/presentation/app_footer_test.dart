@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wfform/app/studio_state.dart';
 import 'package:wfform/app/app_identity.dart';
+import 'package:wfform/features/history/conversation.dart';
+import 'package:wfform/features/history/history_repository.dart';
 import 'package:wfform/presentation/studio_app.dart';
 import 'package:wfform/shared/diagnostics.dart';
 import 'package:wfform/shared/platform.dart';
@@ -13,6 +16,7 @@ import 'studio_test.dart' show Harness, FakePlatform, FakeTransport, composer;
 
 class _LinksPlatform extends FakePlatform {
   final opened = <Uri>[];
+  final navigated = <Uri>[];
   bool fail = false;
 
   @override
@@ -20,12 +24,34 @@ class _LinksPlatform extends FakePlatform {
     if (fail) throw UnsupportedError('Fixture has no URL opener');
     opened.add(url);
   }
+
+  @override
+  void navigateTo(Uri url) {
+    if (fail) throw UnsupportedError('Fixture has no URL opener');
+    navigated.add(url);
+    opened.add(url);
+  }
+}
+
+class _CheckpointRepository extends MemoryHistoryRepository {
+  Completer<void>? gate;
+  bool fail = false;
+  @override
+  Future<void> save(
+    ConversationRecord record, {
+    bool makeActive = false,
+  }) async {
+    await gate?.future;
+    if (fail) throw historyFailure('Fixture storage is full.');
+    await super.save(record, makeActive: makeActive);
+  }
 }
 
 Future<(StudioState, _LinksPlatform)> _mount(
   WidgetTester tester,
   Size size, {
   double scale = 1,
+  MemoryHistoryRepository? repository,
 }) async {
   final platform = _LinksPlatform();
   final state = StudioState(
@@ -34,6 +60,7 @@ Future<(StudioState, _LinksPlatform)> _mount(
     store: MemoryStore(),
     platform: platform,
     diagnostics: Diagnostics(Harness.config),
+    historyRepository: repository,
   );
   state.setTextScale(scale);
   tester.view.devicePixelRatio = 1;
@@ -77,9 +104,54 @@ void main() {
         .load();
   });
 
-  test('release version is 0.2.0', () {
+  testWidgets('About waits for durable draft then navigates in same tab', (
+    tester,
+  ) async {
+    final repository = _CheckpointRepository();
+    final (state, platform) = await _mount(
+      tester,
+      const Size(1440, 900),
+      repository: repository,
+    );
+    await tester.enterText(composer, 'Keep unfinished work when returning');
+    repository.gate = Completer<void>();
+    await tester.tap(find.text('About'));
+    await tester.pump();
+    expect(platform.opened, isEmpty, reason: 'Do not leave before checkpoint');
+    expect(state.draft, 'Keep unfinished work when returning');
+    repository.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(platform.navigated.single, Uri.base.resolve('about.html'));
+    final saved = await repository.read(state.activeConversationId!);
+    expect(saved!.draft, 'Keep unfinished work when returning');
+    await tester.tap(find.text('GitHub'));
+    await tester.pump();
+    expect(platform.navigated.length, 1);
+    expect(platform.opened.last.toString(), sourceRepositoryUrl);
+  });
+
+  testWidgets('failed draft checkpoint keeps information navigation in app', (
+    tester,
+  ) async {
+    final repository = _CheckpointRepository();
+    final (state, platform) = await _mount(
+      tester,
+      const Size(1440, 900),
+      repository: repository,
+    );
+    await tester.enterText(composer, 'Unsaved work must stay here');
+    repository.fail = true;
+    await tester.tap(find.text('About'));
+    await tester.pumpAndSettle();
+    expect(platform.opened, isEmpty);
+    expect(state.draft, 'Unsaved work must stay here');
+    expect(find.textContaining('Fixture storage is full.'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('release version is 0.2.1', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '0.2.0');
+    expect(appVersion, '0.2.1');
     expect(
       RegExp(
         r'^version: (.+)\+',
@@ -88,7 +160,7 @@ void main() {
       appVersion,
     );
     expect(
-      RegExp(r'^version: 0\.2\.0\+5$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 0\.2\.1\+6$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -98,7 +170,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v0.2.0'), findsOneWidget);
+      expect(find.text('v0.2.1'), findsOneWidget);
       _expectAdjacentSourceLink(tester);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {
@@ -128,7 +200,7 @@ void main() {
   ) async {
     final (_, platform) = await _mount(tester, const Size(320, 740), scale: 2);
     expect(_footer, findsOneWidget);
-    expect(find.text('v0.2.0'), findsOneWidget);
+    expect(find.text('v0.2.1'), findsOneWidget);
     _expectAdjacentSourceLink(tester);
     expect(tester.getSize(_footer).height, lessThanOrEqualTo(56));
     expect(composer.hitTestable(), findsOneWidget);
