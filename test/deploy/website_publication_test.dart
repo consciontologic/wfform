@@ -30,6 +30,23 @@ void main() {
     return result;
   }
 
+  String addPreviouslyOwnedArtwork(Release prior) {
+    final immutable = '__releases/${prior.version}/github-mark.svg';
+    final ownership = File('${target.path}/.wfform-deployment.json');
+    final previous =
+        jsonDecode(ownership.readAsStringSync()) as Map<String, dynamic>;
+    // Format-1 deployments before 0.1.2 owned both these exact paths.
+    for (final path in ['github-mark.svg', immutable]) {
+      final file = File('${target.path}/$path')
+        ..writeAsStringSync('<svg>previous artwork</svg>');
+      (previous['files'] as Map<String, dynamic>)[path] = sha256(
+        file.readAsBytesSync(),
+      );
+    }
+    ownership.writeAsStringSync(jsonEncode(previous));
+    return immutable;
+  }
+
   setUp(() {
     Directory('work').createSync();
     scratch = Directory('work').createTempSync('website-publication-');
@@ -173,6 +190,133 @@ void main() {
       );
     },
   );
+
+  for (final alreadyRemoved in [false, true]) {
+    test('migrates retired owned artwork, root removed: $alreadyRemoved', () {
+      final prior = release('prior');
+      prepareWebsite(source, target);
+      final immutable = addPreviouslyOwnedArtwork(prior);
+      final root = File('${target.path}/github-mark.svg');
+      if (alreadyRemoved) root.deleteSync();
+      final next = release('next');
+
+      final result = prepareWebsite(source, target);
+      expect(root.existsSync(), isFalse);
+      expect(result.changedPaths.contains('github-mark.svg'), !alreadyRemoved);
+      expect(
+        File('${target.path}/$immutable').readAsStringSync(),
+        '<svg>previous artwork</svg>',
+      );
+      expect(
+        File(
+          '${target.path}/__releases/${next.version}/github-mark.svg',
+        ).existsSync(),
+        isFalse,
+      );
+      final ownership =
+          jsonDecode(
+                File(
+                  '${target.path}/.wfform-deployment.json',
+                ).readAsStringSync(),
+              )
+              as Map;
+      expect(ownership['files'] as Map, isNot(contains('github-mark.svg')));
+      expect(ownership['files'] as Map, contains(immutable));
+      expect(prepareWebsite(source, target).changedPaths, isEmpty);
+    });
+  }
+
+  for (final editImmutable in [false, true]) {
+    test('preserves edited retired artwork, immutable: $editImmutable', () {
+      final prior = release('prior');
+      prepareWebsite(source, target);
+      final immutable = addPreviouslyOwnedArtwork(prior);
+      final path = editImmutable ? immutable : 'github-mark.svg';
+      final edited = File('${target.path}/$path')
+        ..writeAsStringSync('human edit');
+      final index = File('${target.path}/index.html').readAsStringSync();
+      final ownership = File(
+        '${target.path}/.wfform-deployment.json',
+      ).readAsStringSync();
+      release('next');
+
+      expect(() => prepareWebsite(source, target), throwsStateError);
+      expect(edited.readAsStringSync(), 'human edit');
+      expect(File('${target.path}/index.html').readAsStringSync(), index);
+      expect(
+        File('${target.path}/.wfform-deployment.json').readAsStringSync(),
+        ownership,
+      );
+    });
+  }
+
+  test('retired compatibility does not allow new release artwork', () {
+    release('next');
+    final manifest = File('${source.path}/release.json');
+    final data =
+        jsonDecode(manifest.readAsStringSync()) as Map<String, dynamic>;
+    (data['assets'] as Map<String, dynamic>)['github-mark.svg'] = {
+      'sha256': sha256(utf8.encode('<svg/>')),
+      'bytes': 6,
+    };
+    manifest.writeAsStringSync(jsonEncode(data));
+    expect(
+      () => prepareWebsite(source, target),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          'Unsupported release asset metadata: github-mark.svg',
+        ),
+      ),
+    );
+    expect(target.listSync(), isEmpty);
+  });
+
+  test('retired compatibility never deletes an unowned root artwork file', () {
+    release('next');
+    final unowned = File('${target.path}/github-mark.svg')
+      ..writeAsStringSync('unowned content');
+    final result = prepareWebsite(source, target);
+    expect(unowned.readAsStringSync(), 'unowned content');
+    expect(result.changedPaths, isNot(contains('github-mark.svg')));
+  });
+
+  test('retired compatibility rejects other unrecognized ownership paths', () {
+    release('next');
+    final ownership = File('${target.path}/.wfform-deployment.json');
+    for (final path in [
+      'other-mark.svg',
+      'nested/github-mark.svg',
+      '__releases/not-a-digest/github-mark.svg',
+      '__releases/${'a' * 64}/nested/github-mark.svg',
+    ]) {
+      ownership.writeAsStringSync(
+        jsonEncode({
+          'format': 1,
+          'files': {path: 'b' * 64},
+        }),
+      );
+      expect(
+        () => prepareWebsite(source, target),
+        throwsFormatException,
+        reason: path,
+      );
+      expect(target.listSync(), hasLength(1));
+    }
+  });
+
+  test('a missing retired immutable asset still blocks publication', () {
+    final prior = release('prior');
+    prepareWebsite(source, target);
+    final immutable = addPreviouslyOwnedArtwork(prior);
+    File('${target.path}/$immutable').deleteSync();
+    final index = File('${target.path}/index.html').readAsStringSync();
+    release('next');
+    expect(() => prepareWebsite(source, target), throwsStateError);
+    expect(File('${target.path}/index.html').readAsStringSync(), index);
+    expect(File('${target.path}/github-mark.svg').existsSync(), isTrue);
+  });
 
   test('rejects local configuration before modifying destination', () {
     release('first');

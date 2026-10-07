@@ -28,8 +28,8 @@ state, not merely a hidden cursor.
 
 | Check | Result |
 |---|---|
-| `make verify` | Formatting and analysis clean; 421 tests passed; one opt-in live test skipped; repository check passed |
-| `make codeg codeg.check` | MCP/Dart queries passed; 145 files, 1,947 nodes, 7,993 edges |
+| `make verify` | Formatting and analysis clean; final 429 tests passed; one opt-in live test skipped; repository check passed |
+| `make codeg codeg.check` | MCP/Dart queries passed; final 145 files, 1,948 nodes, 8,025 edges |
 | `make build.public` | Release PWA built successfully |
 | `dart run deploy/package.dart build/publish-web build/012-docker-context` and Docker image build | Credential-free allowlisted context and nginx image built |
 | `dart run deploy/check.dart http://127.0.0.1:8768` | Real nginx headers, health/error/method policy, WASM MIME and all 40 immutable asset hashes passed |
@@ -60,3 +60,19 @@ mobile-device evidence. No fresh offline reload, installation prompt, Safari,
 Firefox, native build or authenticated inference is claimed for this patch.
 
 Publication evidence is recorded after the GitHub workflow completes.
+
+The first source run, [37651193228](https://github.com/consciontologic/wfform/actions/runs/37651193228),
+passed 421 app/tool tests, 14 repository-operation tests, six real Chromium
+storage checks and the release build. Publication then failed before changing
+the destination: its ownership validator no longer recognized the retired
+`github-mark.svg` path. The upgrade adapter now recognizes that exact historical
+path without admitting it into new releases. A fresh-destination artifact check
+alone did not expose this migration case.
+
+Eight additional regressions verify legacy ownership, root deletion, retained
+immutable generations, edited/unowned-file protection, rejection of new logo
+assets and idempotency. Running the corrected publisher against a fresh clone
+of the real destination changed 52 files, removed its owned root SVG and kept
+two previous immutable copies. A second run changed zero files. Those old
+generations remain available only for existing clients; the 0.1.2 root and
+immutable manifest contain no GitHub artwork.

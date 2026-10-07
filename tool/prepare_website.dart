@@ -109,7 +109,7 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
       throw const FormatException('Unsupported website ownership manifest.');
     }
     for (final entry in oldFiles.entries) {
-      if (!_managed(entry.key) ||
+      if (!_previouslyManaged(entry.key) ||
           entry.value is! String ||
           !_digest.hasMatch(entry.value as String)) {
         throw const FormatException('Unsafe website ownership entry.');
@@ -218,7 +218,10 @@ bool _safe(String path) =>
         .split('/')
         .every((part) => part.isNotEmpty && part != '.' && part != '..');
 
-bool _managed(String path) {
+bool _previouslyManaged(String path) {
+  // Historical ownership must outlive a retired asset's release eligibility:
+  // remove its owned root alias, but keep immutable copies for existing clients.
+  const retiredAssets = {'github-mark.svg'};
   if (!_safe(path)) return false;
   if (const {
     'CNAME',
@@ -232,9 +235,11 @@ bool _managed(String path) {
     final parts = path.split('/');
     if (parts.length < 3 || !_digest.hasMatch(parts[1])) return false;
     final asset = parts.skip(2).join('/');
-    return asset == 'release.json' || isShellAsset(asset);
+    return asset == 'release.json' ||
+        isShellAsset(asset) ||
+        retiredAssets.contains(asset);
   }
-  return isShellAsset(path);
+  return isShellAsset(path) || retiredAssets.contains(path);
 }
 
 void _checkPath(Directory root, String path) {
