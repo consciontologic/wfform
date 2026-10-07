@@ -1,0 +1,19 @@
+name: wfform
+services:
+  web:
+    image: wfform-local:latest
+    build:
+      context: ../build/docker-context
+    user: "${WFFORM_UID:-101}:${WFFORM_GID:-101}"
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+    pids_limit: 100
+    mem_limit: 256m
+    cpus: 2
+    init: true
+    restart: unless-stopped

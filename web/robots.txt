@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /config/
+
+Sitemap: https://wfform.com/sitemap.xml

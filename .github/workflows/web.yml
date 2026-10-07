@@ -1,0 +1,60 @@
+name: Web checks and publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize main publications without interrupting a commit/push. PR checks can
+# cancel an older run on the same PR. The publication step also rejects old SHAs.
+concurrency:
+  group: wfform-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.38.5'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze, test and check repository
+        run: make verify
+
+      - name: Test repository operations
+        run: python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v
+
+      - name: Verify browser history storage
+        run: |
+          export CHROME_EXECUTABLE="$(command -v google-chrome)"
+          flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded
+
+      - name: Build public web release
+        run: dart run tool/build.dart --public --output=build/publish-web --base-href=/
+
+      - name: Validate website artifact
+        run: dart run tool/prepare_website.dart build/publish-web "$RUNNER_TEMP/website-validation"
+
+      - name: Publish to consciontologic/wfform.com
+        if: github.repository == 'consciontologic/wfform' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          WFFORM_DEPLOY_TOKEN: ${{ secrets.WFFORM_DEPLOY_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash deploy/scripts/publish-website.sh build/publish-web

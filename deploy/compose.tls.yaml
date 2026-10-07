@@ -1,0 +1,13 @@
+services:
+  web:
+    ports:
+      - "127.0.0.1:${TLS_PORT:-8443}:8443"
+    volumes:
+      - type: bind
+        source: ./nginx/tls.conf
+        target: /etc/nginx/tls-active/local.conf
+        read_only: true
+      - type: bind
+        source: ../.local/tls
+        target: /run/wfform/tls
+        read_only: true

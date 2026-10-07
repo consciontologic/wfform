@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "wfform: Verify",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "verify"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "wfform: Run release locally",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "serve"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "wfform: Build release",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "wfform: Start Docker",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "up"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "wfform: Stop Docker",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "down"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "wfform: Check repository",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "repository.check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Agent: Session Bootstrap",
+      "type": "shell",
+      "command": "xops/agent/session-bootstrap.sh",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+developer_instructions = "Read AGENTS.md, CONVENTIONS.md, docs/tracking/context.md and docs/guides/CODEX_SETUP.md before work. The Codex guide translates client-specific mechanics, not project policy. Read the instruction files listed below and apply each when its applyTo scope matches the work. Use the native tools available in this session, never invent VS Code tools. Do not commit or push. Use --agent=codex for tracking rows. Preserve existing human changes.\n.github/instructions/codegraph.instructions.md\n.github/instructions/tests.instructions.md\n.github/instructions/flutter.instructions.md\n.github/instructions/deploy.instructions.md\n.github/instructions/tracking.instructions.md\nCodeGraph is enabled for Dart and repository code. Prefer advertised graph tools or xops/agent/codegraph.sh explore when MCP has not loaded. Run make codeg to initialize or sync the ignored local index. Use the project launcher; do not install globally."
+
+[mcp_servers.codegraph]
+command = "bash"
+args = ["-c", 'root="$(git rev-parse --show-toplevel)" || exit; exec bash "$root/xops/agent/codegraph.sh" serve --mcp --path "$root"']
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+
+[mcp_servers.codegraph.env]
+CODEGRAPH_MCP_TOOLS = "explore,node,search,callers,callees,impact,files,status"
+CODEGRAPH_TELEMETRY = "0"
+DO_NOT_TRACK = "1"

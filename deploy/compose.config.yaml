@@ -1,0 +1,9 @@
+services:
+  web:
+    volumes:
+      - type: bind
+        source: ${WFFORM_CONFIG_FILE:?Set WFFORM_CONFIG_FILE to an existing runtime JSON file}
+        target: /run/wfform/local.json
+        read_only: true
+        bind:
+          create_host_path: false

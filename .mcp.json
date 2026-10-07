@@ -1,0 +1,15 @@
+{
+  "$comment": "Portable project MCP configuration. CodeGraph is defined here once for compatible Claude/Copilot clients; native Codex mirrors it in .codex/config.toml.",
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["-c", "root=\"$(git rev-parse --show-toplevel)\" || exit; exec bash \"$root/xops/agent/codegraph.sh\" serve --mcp --path \"$root\""],
+      "env": {
+        "CODEGRAPH_MCP_TOOLS": "explore,node,search,callers,callees,impact,files,status",
+        "CODEGRAPH_TELEMETRY": "0",
+        "DO_NOT_TRACK": "1"
+      }
+    }
+  }
+}

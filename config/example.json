@@ -1,0 +1,21 @@
+{
+  "apiBaseUrl": "https://openrouter.ai/api/v1",
+  "apiKey": "",
+  "requestTimeoutSeconds": 90,
+  "probeTimeoutSeconds": 25,
+  "healthTtlSeconds": 300,
+  "cooldownSeconds": 15,
+  "maxBackoffSeconds": 300,
+  "cacheTtlSeconds": 86400,
+  "maxDiagnostics": 100,
+  "maxDetailChars": 2000,
+  "maxMessages": 80,
+  "maxResponseChars": 120000,
+  "maxCatalogBytes": 8000000,
+  "firstResponseTimeoutSeconds": 90,
+  "streamIdleTimeoutSeconds": 45,
+  "streamOverallTimeoutSeconds": 300,
+  "endpointTtlSeconds": 1800,
+  "quotaTtlSeconds": 300,
+  "maxOutputTokens": 2048
+}

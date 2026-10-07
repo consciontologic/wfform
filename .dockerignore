@@ -1,0 +1,15 @@
+# Deny repository context by default; only the generated context fits this list.
+**
+!Dockerfile
+!.dockerignore
+!nginx/
+!nginx/*.conf
+!site/
+!site/**
+# Defense in depth: never send runtime configuration, keys or editor artifacts.
+**/config/**
+**/.env*
+**/*.key
+**/*.pem
+**/*.map
+**/.DS_Store

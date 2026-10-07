@@ -1,0 +1,5 @@
+{
+  "$comment": "CodeGraph uses the portable root .mcp.json. Keep this servers map empty to avoid duplicate definitions. See docs/guides/MCP_SETUP.md for older VS Code clients.",
+  "servers": {},
+  "inputs": []
+}
