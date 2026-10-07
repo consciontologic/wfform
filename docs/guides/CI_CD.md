@@ -69,6 +69,10 @@ through Namecheap and configured DNS on 2026-10-07, superseding the earlier
 GitHub Pages provides the TLS certificate automatically; a paid certificate
 from the registrar is unnecessary.
 
+This configuration is live and verified on 2026-10-07. See the
+[custom-domain report](../reports/custom-domain-verification.md) for successful
+CI/Pages runs, HTTPS redirects and actual browser/catalog/cache evidence.
+
 1. In `consciontologic/wfform.com` **Settings → Pages**, use
    **Deploy from a branch**, branch **main**, folder **/(root)**, and set
    **Custom domain** to `wfform.com`.

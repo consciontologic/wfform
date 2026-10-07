@@ -102,3 +102,10 @@ the no-custom-domain configuration above without changing repository names or
 `WFFORM_DEPLOY_TOKEN`. Existing histories remain on their original browser
 origin; use export/import to transfer them. See Phase 7 of the roadmap for
 current deployment and verification acceptance.
+
+Deployment completed successfully: custom-domain HTTPS and redirects were
+verified, the actual browser loaded the live catalog, and the root worker cached
+all 37 shell assets without policy violations. CI passed 358 app/tool tests,
+14 repository tests and six Chrome storage checks. See the
+[custom-domain report](../reports/custom-domain-verification.md) for exact runs,
+revision, release and verification limits.

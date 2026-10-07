@@ -114,4 +114,6 @@ Scope ID: custom-domain. Requested 2026-10-07 after the user purchased
 `wfform.com` and configured Namecheap DNS.
 
 - [x] Restore root public build paths, custom-domain publication and SEO metadata with regression coverage; update current guides.
-- [ ] Configure GitHub Pages for `wfform.com`, publish the verified release, enforce managed HTTPS and verify the public browser, live catalog and PWA scope.
+- [x] Configure GitHub Pages for `wfform.com`, publish the verified release, enforce managed HTTPS and verify the public browser, live catalog and PWA scope.
+
+Completed evidence: [custom-domain verification](../reports/custom-domain-verification.md).
