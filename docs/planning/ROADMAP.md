@@ -10,7 +10,7 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Repository workflow and application identity | 4 | 4 | Complete; current report records live MCP and browser verification |
 | Native application identifier clarification | 1 | 1 | Complete; native configuration and web regression checks passed; native binaries unverified |
 | Search metadata, web publishing and brand mark | 3 | 3 | Complete locally; public hosting and search indexing remain separate |
-| GitHub account migration | 3 | 1 | New targets configured; fresh-history push and remote publication in progress |
+| GitHub account migration | 3 | 3 | Complete; fresh history and real compiled-artifact publication verified |
 
 ## Established application baseline
 
@@ -92,5 +92,7 @@ Scope ID: repository-migration. Requested 2026-10-07; the user explicitly
 authorized a fresh Git history, source push and pipeline launch.
 
 - [x] Update active repository metadata, publishing target, instructions and guides to `consciontologic/wfform` and `consciontologic/wfform.com`; retain dated evidence and tracking records.
-- [ ] Push the current application as a fresh history to the new source repository, retaining an ignored local backup of the old Git metadata.
-- [ ] Start the new account's workflow and verify the compiled web files reach the new publication repository; report any external blocker precisely.
+- [x] Push the current application as a fresh history to the new source repository, retaining an ignored local backup of the old Git metadata.
+- [x] Start the new account's workflow and verify the compiled web files reach the new publication repository; report any external blocker precisely.
+
+Completed evidence: [account migration and real publication](../reports/account-migration-verification.md). Public Pages/DNS serving remains a separate hosting step.

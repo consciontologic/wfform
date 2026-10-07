@@ -2,6 +2,10 @@
 
 Reports must state their date, revision/release when known, commands, fixture/live/browser distinction and any unverified checks. A prior passing count is not a result for a changed build. Runtime logs and generated screenshots are evidence, not configuration or application source.
 
+## Current migration evidence
+
+- [GitHub account migration](account-migration-verification.md): 7 October 2026 fresh source history, successful real GitHub pipeline and authenticated compiled-artifact publication to the new account.
+
 ## Preserved baseline evidence
 
 - [Public web verification](public-web-verification.md): 7 October 2026 metadata, logo, real release/PWA/browser checks and locally tested GitHub publishing; remote setup remains unverified.

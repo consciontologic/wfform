@@ -5,7 +5,9 @@ repository is `consciontologic/wfform`; the static website repository is
 [`consciontologic/wfform.com`](https://github.com/consciontologic/wfform.com). The destination
 is dedicated to compiled web assets; Flutter sources stay in the source repository.
 The 2026-10-07 account migration uses a fresh source history and the existing
-`WFFORM_DEPLOY_TOKEN` repository secret in the new source repository.
+`WFFORM_DEPLOY_TOKEN` repository secret in the new source repository. The first
+real run and destination publication succeeded; see the
+[migration verification](../reports/account-migration-verification.md).
 
 ## What runs automatically
 

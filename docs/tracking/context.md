@@ -68,4 +68,7 @@ implementation audit trail without carrying old Git commits to the new repositor
 The source Actions secret remains `WFFORM_DEPLOY_TOKEN`; only built web files
 are published. The previous account's manually dispatched run stopped before
 jobs with `startup_failure`; that is not a successful release or a result for
-the new account. Follow the new repository's Actions run for remote evidence.
+the new account. The new account's API-triggered run completed successfully and
+published compiled files. See the [migration report](../reports/account-migration-verification.md)
+for root commit, workflow run, destination commit and integrity evidence. Pages/DNS
+serving remains separate.
