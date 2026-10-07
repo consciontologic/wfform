@@ -36,45 +36,54 @@ Future<void> openHistory(BuildContext context, StudioState state) =>
     );
 
 class ConversationHistory extends StatefulWidget {
-  const ConversationHistory({super.key, required this.state, this.onOpened});
+  const ConversationHistory({
+    super.key,
+    required this.state,
+    this.onOpened,
+    this.onInteracted,
+  });
   final StudioState state;
   final VoidCallback? onOpened;
+  final VoidCallback? onInteracted;
   @override
   State<ConversationHistory> createState() => _ConversationHistoryState();
 }
 
 class _ConversationHistoryState extends State<ConversationHistory> {
   final search = TextEditingController();
+  final searchFocus = FocusNode();
   bool archived = false;
   StudioState get state => widget.state;
   @override
+  void initState() {
+    super.initState();
+    searchFocus.addListener(_searchFocusChanged);
+  }
+
+  void _searchFocusChanged() {
+    if (searchFocus.hasFocus) widget.onInteracted?.call();
+  }
+
+  @override
   void dispose() {
     search.dispose();
+    searchFocus.dispose();
     super.dispose();
   }
 
   Future<void> _delete(String id, String title) async {
-    final confirmed = await showSelectableDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete conversation?'),
+    widget.onInteracted?.call();
+    final deleted = await state.deleteConversation(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Text(
-          '“$title” will be permanently removed from this browser. This cannot be undone.',
+          deleted
+              ? 'Deleted “$title” from this browser.'
+              : 'Could not delete “$title”. ${state.historyError?.message ?? 'Try again after the current conversation operation finishes.'}',
         ),
-        actions: [
-          TextButton(
-            autofocus: true,
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep conversation'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete permanently'),
-          ),
-        ],
       ),
     );
-    if (confirmed == true && mounted) await state.deleteConversation(id);
   }
 
   @override
@@ -109,6 +118,7 @@ class _ConversationHistoryState extends State<ConversationHistory> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
             child: TextField(
               controller: search,
+              focusNode: searchFocus,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Search conversations',
@@ -126,15 +136,26 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                 ChoiceChip(
                   label: const Text('Chats'),
                   selected: !archived,
-                  onSelected: (_) => setState(() => archived = false),
+                  onSelected: (_) {
+                    widget.onInteracted?.call();
+                    setState(() => archived = false);
+                  },
                 ),
                 ChoiceChip(
                   label: const Text('Archived'),
                   selected: archived,
-                  onSelected: (_) => setState(() => archived = true),
+                  onSelected: (_) {
+                    widget.onInteracted?.call();
+                    setState(() => archived = true);
+                  },
                 ),
                 TextButton.icon(
-                  onPressed: busy ? null : state.importConversation,
+                  onPressed: busy
+                      ? null
+                      : () {
+                          widget.onInteracted?.call();
+                          state.importConversation();
+                        },
                   icon: const Icon(Icons.file_upload_outlined, size: 17),
                   label: const Text('Import'),
                 ),
@@ -176,6 +197,7 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                     itemBuilder: (context, index) {
                       final entry = entries[index];
                       final active = entry.id == state.activeConversationId;
+                      final deleting = state.isDeletingConversation(entry.id);
                       return Container(
                         key: ValueKey('history-${entry.id}'),
                         margin: const EdgeInsets.symmetric(
@@ -192,46 +214,54 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            ListTile(
-                              selected: active,
-                              selectedColor: colors.ink,
-                              enabled: !busy,
-                              contentPadding: const EdgeInsets.fromLTRB(
-                                12,
-                                4,
-                                12,
-                                0,
-                              ),
-                              title: SelectableTooltip(
-                                message: entry.title,
-                                child: Text(
-                                  entry.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                            // Keep opening the conversation in its own semantic
+                            // boundary. Otherwise IndexedSemantics can absorb
+                            // its tap action and nest Export/Archive/Delete
+                            // buttons inside a larger button on Flutter web.
+                            Semantics(
+                              container: true,
+                              child: ListTile(
+                                selected: active,
+                                selectedColor: colors.ink,
+                                enabled: !busy && !deleting,
+                                contentPadding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  4,
+                                  12,
+                                  0,
+                                ),
+                                title: SelectableTooltip(
+                                  message: entry.title,
+                                  child: Text(
+                                    entry.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 5),
-                                child: Text(
-                                  '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.messageCount} messages',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: colors.muted,
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 5),
+                                  child: Text(
+                                    '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.messageCount} messages',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colors.muted,
+                                    ),
                                   ),
                                 ),
+                                onTap: () async {
+                                  widget.onInteracted?.call();
+                                  if (await state.openConversation(entry.id) &&
+                                      mounted) {
+                                    widget.onOpened?.call();
+                                  }
+                                },
                               ),
-                              onTap: () async {
-                                if (await state.openConversation(entry.id) &&
-                                    mounted) {
-                                  widget.onOpened?.call();
-                                }
-                              },
                             ),
                             Align(
                               alignment: Alignment.centerRight,
@@ -239,11 +269,12 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                 children: [
                                   SelectableIconButton(
                                     tooltip: 'Export ${entry.title}',
-                                    onPressed: busy
+                                    onPressed: busy || deleting
                                         ? null
-                                        : () => state.exportConversation(
-                                            entry.id,
-                                          ),
+                                        : () {
+                                            widget.onInteracted?.call();
+                                            state.exportConversation(entry.id);
+                                          },
                                     icon: const Icon(
                                       Icons.file_download_outlined,
                                       size: 19,
@@ -252,11 +283,14 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                   if (entry.archived) ...[
                                     SelectableIconButton(
                                       tooltip: 'Restore ${entry.title}',
-                                      onPressed: busy
+                                      onPressed: busy || deleting
                                           ? null
-                                          : () => state.restoreConversation(
-                                              entry.id,
-                                            ),
+                                          : () {
+                                              widget.onInteracted?.call();
+                                              state.restoreConversation(
+                                                entry.id,
+                                              );
+                                            },
                                       icon: const Icon(
                                         Icons.unarchive_outlined,
                                         size: 19,
@@ -264,23 +298,40 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                     ),
                                     SelectableIconButton(
                                       tooltip: 'Delete ${entry.title}',
-                                      onPressed: busy
+                                      onPressed:
+                                          state.historyBusy ||
+                                              deleting ||
+                                              (active &&
+                                                  (state.chat.busy ||
+                                                      state.attachmentPicking))
                                           ? null
                                           : () =>
                                                 _delete(entry.id, entry.title),
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        size: 19,
-                                      ),
+                                      icon: deleting
+                                          ? const SizedBox.square(
+                                              dimension: 19,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                semanticsLabel:
+                                                    'Deleting conversation',
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.delete_outline,
+                                              size: 19,
+                                            ),
                                     ),
                                   ] else
                                     SelectableIconButton(
                                       tooltip: 'Archive ${entry.title}',
-                                      onPressed: busy
+                                      onPressed: busy || deleting
                                           ? null
-                                          : () => state.archiveConversation(
-                                              entry.id,
-                                            ),
+                                          : () {
+                                              widget.onInteracted?.call();
+                                              state.archiveConversation(
+                                                entry.id,
+                                              );
+                                            },
                                       icon: const Icon(
                                         Icons.archive_outlined,
                                         size: 19,
@@ -297,7 +348,12 @@ class _ConversationHistoryState extends State<ConversationHistory> {
           ),
           if (state.historyError != null && state.hasUnsavedHistoryChanges)
             TextButton.icon(
-              onPressed: state.historySaving ? null : state.flushHistory,
+              onPressed: state.historySaving
+                  ? null
+                  : () {
+                      widget.onInteracted?.call();
+                      state.flushHistory();
+                    },
               icon: const Icon(Icons.save_outlined),
               label: const Text('Retry saving'),
             ),

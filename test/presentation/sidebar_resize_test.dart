@@ -34,7 +34,7 @@ void main() {
     await tester.drag(_handle, const Offset(1000, 0));
     await tester.pump();
     expect(tester.getSize(_sidebar).width, 440);
-    await tester.drag(_handle, const Offset(-1000, 0));
+    await tester.drag(_handle, const Offset(-200, 0));
     await tester.pump();
     expect(tester.getSize(_sidebar).width, 240);
     expect(tester.takeException(), isNull);

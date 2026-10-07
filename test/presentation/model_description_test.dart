@@ -105,13 +105,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text(model.description), findsOneWidget);
-        expect(
-          find.text(
-            'This description ends with an ellipsis in OpenRouter’s catalog. '
-            'More information may be available on its model page.',
-          ),
-          findsOneWidget,
-        );
+        expect(find.text('Ellipsis supplied by OpenRouter.'), findsOneWidget);
         final linkCopy = find.byTooltip('Copy model page link');
         await tester.ensureVisible(linkCopy);
         await tester.pumpAndSettle();
@@ -171,6 +165,11 @@ void main() {
       } else {
         await h.state.selectModel(model);
       }
+      await tester.pumpAndSettle();
+      expect(find.text(description), findsNothing);
+      final expandDescription = find.text('Show full description');
+      await tester.ensureVisible(expandDescription);
+      await tester.tap(expandDescription);
       await tester.pumpAndSettle();
       final descriptionFinder = find.text(description);
       expect(descriptionFinder, findsOneWidget);

@@ -277,14 +277,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Delete Alpha conversation'));
       await tester.pumpAndSettle();
-      expect(find.text('Delete conversation?'), findsOneWidget);
-      await tester.tap(find.text('Keep conversation'));
-      await tester.pumpAndSettle();
-      expect(h.state.history.any((entry) => entry.id == firstId), true);
-      await tester.tap(find.byTooltip('Delete Alpha conversation'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Delete permanently'));
-      await tester.pumpAndSettle();
+      expect(find.text('Delete conversation?'), findsNothing);
       expect(h.state.history.any((entry) => entry.id == firstId), false);
       expect(h.state.history.any((entry) => entry.title == 'Beta draft'), true);
       expect(h.transport.sends, 0);
@@ -480,9 +473,15 @@ void main() {
           tester.getSemantics(idNode.first).getSemanticsData().label,
           'test/chat',
         );
+        await tester.ensureVisible(find.text('Provider & context'));
+        await tester.tap(find.text('Provider & context'));
+        await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('8192 tokens'));
         await tester.pumpAndSettle();
         expect(find.bySemanticsLabel('8192 tokens'), findsWidgets);
+        await tester.ensureVisible(find.text('Files'));
+        await tester.tap(find.text('Files'));
+        await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('text → text'));
         await tester.pumpAndSettle();
         expect(find.bySemanticsLabel('text → text'), findsWidgets);

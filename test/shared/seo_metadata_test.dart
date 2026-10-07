@@ -120,6 +120,10 @@ void main() {
     expect(about, isNot(contains('flutter_bootstrap')));
     expect(about, contains('href="./"'));
     expect(about, contains('OpenRouter API key'));
+    for (final page in publicPages.where((path) => path != 'index.html')) {
+      expect(document(page), contains('>Open app</a>'));
+      expect(document(page), isNot(contains('>Open the app</a>')));
+    }
     expect(about, contains('limits'));
     final index = document('index.html');
     expect(index, contains('id="loading"'));

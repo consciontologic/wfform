@@ -5,6 +5,7 @@ import '../app/studio_state.dart';
 import '../app/theme.dart';
 import '../features/models/model.dart';
 import '../features/models/health.dart';
+import '../shared/diagnostics.dart';
 
 String timeLabel(DateTime? date) {
   if (date == null) return 'Not checked yet';
@@ -526,207 +527,385 @@ class _ModelRowState extends State<_ModelRow> {
   }
 }
 
+/// Rounded overview only; the exact context remains in Provider & context.
+String modelContextLabel(int? tokens) {
+  if (tokens == null) return 'Not reported';
+  for (final unit in [(1000000000, 'B'), (1000000, 'M'), (1000, 'K')]) {
+    if (tokens >= unit.$1) {
+      final count = tokens / unit.$1;
+      final number = count
+          .toStringAsFixed(count < 10 ? 1 : 0)
+          .replaceFirst(RegExp(r'\.0$'), '');
+      return '$number${unit.$2} tokens';
+    }
+  }
+  return '$tokens tokens';
+}
+
+/// A literal excerpt, never a generated summary. Full API text stays available.
+String modelDescriptionPreview(String description) {
+  final source = description.trim();
+  const limit = 180;
+  final firstEnd = RegExp(r'[.!?](?:\s+|$)|[。！？]').firstMatch(source);
+  var candidate = firstEnd == null
+      ? source
+      : source.substring(0, firstEnd.end).trimRight();
+  if (candidate.runes.length <= limit) return candidate;
+  candidate = String.fromCharCodes(candidate.runes.take(limit));
+  final boundary = candidate.lastIndexOf(RegExp(r'\s'));
+  if (boundary >= candidate.length ~/ 2) {
+    candidate = candidate.substring(0, boundary);
+  }
+  return candidate.trimRight();
+}
+
 class ModelDetails extends StatelessWidget {
   const ModelDetails({super.key, required this.state, required this.model});
   final StudioState state;
   final FreeModel model;
-  @override
-  Widget build(BuildContext context) => SelectionArea(child: _details(context));
 
-  Widget _details(BuildContext context) => ListenableBuilder(
-    listenable: state.health,
-    builder: (context, _) {
-      final observation = state.health.forModel(model.id);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'MODEL PASSPORT',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 14),
-          SelectableText(
-            model.name,
-            semanticsLabel: model.name,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          SelectableText(
-            model.id,
-            semanticsLabel: model.id,
-            style: TextStyle(
-              fontSize: 13,
-              color: StudioPalette.of(context).muted,
-            ),
-          ),
-          const SizedBox(height: 20),
-          PaperPanel(
-            color: observation.status == HealthStatus.responsive
-                ? StudioPalette.of(context).sage
-                : observation.status == HealthStatus.degraded ||
-                      observation.status == HealthStatus.unavailable
-                ? StudioPalette.of(context).peach
-                : StudioPalette.of(context).lilac,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  healthLabel(observation.status),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(observation.message),
-                Text(
-                  'Last check: ${timeLabel(observation.checkedAt)}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                if (observation.retryAt != null)
-                  Text(
-                    'Retry after: ${timeLabel(observation.retryAt)}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed:
-                      !state.online ||
-                          !model.chatCompatible ||
-                          observation.status == HealthStatus.checking
-                      ? null
-                      : () => state.health.check(model, force: true),
-                  icon: const Icon(Icons.sync, size: 18),
-                  label: const Text('Recheck availability'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Catalog presence is not a health check. A recent response does not guarantee the next request.',
-            style: TextStyle(
-              fontSize: 12,
-              color: StudioPalette.of(context).muted,
-            ),
-          ),
-          for (final entry
-              in state.health.modalityObservations(model.id).entries)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '${entry.key}: ${entry.value.message}\n${timeLabel(entry.value.checkedAt)}',
-                style: const TextStyle(fontSize: 12),
+  @override
+  Widget build(BuildContext context) => SelectionArea(
+    child: ListenableBuilder(
+      listenable: state.health,
+      builder: (context, _) {
+        final observation = state.health.forModel(model.id);
+        final palette = StudioPalette.of(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'MODEL PASSPORT',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
               ),
             ),
-          const SizedBox(height: 24),
-          Text(
-            model.description.isEmpty
-                ? 'No description supplied.'
-                : model.description,
-          ),
-          if (model.description.trimRight().endsWith('...') ||
-              model.description.trimRight().endsWith('…')) ...[
             const SizedBox(height: 12),
+            SelectableText(
+              model.name,
+              semanticsLabel: model.name,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 6),
+            SelectableText(
+              model.id,
+              semanticsLabel: model.id,
+              style: TextStyle(fontSize: 12, color: palette.muted),
+            ),
+            const SizedBox(height: 14),
+            _ModelDescription(
+              key: ValueKey(model.id),
+              state: state,
+              model: model,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final input in model.inputModalities)
+                  _ModalityChip(label: '${_modalityLabel(input)} input'),
+                for (final output in model.outputModalities)
+                  _ModalityChip(label: '${_modalityLabel(output)} output'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Context window',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
             Text(
-              'This description ends with an ellipsis in OpenRouter’s catalog. '
-              'More information may be available on its model page.',
+              modelContextLabel(model.contextLength),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            if (!model.chatCompatible) ...[
+              const SizedBox(height: 8),
+              Text(model.incompatibilityReason ?? 'Unavailable for text chat.'),
+            ],
+            const SizedBox(height: 14),
+            PaperPanel(
+              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+              color: observation.status == HealthStatus.responsive
+                  ? palette.sage
+                  : observation.status == HealthStatus.degraded ||
+                        observation.status == HealthStatus.unavailable
+                  ? palette.peach
+                  : palette.lilac,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          healthLabel(observation.status),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          observation.checkedAt == null
+                              ? 'Not checked yet'
+                              : 'Checked ${timeLabel(observation.checkedAt)}',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        if (observation.retryAt != null)
+                          Text(
+                            'Retry after ${timeLabel(observation.retryAt)}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SelectableIconButton(
+                    tooltip: 'Recheck availability',
+                    onPressed:
+                        !state.online ||
+                            !model.chatCompatible ||
+                            observation.status == HealthStatus.checking
+                        ? null
+                        : () => state.health.check(model, force: true),
+                    icon: const Icon(Icons.sync, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            _section('Availability details', [
+              Text(observation.message),
+              const SizedBox(height: 8),
+              const Text(
+                'A recent response is not a guarantee. Catalog presence alone does not verify availability.',
+                style: TextStyle(fontSize: 12),
+              ),
+              for (final entry
+                  in state.health.modalityObservations(model.id).entries)
+                _Detail(
+                  label: entry.key,
+                  value:
+                      '${entry.value.message}\n${timeLabel(entry.value.checkedAt)}',
+                ),
+            ]),
+            _section('Pricing', [
+              _Detail(
+                label: 'USD per native unit',
+                value: model.pricing.entries
+                    .map(
+                      (e) =>
+                          '${e.key}: ${isUnresolvedPrice(e.value) ? 'Unresolved (reported: ${e.value})' : e.value}',
+                    )
+                    .join('\n'),
+              ),
+              if (!model.pricing.containsKey('request'))
+                const _Detail(
+                  label: 'Request price',
+                  value:
+                      'Not reported. Routing enforces a maximum request price of zero USD.',
+                ),
+              if (model.pricingOverrides.isNotEmpty)
+                _Detail(
+                  label: 'Conditional prices',
+                  value: model.pricingOverrides
+                      .map(
+                        (override) => override.entries
+                            .map((e) => '${e.key}: ${e.value}')
+                            .join(', '),
+                      )
+                      .join('\n'),
+                ),
+              const Text(
+                'Zero-price routing only; no paid fallback.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ]),
+            _section('Parameters', [
+              _Detail(
+                label: 'Supported controls',
+                value: model.supportedParameters.join(', '),
+              ),
+            ]),
+            _section('Files', [
+              _Detail(
+                label: 'Uploads in wfform',
+                value: model.attachmentSummary,
+              ),
+              _Detail(label: 'Formats & limits', value: model.attachmentNotice),
+              _Detail(
+                label: 'API input → output',
+                value:
+                    '${model.inputModalities.join(', ')} → ${model.outputModalities.join(', ')}',
+              ),
+            ]),
+            _section('Provider & context', [
+              _Detail(
+                label: 'Exact context window',
+                value: model.contextLength == null
+                    ? 'Not reported'
+                    : '${model.contextLength} tokens',
+              ),
+              if (model.architectureTokenizer != null)
+                _Detail(
+                  label: 'Tokenizer',
+                  value: model.architectureTokenizer!,
+                ),
+              _Detail(
+                label: 'Top provider',
+                value: model.topProvider.entries
+                    .map((e) => '${e.key}: ${e.value}')
+                    .join('\n'),
+              ),
+              if (observation.provider != null)
+                _Detail(
+                  label: 'Observed provider',
+                  value: observation.provider!,
+                ),
+              if (observation.endpointSummary?.isNotEmpty ?? false)
+                _Detail(
+                  label: 'Endpoints',
+                  value: observation.endpointSummary!,
+                ),
+            ]),
+          ],
+        );
+      },
+    ),
+  );
+
+  Widget _section(String title, List<Widget> children) => ExpansionTile(
+    key: PageStorageKey('${model.id}:$title'),
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: const EdgeInsets.only(top: 8, bottom: 12),
+    expandedCrossAxisAlignment: CrossAxisAlignment.start,
+    title: Text(
+      title,
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    ),
+    children: children,
+  );
+}
+
+String _modalityLabel(String value) => switch (value) {
+  'text' => 'Text',
+  'image' => 'Image',
+  'audio' => 'Audio',
+  'video' => 'Video',
+  'file' => 'File',
+  'embeddings' => 'Embedding',
+  _ => value,
+};
+
+class _ModalityChip extends StatelessWidget {
+  const _ModalityChip({required this.label});
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: StudioPalette.of(context).paper,
+      border: Border.all(color: StudioPalette.of(context).border),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Text(label, style: const TextStyle(fontSize: 11)),
+  );
+}
+
+class _ModelDescription extends StatefulWidget {
+  const _ModelDescription({
+    super.key,
+    required this.state,
+    required this.model,
+  });
+  final StudioState state;
+  final FreeModel model;
+  @override
+  State<_ModelDescription> createState() => _ModelDescriptionState();
+}
+
+class _ModelDescriptionState extends State<_ModelDescription> {
+  bool expanded = false;
+
+  void _openPage(Uri uri) {
+    try {
+      widget.state.platform.openUrl(uri);
+    } catch (_) {
+      widget.state.diagnostics.record(
+        'model.link.open',
+        failure: const AppFailure(
+          FailureKind.configuration,
+          'The model page could not be opened. Copy its link and open it in a browser.',
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not open the model page. Use Copy model page link.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final description = widget.model.description;
+    final preview = modelDescriptionPreview(description);
+    final modelPage = Uri.https('openrouter.ai', '/${widget.model.id}');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          description.isEmpty
+              ? 'No description supplied.'
+              : expanded
+              ? description
+              : preview,
+        ),
+        if (preview != description.trim())
+          TextButton(
+            onPressed: () => setState(() => expanded = !expanded),
+            child: Text(expanded ? 'Show less' : 'Show full description'),
+          ),
+        if (description.trimRight().endsWith('...') ||
+            description.trimRight().endsWith('…'))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Ellipsis supplied by OpenRouter.',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: StudioPalette.of(context).muted,
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    Uri.https('openrouter.ai', '/${model.id}').toString(),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                SelectableIconButton(
-                  tooltip: 'Copy model page link',
-                  onPressed: () => Clipboard.setData(
-                    ClipboardData(
-                      text: Uri.https(
-                        'openrouter.ai',
-                        '/${model.id}',
-                      ).toString(),
+          ),
+        Row(
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Semantics(
+                  link: true,
+                  hint: 'Opens in a new tab',
+                  child: TextButton.icon(
+                    onPressed: () => _openPage(modelPage),
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text(
+                      'Model page',
+                      style: TextStyle(fontSize: 12),
                     ),
                   ),
-                  icon: const Icon(Icons.copy_outlined, size: 18),
                 ),
-              ],
+              ),
+            ),
+            SelectableIconButton(
+              tooltip: 'Copy model page link',
+              onPressed: () =>
+                  Clipboard.setData(ClipboardData(text: '$modelPage')),
+              icon: const Icon(Icons.copy_outlined, size: 18),
             ),
           ],
-          const SizedBox(height: 24),
-          _Detail(
-            label: 'Context window',
-            value: model.contextLength == null
-                ? 'Not reported'
-                : '${model.contextLength} tokens',
-          ),
-          _Detail(
-            label: 'Input → output',
-            value:
-                '${model.inputModalities.join(', ')} → ${model.outputModalities.join(', ')}',
-          ),
-          _Detail(
-            label: 'File uploads enabled in wfform',
-            value: model.attachmentSummary,
-          ),
-          _Detail(
-            label: 'Attachment formats and limits',
-            value: model.attachmentNotice,
-          ),
-          if (!model.chatCompatible)
-            _Detail(
-              label: 'Chat compatibility',
-              value: model.incompatibilityReason ?? 'Not supported',
-            ),
-          _Detail(
-            label: 'Pricing · USD per native unit',
-            value: model.pricing.entries
-                .map(
-                  (e) =>
-                      '${e.key}: ${isUnresolvedPrice(e.value) ? 'Unresolved (reported: ${e.value})' : e.value}',
-                )
-                .join('\n'),
-          ),
-          if (!model.pricing.containsKey('request'))
-            const _Detail(
-              label: 'Request price',
-              value:
-                  'Not reported. Routing enforces a maximum request price of zero USD.',
-            ),
-          _Detail(
-            label: 'Supported parameters',
-            value: model.supportedParameters.isEmpty
-                ? 'Not reported'
-                : model.supportedParameters.join(', '),
-          ),
-          _Detail(
-            label: 'Top provider metadata',
-            value: model.topProvider.isEmpty
-                ? 'Not reported'
-                : model.topProvider.entries
-                      .map((e) => '${e.key}: ${e.value}')
-                      .join('\n'),
-          ),
-          if (observation.provider != null)
-            _Detail(label: 'Observed provider', value: observation.provider!),
-          if (observation.endpointSummary?.isNotEmpty ?? false)
-            _Detail(
-              label: 'Endpoint metadata',
-              value: observation.endpointSummary!,
-            ),
-        ],
-      );
-    },
-  );
+        ),
+      ],
+    );
+  }
 }
 
 class _Detail extends StatelessWidget {
@@ -734,7 +913,7 @@ class _Detail extends StatelessWidget {
   final String label, value;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 20),
+    padding: const EdgeInsets.only(bottom: 12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -747,10 +926,10 @@ class _Detail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        SelectableText(
-          value.isEmpty ? 'Not reported' : value,
-          semanticsLabel: value.isEmpty ? 'Not reported' : value,
-        ),
+        // The surrounding SelectionArea handles copying across fields. Keeping
+        // this as text also avoids sharing a scroll-position PageStorage entry
+        // with the enclosing ExpansionTile's boolean expansion state.
+        Text(value.isEmpty ? 'Not reported' : value),
       ],
     ),
   );

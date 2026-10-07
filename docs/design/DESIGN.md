@@ -19,7 +19,7 @@ The design combines a live normalized catalog, bounded health observations, one 
 Text scaling can select a less dense arrangement. Controllers and focus nodes survive layout transitions. New conversation, model changes and history switches are guarded while a response/history transition is active. Model details use text labels, focus/pointer previews and explicit information actions; no essential information depends solely on hover.
 
 The sidebar divider supports pointer/touch dragging and keyboard adjustment.
-Arrow keys adjust in 16-pixel steps; Home/End select limits and Enter resets.
+The plain line has no grip icon. Arrow keys adjust in 16-pixel steps; Home/End select limits, Enter resets, and Escape collapses. Dragging to the left edge also collapses it. Hover the outermost left edge to preview navigation; moving away hides the preview. A keyboard-focusable edge target and tap access provide the same action without hover. Activating any sidebar item restores its default width and performs that action.
 Its preferred width is saved locally on release, rather than writing storage
 on each pointer move. Width is bounded by the viewport and text size so the
 conversation retains usable space; switching to a drawer or navigation rail
@@ -28,8 +28,10 @@ does not discard the preference. The default is 290 logical pixels, with a
 is omitted when it would crowd the conversation. Short sidebars/drawers scroll
 to keep utilities reachable. Settings offers 100%, 125%, 150% and 200% text.
 
-Model details and the inspector display the complete description supplied by
-the API, without a line limit. Some upstream descriptions already end in an
+Model details and the inspector start with a literal, concise description preview.
+Show full description expands the complete API text without a line limit.
+Context and input/output capabilities are visible at a glance; availability,
+pricing, parameters, file limits and provider details expand on demand. Some upstream descriptions already end in an
 ellipsis; these receive a source notice and a copyable OpenRouter model-page
 link. Missing paragraphs are not reconstructed, and additional API requests
 are not made to fetch identical descriptions. The repetitive instruction to
@@ -38,7 +40,7 @@ buttons remain accessible.
 
 The composer grows over several lines and clears when a valid send is accepted. A next draft can be written while the answer streams. Explicit retry reuses the failed user turn; edit/resend appends a revised copy. Returned reasoning is separate and collapsible. Context exclusions and continuation are explicit actions, preserving earlier records.
 
-History offers current and archived views, search, restore, export/import and confirmed permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
+History offers current and archived views, search, restore, export/import and direct permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
 
 ## Visual and content design
 
@@ -74,7 +76,7 @@ The composer starts at three lines, or two when viewport height or 200% text nee
 
 **Add files** accepts UTF-8 text/source files up to 256 KiB on text-compatible models, including Markdown, JSON, YAML, JavaScript and C. Text files have local readable previews and are sent as named text content, without requiring a provider's native file capability. Where supported, the picker also accepts PNG/JPEG/WebP/GIF images, WAV/MP3 audio, MP4 video, and PDF with native file input. Shared limits are 4 files, 8 MiB each and 12 MiB total per message, with the smaller text-file limit applied separately. Text in the composer is optional for an attachment-only message. Draft and sent files persist as binary IndexedDB records with references from their conversation; streamed checkpoints do not rewrite unchanged files. File payloads never enter localStorage/sessionStorage recovery markers, diagnostics or the PWA cache. PDF requests explicitly disable paid parser fallback. See [the rendering guide](../file-rendering.md) for extensions, preview limits and source copying, and [the multimodal guide](../multimodal.md) for media price guards and provider limitations.
 
-The navigation sidebar contains **New conversation**, searchable history, Diagnostics and Settings. History separates **Chats** from **Archived**. Archive keeps a conversation available to inspect and restore; permanent deletion is offered for archived conversations and requires confirmation. Archived conversations are read-only until restored. History identifies each conversation by title, model, update time and message count. The composer shows **Unsaved changes**, **Saving…**, **Saved** or **Save failed**. **Export** saves a conversation and its attachments as a versioned JSON backup; **Import** opens a separate copy. Multiple tabs retain independent active conversations. Conflicting edits preserve both versions by saving a **Recovered copy**, with no automatic merge or overwrite. History remains browser-local, with no cloud sync. See [history.md](../history.md) for persistence, migration, capacity and recovery details.
+The navigation sidebar contains **New conversation**, searchable history, Diagnostics and Settings. History separates **Chats** from **Archived**. Archive keeps a conversation available to inspect and restore; permanent deletion is offered directly on archived rows without first selecting them or opening a confirmation dialog. Archived conversations are read-only until restored. History identifies each conversation by title, model, update time and message count. The composer shows **Unsaved changes**, **Saving…**, **Saved** or **Save failed**. **Export** saves a conversation and its attachments as a versioned JSON backup; **Import** opens a separate copy. Multiple tabs retain independent active conversations. Conflicting edits preserve both versions by saving a **Recovered copy**, with no automatic merge or overwrite. History remains browser-local, with no cloud sync. See [history.md](../history.md) for persistence, migration, capacity and recovery details.
 
 Settings provides **System**, **Light** and **Dark** appearance choices, a session key, 100/125/150/200% text, deliberate offline mode, install where offered, and update checks. **Check allowance** explicitly retrieves the key's free-request allowance when the API reports it; no quota request is made at startup. Counts are advisory, stale observations are labeled, and health probes also consume inference requests. System is the initial appearance choice; an explicit preference persists locally. Both color schemes retain the muted neo-brutalist palette, readable borders and pastel popup headers. The model chooser, model details and diagnostics have distinct colored headings with small emoji cues and readable text labels.
 

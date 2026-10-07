@@ -230,10 +230,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Model details: Quiet Chat'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Pricing'));
+      await tester.tap(find.text('Pricing'));
+      await tester.pumpAndSettle();
       expect(
         find.textContaining('audio: Unresolved (reported: -1)'),
         findsOneWidget,
       );
+      final prices = tester.widget<Text>(
+        find.textContaining('audio: Unresolved (reported: -1)'),
+      );
+      await _selectText(tester, prices.data!);
+      await _shortcut(tester, LogicalKeyboardKey.keyC);
+      expect(copied, prices.data);
       expect(find.textContaining('audio: -1'), findsNothing);
       await h.dispose(tester);
     },

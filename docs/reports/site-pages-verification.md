@@ -61,3 +61,9 @@ failure handling are covered by deterministic widget tests; this is separate
 from the real-browser checks above. No authenticated chat content was sent.
 Google Analytics Realtime/account ingestion, legal enforceability, native
 builds and a fresh offline/install acceptance run are not asserted.
+
+## Published verification
+
+Source commit `c46b0d2` passed [GitHub CI run 37642521874](https://github.com/consciontologic/wfform/actions/runs/37642521874), including six real Chrome storage checks. Publication commit `81a75a9c0b3fedaec0a4f482dde87e4bf325c19c` passed [Pages run 37643186544](https://github.com/consciontologic/wfform.com/actions/runs/37643186544).
+
+Live HTTPS returned all four documents with status 200, version 0.1.0 and one Google loader per document. The actual browser displayed the deployed About page, navigation, analytics explanation, source doodle and version. This browser initially retained an older installed shell; a query bypass was used to inspect current public HTML without changing the user's open app or drafts. Existing installed clients receive the normal safe update flow; a reload alone is not evidence of the current deployment.

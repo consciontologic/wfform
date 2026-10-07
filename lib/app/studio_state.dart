@@ -70,6 +70,7 @@ class StudioState extends ChangeNotifier {
     if (savedSidebarWidth != null && savedSidebarWidth.isFinite) {
       _sidebarWidth = savedSidebarWidth.clamp(240, 440);
     }
+    _sidebarCollapsed = this.store.read('freeform.sidebarCollapsed') == 'true';
     final session = this.store.read('freeform.updateSession.v1');
     _legacyUpdateSession = session;
     if (session != null) {
@@ -109,6 +110,8 @@ class StudioState extends ChangeNotifier {
   double textScale = 1;
   double _sidebarWidth = 290;
   double get sidebarWidth => _sidebarWidth;
+  bool _sidebarCollapsed = false;
+  bool get sidebarCollapsed => _sidebarCollapsed;
   bool _wasOnline = true;
   String? _lastPwaError;
   bool _disposed = false;
@@ -987,6 +990,7 @@ class StudioState extends ChangeNotifier {
   }
 
   Future<bool> openConversation(String id) async {
+    if (isDeletingConversation(id)) return false;
     if (!_beginHistoryNavigation()) return false;
     try {
       if (!await flushHistory()) return false;
@@ -1017,6 +1021,7 @@ class StudioState extends ChangeNotifier {
   Future<bool> restoreConversation(String id) => _setArchived(id, false);
 
   Future<bool> _setArchived(String id, bool value) async {
+    if (isDeletingConversation(id)) return false;
     if (!_beginHistoryNavigation()) return false;
     try {
       if (!await flushHistory()) return false;
@@ -1051,14 +1056,50 @@ class StudioState extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteConversation(String id) async {
-    if (!_beginHistoryNavigation()) return false;
+  final Map<String, Future<bool>> _conversationDeletions = {};
+  AppFailure? _lastDeletionError;
+
+  bool isDeletingConversation(String id) =>
+      _conversationDeletions.containsKey(id);
+
+  Future<bool> deleteConversation(String id) {
+    final pending = _conversationDeletions[id];
+    if (pending != null) return pending;
+    if (_disposed || historyBusy) return Future.value(false);
+    final deletingActive = id == activeConversationId;
+    if (deletingActive && !_beginHistoryNavigation()) {
+      return Future.value(false);
+    }
+    // Register before starting the transaction so repeated clicks and attempts
+    // to open/restore this row cannot race it. Other drafts keep saving normally.
+    final operation = Future<void>.value()
+        .then((_) => _deleteConversation(id, deletingActive: deletingActive))
+        .whenComplete(() {
+          _conversationDeletions.remove(id);
+          if (deletingActive) _historySwitching = false;
+          if (!_disposed) notifyListeners();
+        });
+    _conversationDeletions[id] = operation;
+    notifyListeners();
+    return operation;
+  }
+
+  Future<bool> _deleteConversation(
+    String id, {
+    required bool deletingActive,
+  }) async {
+    if (_disposed) return false;
     try {
-      if (id != activeConversationId && !await flushHistory()) return false;
-      await _saving;
-      _historyTimer?.cancel();
-      _historyTimer = null;
+      if (deletingActive) {
+        // A checkpoint for this record must finish before its deletion commits.
+        await _saving;
+        if (id == activeConversationId) {
+          _historyTimer?.cancel();
+          _historyTimer = null;
+        }
+      }
       await historyRepository.delete(id);
+      if (_disposed) return true;
       _history.removeWhere((record) => record.id == id);
       if (id == activeConversationId) {
         _suppressHistory = true;
@@ -1067,18 +1108,28 @@ class StudioState extends ChangeNotifier {
         _draftAttachments = const [];
         store.write('freeform.draft.v1', '');
         _activeRecord = _blankRecord(catalog.selected);
+        _persistDraft();
         _revision = _savedRevision = 0;
         conversationNotice = null;
         _suppressHistory = false;
+        historyError = null;
+        historyStatus.value = 'Saved';
+      } else if (_lastDeletionError != null &&
+          identical(historyError, _lastDeletionError)) {
+        historyError = null;
+        historyStatus.value = hasUnsavedHistoryChanges
+            ? 'Unsaved changes'
+            : 'Saved';
       }
-      historyError = null;
+      _lastDeletionError = null;
+      historyIndexChanges.value++;
       return true;
     } catch (error) {
-      _historyFailure(error);
+      if (!_disposed) {
+        _historyFailure(error);
+        _lastDeletionError = historyError;
+      }
       return false;
-    } finally {
-      _historySwitching = false;
-      if (!_disposed) notifyListeners();
     }
   }
 
@@ -1095,6 +1146,22 @@ class StudioState extends ChangeNotifier {
     if (next == _sidebarWidth) return;
     _sidebarWidth = next;
     store.write('freeform.sidebarWidth', '$next');
+    notifyListeners();
+  }
+
+  void collapseSidebar() {
+    if (_sidebarCollapsed) return;
+    _sidebarCollapsed = true;
+    store.write('freeform.sidebarCollapsed', 'true');
+    notifyListeners();
+  }
+
+  void restoreSidebar() {
+    if (!_sidebarCollapsed) return;
+    _sidebarCollapsed = false;
+    _sidebarWidth = 290;
+    store.write('freeform.sidebarCollapsed', 'false');
+    store.write('freeform.sidebarWidth', '290.0');
     notifyListeners();
   }
 

@@ -136,4 +136,15 @@ Scope ID: public-information. Requested 2026-10-07.
 - [x] Add the supplied Google tag exactly once immediately after each HTML head and keep hosting/CSP/PWA packaging compatible.
 - [x] Publish accessible About, Terms and conditions, and Liability pages with contextual copy, a GitHub doodle, and app/page version 0.1.0.
 - [x] Replace tracked personal machine paths/usernames with portable documentation and shorten the visitor README.
-- [ ] Verify deterministic gates, release build, responsive browser behavior and the deployed public pages.
+- [x] Verify deterministic gates, release build, responsive browser behavior and the deployed public pages.
+
+## Phase 10 — Sidebar and model passport patch 0.1.1
+
+Scope ID: sidebar-passport-patch. Requested 2026-10-07.
+
+- [x] Replace resize grip with a plain divider; support collapse, edge reveal and default-width restoration on sidebar actions without losing drafts or requests.
+- [x] Present a concise, readable model passport with full source descriptions and technical details available on demand.
+- [x] Delete an archived row directly without requiring selection; preserve unrelated active conversations and report failures.
+- [ ] Publish patch 0.1.1 with concise Open app labels; verify regressions, release build, responsive browser behavior and deployment.
+
+Local patch evidence: [0.1.1 verification](../reports/sidebar-passport-patch-verification.md).

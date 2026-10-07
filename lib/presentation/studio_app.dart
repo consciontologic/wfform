@@ -18,6 +18,7 @@ import 'retry_control.dart';
 import 'context_dialog.dart';
 import 'sidebar_resize_handle.dart';
 import 'app_footer.dart';
+import 'sidebar_reveal_edge.dart';
 
 class StudioApp extends StatelessWidget {
   const StudioApp({super.key, required this.state});
@@ -61,8 +62,14 @@ class _StudioScreenState extends State<StudioScreen> {
   final composerFocus = FocusNode(debugLabel: 'Message composer');
   final chatKey = GlobalKey(debugLabel: 'Stable chat across layouts');
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  final sidebarKey = GlobalKey(debugLabel: 'Stable sidebar across preview');
+  final sidebarEdgeFocus = FocusNode(debugLabel: 'Show sidebar');
+  final sidebarPreviewFocus = FocusNode(debugLabel: 'Sidebar preview');
   bool inspector = true;
   double? sidebarPreview;
+  bool sidebarPeeking = false;
+  bool sidebarHovered = false;
+  bool edgeHoverArmed = true;
   bool syncingDraft = false;
   StudioState get state => widget.state;
   @override
@@ -92,7 +99,46 @@ class _StudioScreenState extends State<StudioScreen> {
     composer.removeListener(_saveDraft);
     composer.dispose();
     composerFocus.dispose();
+    sidebarEdgeFocus.dispose();
+    sidebarPreviewFocus.dispose();
     super.dispose();
+  }
+
+  void _collapseSidebar(bool keyboard) {
+    sidebarPreview = null;
+    sidebarPeeking = false;
+    sidebarHovered = false;
+    // A drag ending at x=0 must actually hide the panel; do not immediately
+    // reopen it because a newly mounted hover region is under the pointer.
+    edgeHoverArmed = false;
+    state.collapseSidebar();
+    if (keyboard) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && state.sidebarCollapsed) sidebarEdgeFocus.requestFocus();
+      });
+    }
+  }
+
+  void _revealSidebar() {
+    if (!state.sidebarCollapsed || sidebarPeeking) return;
+    setState(() => sidebarPeeking = true);
+  }
+
+  void _dismissSidebar({bool focusEdge = false}) {
+    edgeHoverArmed = false;
+    if (sidebarPeeking) setState(() => sidebarPeeking = false);
+    if (focusEdge) sidebarEdgeFocus.requestFocus();
+  }
+
+  void _sidebarAction() {
+    if (!state.sidebarCollapsed) return;
+    // Let the item execute first. KeyedSubtree then moves the same focused
+    // history/composer controls instead of cancelling the initial activation.
+    scheduleMicrotask(() {
+      if (!mounted || !state.sidebarCollapsed) return;
+      sidebarPeeking = false;
+      state.restoreSidebar();
+    });
   }
 
   Future<void> _send({bool retry = false}) async {
@@ -194,17 +240,25 @@ class _StudioScreenState extends State<StudioScreen> {
             box.maxWidth >= 1100 &&
             scale < 1.8 &&
             sidebarMaximum >= sidebarMinimum;
-        if (!expanded) sidebarPreview = null;
-        final sidebarWidth = expanded
-            ? (sidebarPreview ?? state.sidebarWidth).clamp(
-                sidebarMinimum,
-                sidebarMaximum,
-              )
+        if (!expanded) {
+          sidebarPreview = null;
+          sidebarPeeking = false;
+        }
+        final sidebarVisible = expanded && !state.sidebarCollapsed;
+        final sidebarWidth = sidebarVisible
+            ? sidebarPreview ??
+                  state.sidebarWidth.clamp(sidebarMinimum, sidebarMaximum)
             : 0.0;
+        final peekWidth = 290.0
+            .clamp(sidebarMinimum, math.max(sidebarMinimum, sidebarMaximum))
+            .toDouble();
         final canShowInspector =
             expanded &&
             box.maxWidth >= 1420 &&
-            box.maxWidth - sidebarWidth - SidebarResizeHandle.extent - 310 >=
+            box.maxWidth -
+                    sidebarWidth -
+                    (sidebarVisible ? SidebarResizeHandle.extent : 0) -
+                    310 >=
                 chatMinimum;
         final wideDetails = canShowInspector && inspector;
         final palette = StudioPalette.of(context);
@@ -215,7 +269,11 @@ class _StudioScreenState extends State<StudioScreen> {
               ? Drawer(
                   width: (box.maxWidth - 24).clamp(260.0, 340.0),
                   child: SafeArea(
-                    child: _SidePanel(state: state, drawer: true),
+                    child: _SidePanel(
+                      state: state,
+                      drawer: true,
+                      onInteracted: _sidebarAction,
+                    ),
                   ),
                 )
               : null,
@@ -228,194 +286,302 @@ class _StudioScreenState extends State<StudioScreen> {
                 ),
                 if (state.platform.updateAvailable) _UpdateNotice(state: state),
                 Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      if (expanded)
-                        Container(
-                          key: const ValueKey('expanded-sidebar'),
-                          width: sidebarWidth,
-                          decoration: BoxDecoration(
-                            color: palette.cream,
-                            border: Border(
-                              right: BorderSide(
-                                color: palette.border,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                          child: _SidePanel(state: state),
-                        ),
-                      if (expanded)
-                        SidebarResizeHandle(
-                          key: const ValueKey('sidebar-resize-handle'),
-                          value: sidebarWidth,
-                          minimum: sidebarMinimum,
-                          maximum: sidebarMaximum,
-                          onChanged: (value) =>
-                              setState(() => sidebarPreview = value),
-                          onChangeEnd: (value) {
-                            setState(() => sidebarPreview = null);
-                            state.setSidebarWidth(value);
-                          },
-                          onCancelled: () =>
-                              setState(() => sidebarPreview = null),
-                        ),
-                      if (!expanded && !compact)
-                        Container(
-                          key: const ValueKey('medium-rail'),
-                          width: 72,
-                          decoration: BoxDecoration(
-                            color: palette.cream,
-                            border: Border(
-                              right: BorderSide(color: palette.border),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 16),
-                              ListenableBuilder(
-                                listenable: state.chat,
-                                builder: (context, _) => SelectableIconButton(
-                                  tooltip: 'New conversation',
-                                  onPressed:
-                                      state.chat.busy || state.historyBusy
-                                      ? null
-                                      : state.newConversation,
-                                  icon: const Icon(Icons.edit_square),
-                                ),
-                              ),
-                              SelectableIconButton(
-                                tooltip: 'Conversation history',
-                                onPressed: () => openHistory(context, state),
-                                icon: const Icon(Icons.history),
-                              ),
-                              const Spacer(),
-                              _UtilityActions(state: state),
-                              const SizedBox(height: 12),
-                            ],
-                          ),
-                        ),
-                      Expanded(
-                        child: LayoutBuilder(
-                          key: chatKey,
-                          builder: (context, chatBox) => Column(
-                            children: [
-                              _SelectionBar(
-                                state: state,
-                                compact: compact,
-                                expanded: expanded,
-                                onToggleDetails: canShowInspector
-                                    ? () =>
-                                          setState(() => inspector = !inspector)
-                                    : null,
-                              ),
-                              if (!state.online)
-                                _Notice(
-                                  text:
-                                      'Offline · remote chat is unavailable. Your saved conversations and draft are here.',
-                                  color: palette.peach,
-                                ),
-                              if (state.catalog.selectionNotice != null)
-                                _Notice(
-                                  text: state.catalog.selectionNotice!,
-                                  color: palette.peach,
-                                ),
-                              if (state.conversationNotice != null &&
-                                  !state.activeConversationArchived)
-                                _Notice(
-                                  text: state.conversationNotice!,
-                                  color: palette.peach,
-                                ),
-                              if (state.historyError != null)
-                                _Notice(
-                                  text: state.historyError!.message,
-                                  color: palette.peach,
-                                ),
-                              if (state.catalog.error != null && !expanded)
-                                _Notice(
-                                  text: state.catalog.error!.message,
-                                  color: palette.peach,
-                                ),
-                              if (state.activeConversationArchived)
-                                Container(
-                                  color: palette.lilac,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 6,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (sidebarVisible)
+                            Container(
+                              key: const ValueKey('expanded-sidebar'),
+                              width: sidebarWidth,
+                              color: palette.cream,
+                              child: ClipRect(
+                                child: OverflowBox(
+                                  alignment: Alignment.centerLeft,
+                                  minWidth: math.max(
+                                    sidebarWidth,
+                                    sidebarMinimum,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Expanded(
-                                        child: Text(
-                                          'Archived conversation · restore to continue.',
-                                          style: TextStyle(fontSize: 12),
+                                  maxWidth: math.max(
+                                    sidebarWidth,
+                                    sidebarMinimum,
+                                  ),
+                                  child: KeyedSubtree(
+                                    key: sidebarKey,
+                                    child: _SidePanel(
+                                      state: state,
+                                      onInteracted: _sidebarAction,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (sidebarVisible)
+                            SidebarResizeHandle(
+                              key: const ValueKey('sidebar-resize-handle'),
+                              value: sidebarWidth,
+                              minimum: sidebarMinimum,
+                              maximum: sidebarMaximum,
+                              onChanged: (value) =>
+                                  setState(() => sidebarPreview = value),
+                              onChangeEnd: (value) {
+                                setState(() => sidebarPreview = null);
+                                state.setSidebarWidth(value);
+                              },
+                              onCancelled: () =>
+                                  setState(() => sidebarPreview = null),
+                              onCollapse: _collapseSidebar,
+                            ),
+                          if (!expanded && !compact)
+                            Container(
+                              key: const ValueKey('medium-rail'),
+                              width: 72,
+                              decoration: BoxDecoration(
+                                color: palette.cream,
+                                border: Border(
+                                  right: BorderSide(color: palette.border),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 16),
+                                  ListenableBuilder(
+                                    listenable: state.chat,
+                                    builder: (context, _) =>
+                                        SelectableIconButton(
+                                          tooltip: 'New conversation',
+                                          onPressed:
+                                              state.chat.busy ||
+                                                  state.historyBusy
+                                              ? null
+                                              : () {
+                                                  _sidebarAction();
+                                                  state.newConversation();
+                                                },
+                                          icon: const Icon(Icons.edit_square),
                                         ),
+                                  ),
+                                  SelectableIconButton(
+                                    tooltip: 'Conversation history',
+                                    onPressed: () {
+                                      _sidebarAction();
+                                      openHistory(context, state);
+                                    },
+                                    icon: const Icon(Icons.history),
+                                  ),
+                                  const Spacer(),
+                                  _UtilityActions(
+                                    state: state,
+                                    beforeOpen: _sidebarAction,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              ),
+                            ),
+                          Expanded(
+                            child: LayoutBuilder(
+                              key: chatKey,
+                              builder: (context, chatBox) => Column(
+                                children: [
+                                  _SelectionBar(
+                                    state: state,
+                                    compact: compact,
+                                    expanded: expanded,
+                                    onToggleDetails: canShowInspector
+                                        ? () => setState(
+                                            () => inspector = !inspector,
+                                          )
+                                        : null,
+                                  ),
+                                  if (!state.online)
+                                    _Notice(
+                                      text:
+                                          'Offline · remote chat is unavailable. Your saved conversations and draft are here.',
+                                      color: palette.peach,
+                                    ),
+                                  if (state.catalog.selectionNotice != null)
+                                    _Notice(
+                                      text: state.catalog.selectionNotice!,
+                                      color: palette.peach,
+                                    ),
+                                  if (state.conversationNotice != null &&
+                                      !state.activeConversationArchived)
+                                    _Notice(
+                                      text: state.conversationNotice!,
+                                      color: palette.peach,
+                                    ),
+                                  if (state.historyError != null)
+                                    _Notice(
+                                      text: state.historyError!.message,
+                                      color: palette.peach,
+                                    ),
+                                  if (state.catalog.error != null && !expanded)
+                                    _Notice(
+                                      text: state.catalog.error!.message,
+                                      color: palette.peach,
+                                    ),
+                                  if (state.activeConversationArchived)
+                                    Container(
+                                      color: palette.lilac,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 6,
                                       ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            state.restoreConversation(
-                                              state.activeConversationId!,
+                                      child: Row(
+                                        children: [
+                                          const Expanded(
+                                            child: Text(
+                                              'Archived conversation · restore to continue.',
+                                              style: TextStyle(fontSize: 12),
                                             ),
-                                        child: const Text('Restore'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                state.restoreConversation(
+                                                  state.activeConversationId!,
+                                                ),
+                                            child: const Text('Restore'),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
+                                  Expanded(
+                                    child: _Conversation(
+                                      state: state,
+                                      compact: compact,
+                                      onSuggestion: (text) {
+                                        if (!state.activeConversationArchived) {
+                                          composer.text = text;
+                                          composerFocus.requestFocus();
+                                        }
+                                      },
+                                      onChoose: () =>
+                                          openModels(context, state),
+                                      onEdit: _editMessage,
+                                    ),
+                                  ),
+                                  _Composer(
+                                    state: state,
+                                    maxHeight: chatBox.maxHeight * .5,
+                                    controller: composer,
+                                    focus: composerFocus,
+                                    compact: compact,
+                                    onSend: () => _send(),
+                                    onRetry: () => _send(retry: true),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (wideDetails)
+                            Container(
+                              key: const ValueKey('model-inspector'),
+                              width: 310,
+                              decoration: BoxDecoration(
+                                color: palette.cream,
+                                border: Border(
+                                  left: BorderSide(
+                                    color: palette.border,
+                                    width: 1.5,
                                   ),
                                 ),
-                              Expanded(
-                                child: _Conversation(
-                                  state: state,
-                                  compact: compact,
-                                  onSuggestion: (text) {
-                                    if (!state.activeConversationArchived) {
-                                      composer.text = text;
-                                      composerFocus.requestFocus();
+                              ),
+                              child: state.catalog.selected == null
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(24),
+                                      child: Text(
+                                        'Choose a model to inspect its capabilities and availability.',
+                                      ),
+                                    )
+                                  : SingleChildScrollView(
+                                      padding: const EdgeInsets.all(22),
+                                      child: ModelDetails(
+                                        state: state,
+                                        model: state.catalog.selected!,
+                                      ),
+                                    ),
+                            ),
+                        ],
+                      ),
+                      if (expanded && state.sidebarCollapsed)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: SidebarRevealEdge(
+                            key: const ValueKey('sidebar-reveal-edge'),
+                            focusNode: sidebarEdgeFocus,
+                            onReveal: _revealSidebar,
+                            onHoverReveal: () {
+                              if (edgeHoverArmed) _revealSidebar();
+                            },
+                            onPointerExit: () => edgeHoverArmed = true,
+                            onDismiss: () => _dismissSidebar(focusEdge: true),
+                          ),
+                        ),
+                      if (expanded && state.sidebarCollapsed && sidebarPeeking)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: peekWidth,
+                          child: TapRegion(
+                            onTapOutside: (_) => _dismissSidebar(),
+                            child: MouseRegion(
+                              onEnter: (_) => sidebarHovered = true,
+                              onExit: (_) {
+                                sidebarHovered = false;
+                                if (!sidebarPreviewFocus.hasFocus) {
+                                  _dismissSidebar();
+                                }
+                              },
+                              child: FocusTraversalGroup(
+                                policy: WidgetOrderTraversalPolicy(),
+                                child: Focus(
+                                  focusNode: sidebarPreviewFocus,
+                                  skipTraversal: true,
+                                  onKeyEvent: (_, event) {
+                                    if (event is KeyDownEvent &&
+                                        event.logicalKey ==
+                                            LogicalKeyboardKey.escape) {
+                                      _dismissSidebar(focusEdge: true);
+                                      return KeyEventResult.handled;
+                                    }
+                                    return KeyEventResult.ignored;
+                                  },
+                                  onFocusChange: (focused) {
+                                    if (!focused &&
+                                        !sidebarHovered &&
+                                        state.sidebarCollapsed) {
+                                      _dismissSidebar();
                                     }
                                   },
-                                  onChoose: () => openModels(context, state),
-                                  onEdit: _editMessage,
+                                  child: Material(
+                                    key: const ValueKey(
+                                      'sidebar-hover-preview',
+                                    ),
+                                    color: palette.cream,
+                                    elevation: 6,
+                                    shape: Border(
+                                      right: BorderSide(
+                                        color: palette.border,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: KeyedSubtree(
+                                      key: sidebarKey,
+                                      child: _SidePanel(
+                                        state: state,
+                                        onInteracted: _sidebarAction,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              _Composer(
-                                state: state,
-                                maxHeight: chatBox.maxHeight * .5,
-                                controller: composer,
-                                focus: composerFocus,
-                                compact: compact,
-                                onSend: () => _send(),
-                                onRetry: () => _send(retry: true),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (wideDetails)
-                        Container(
-                          key: const ValueKey('model-inspector'),
-                          width: 310,
-                          decoration: BoxDecoration(
-                            color: palette.cream,
-                            border: Border(
-                              left: BorderSide(
-                                color: palette.border,
-                                width: 1.5,
                               ),
                             ),
                           ),
-                          child: state.catalog.selected == null
-                              ? const Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Text(
-                                    'Choose a model to inspect its capabilities and availability.',
-                                  ),
-                                )
-                              : SingleChildScrollView(
-                                  padding: const EdgeInsets.all(22),
-                                  child: ModelDetails(
-                                    state: state,
-                                    model: state.catalog.selected!,
-                                  ),
-                                ),
                         ),
                     ],
                   ),
@@ -433,9 +599,14 @@ class _StudioScreenState extends State<StudioScreen> {
 }
 
 class _SidePanel extends StatelessWidget {
-  const _SidePanel({required this.state, this.drawer = false});
+  const _SidePanel({
+    required this.state,
+    this.drawer = false,
+    this.onInteracted,
+  });
   final StudioState state;
   final bool drawer;
+  final VoidCallback? onInteracted;
   void _close(BuildContext context) {
     if (drawer) Navigator.pop(context);
   }
@@ -466,6 +637,7 @@ class _SidePanel extends StatelessWidget {
             onPressed: state.chat.busy || state.historyBusy
                 ? null
                 : () async {
+                    onInteracted?.call();
                     if (await state.newConversation() && context.mounted) {
                       _close(context);
                     }
@@ -478,6 +650,7 @@ class _SidePanel extends StatelessWidget {
       Expanded(
         child: ConversationHistory(
           state: state,
+          onInteracted: onInteracted,
           onOpened: () => _close(context),
         ),
       ),
@@ -485,7 +658,10 @@ class _SidePanel extends StatelessWidget {
       _UtilityActions(
         state: state,
         labels: true,
-        beforeOpen: () => _close(context),
+        beforeOpen: () {
+          onInteracted?.call();
+          _close(context);
+        },
       ),
       const SizedBox(height: 12),
     ],

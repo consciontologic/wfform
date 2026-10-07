@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Sidebar and passport patch 0.1.1](sidebar-passport-patch-verification.md): collapse/edge reveal, concise model metadata, direct archived deletion, accessibility regression fixes and release checks.
+
 - [Public pages and version 0.1.0](site-pages-verification.md): Google tag placement, linked information pages, responsive footer, portable repository docs and local/remote verification evidence.
 
 - [Sidebar and model readability](sidebar-readability-verification.md): 7 October 2026 adaptive resizing, 125% text, truthful source descriptions and release/browser regression checks.

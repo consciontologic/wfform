@@ -319,6 +319,11 @@ void main() {
       expect(h.state.history.where((entry) => entry.id == id), isEmpty);
       expect(h.state.activeConversationId, isNot(id));
       expect(h.state.draft, isEmpty);
+      final recovery =
+          jsonDecode(h.state.recoveryStore.read('freeform.pendingDraft.v1')!)
+              as Map<String, dynamic>;
+      expect(recovery['id'], h.state.activeConversationId);
+      expect(recovery['draft'], isEmpty);
     },
   );
 

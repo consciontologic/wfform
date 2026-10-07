@@ -134,3 +134,14 @@ footers in sync, and update the CSP hash if the inline snippet changes.
 Machine-specific paths have been removed from tracked documentation; retain
 portable commands and relative repository references. See the
 [verification report](../reports/site-pages-verification.md).
+
+## Sidebar and passport patch — 2026-10-07
+
+Version 0.1.1 replaces the sidebar grip with a plain divider and supports a
+persisted collapsed state, left-edge preview, and default-width restoration
+when a sidebar action is activated. Compact drawers and medium rails retain
+their existing interaction models. Model passports show a concise literal
+preview with complete descriptions and grouped technical details available
+on demand. Archived-row deletion is direct, independent of row selection,
+and does not disturb an unrelated active conversation. See Phase 10 of the
+roadmap for verification acceptance.

@@ -54,9 +54,9 @@ Future<(StudioState, _LinksPlatform)> _mount(
 Finder get _footer => find.byKey(const ValueKey('app-footer'));
 
 void main() {
-  test('release version is 0.1.0', () {
+  test('release version is 0.1.1', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '0.1.0');
+    expect(appVersion, '0.1.1');
     expect(
       RegExp(
         r'^version: (.+)\+',
@@ -65,7 +65,7 @@ void main() {
       appVersion,
     );
     expect(
-      RegExp(r'^version: 0\.1\.0\+1$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 0\.1\.1\+2$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -75,7 +75,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v0.1.0'), findsOneWidget);
+      expect(find.text('v0.1.1'), findsOneWidget);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {
         'About': 'about.html',
@@ -104,7 +104,7 @@ void main() {
   ) async {
     final (_, platform) = await _mount(tester, const Size(320, 740), scale: 2);
     expect(_footer, findsOneWidget);
-    expect(find.text('v0.1.0'), findsOneWidget);
+    expect(find.text('v0.1.1'), findsOneWidget);
     expect(tester.getSize(_footer).height, lessThanOrEqualTo(56));
     expect(composer.hitTestable(), findsOneWidget);
     for (final label in ['About', 'Terms and conditions', 'Liability']) {

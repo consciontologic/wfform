@@ -53,4 +53,29 @@ void main() {
       expect(restored.state.sidebarWidth, 440);
     },
   );
+
+  test(
+    'collapse persists independently and an action restores the default width',
+    () {
+      final h = fixtures.Harness();
+      addTearDown(h.state.dispose);
+      h.state.setSidebarWidth(400);
+      h.state.collapseSidebar();
+      expect(h.state.sidebarCollapsed, isTrue);
+      expect(h.state.sidebarWidth, 400);
+      final restored = fixtures.Harness(memory: h.store);
+      addTearDown(restored.state.dispose);
+      expect(restored.state.sidebarCollapsed, isTrue);
+      expect(restored.state.sidebarWidth, 400);
+      var changes = 0;
+      restored.state.addListener(() => changes++);
+      restored.state.restoreSidebar();
+      expect(restored.state.sidebarCollapsed, isFalse);
+      expect(restored.state.sidebarWidth, 290);
+      expect(h.store.read('freeform.sidebarCollapsed'), 'false');
+      expect(h.store.read('freeform.sidebarWidth'), '290.0');
+      restored.state.restoreSidebar();
+      expect(changes, 1);
+    },
+  );
 }

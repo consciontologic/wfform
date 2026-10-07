@@ -16,12 +16,14 @@ class SidebarResizeHandle extends StatefulWidget {
     required this.onChanged,
     required this.onChangeEnd,
     required this.onCancelled,
+    required this.onCollapse,
   });
 
   static const extent = 24.0;
   final double value, minimum, maximum;
   final ValueChanged<double> onChanged, onChangeEnd;
   final VoidCallback onCancelled;
+  final ValueChanged<bool> onCollapse;
 
   @override
   State<SidebarResizeHandle> createState() => _SidebarResizeHandleState();
@@ -67,6 +69,8 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
         const SingleActivator(LogicalKeyboardKey.end): () =>
             _set(widget.maximum),
         const SingleActivator(LogicalKeyboardKey.enter): () => _set(290),
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            widget.onCollapse(true),
       },
       child: FocusableActionDetector(
         focusNode: _focus,
@@ -78,7 +82,7 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
           value: '${widget.value.round()} pixels',
           hint:
               'Drag, or use arrow keys. Home for minimum, End for maximum, '
-              'Enter to reset.',
+              'Enter to reset. Drag to the left edge or press Escape to hide.',
           slider: true,
           increasedValue: widget.value < widget.maximum
               ? '${_bound(widget.value + 16).round()} pixels'
@@ -95,7 +99,7 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
           child: SelectableTooltip(
             message:
                 'Drag to resize sidebar. Arrow keys adjust; '
-                'Home / End set limits; Enter resets.',
+                'Home / End set limits; Enter resets; Escape hides.',
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               excludeFromSemantics: true,
@@ -109,15 +113,20 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
                 setState(() => _dragging = true);
               },
               onHorizontalDragUpdate: (details) {
-                _dragValue = _bound(
-                  _dragWidth +
-                      (details.globalPosition.dx - _dragStart) * _direction,
-                );
+                _dragValue =
+                    (_dragWidth +
+                            (details.globalPosition.dx - _dragStart) *
+                                _direction)
+                        .clamp(0.0, widget.maximum);
                 widget.onChanged(_dragValue);
               },
               onHorizontalDragEnd: (_) {
                 setState(() => _dragging = false);
-                widget.onChangeEnd(_bound(_dragValue));
+                if (_dragValue <= 32) {
+                  widget.onCollapse(false);
+                } else {
+                  widget.onChangeEnd(_bound(_dragValue));
+                }
               },
               onHorizontalDragCancel: () {
                 setState(() => _dragging = false);
@@ -125,23 +134,12 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
               },
               child: SizedBox(
                 width: SidebarResizeHandle.extent,
-                child: ColoredBox(
-                  color: active ? palette.lilac : palette.cream,
-                  child: Center(
-                    child: Container(
-                      width: 20,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: active ? palette.surface : palette.cream,
-                        border: Border.all(
-                          color: active ? palette.ink : palette.border,
-                          width: _highlight ? 2 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: ExcludeSemantics(
-                        child: Icon(Icons.drag_indicator, size: 18),
-                      ),
+                child: Center(
+                  child: SizedBox(
+                    width: active ? 3 : 1.5,
+                    height: double.infinity,
+                    child: ColoredBox(
+                      color: active ? palette.ink : palette.border,
                     ),
                   ),
                 ),
