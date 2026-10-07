@@ -56,6 +56,15 @@ fi
 
   String commands() => calls.existsSync() ? calls.readAsStringSync() : '';
 
+  test('public CLI and CI builds use the custom domain root', () {
+    final makefile = File('Makefile').readAsStringSync();
+    final workflow = File('.github/workflows/web.yml').readAsStringSync();
+    const build =
+        'dart run tool/build.dart --public --output=build/publish-web --base-href=/';
+    expect(makefile, contains('build.public:\n\t$build\n'));
+    expect(workflow, contains('        run: $build\n'));
+  });
+
   test(
     'empty target is initialized and changed artifacts commit and push once',
     () async {

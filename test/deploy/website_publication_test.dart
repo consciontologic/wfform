@@ -45,14 +45,14 @@ void main() {
       final first = prepareWebsite(source, target);
       expect(first.version, built.version);
       expect(first.changedPaths, contains('index.html'));
-      expect(File('${target.path}/CNAME').existsSync(), isFalse);
+      expect(File('${target.path}/CNAME').readAsStringSync(), 'wfform.com\n');
       expect(File('${target.path}/.nojekyll').existsSync(), isTrue);
       expect(prepareWebsite(source, target).changedPaths, isEmpty);
     },
   );
 
   for (final alreadyRemoved in [false, true]) {
-    test('retires previously owned CNAME, already removed: $alreadyRemoved', () {
+    test('preserves or restores owned CNAME, removed: $alreadyRemoved', () {
       final prior = release('prior');
       prepareWebsite(source, target);
       // This is the actual format-1 ownership entry written by older releases.
@@ -68,11 +68,11 @@ void main() {
       if (alreadyRemoved) cname.deleteSync();
       release('next');
       final result = prepareWebsite(source, target);
-      expect(cname.existsSync(), isFalse);
-      expect(result.changedPaths.contains('CNAME'), !alreadyRemoved);
+      expect(cname.readAsStringSync(), 'wfform.com\n');
+      expect(result.changedPaths.contains('CNAME'), alreadyRemoved);
       expect(
         (jsonDecode(ownership.readAsStringSync()) as Map)['files'],
-        isNot(contains('CNAME')),
+        containsPair('CNAME', sha256(utf8.encode('wfform.com\n'))),
       );
       expect(
         File(
@@ -84,14 +84,40 @@ void main() {
     });
   }
 
-  test('unowned custom-domain file stops publication without deleting it', () {
-    release('first');
-    final cname = File('${target.path}/CNAME')
-      ..writeAsStringSync('another.example\n');
-    expect(() => prepareWebsite(source, target), throwsStateError);
-    expect(cname.readAsStringSync(), 'another.example\n');
-    expect(target.listSync().length, 1);
-  });
+  for (final content in ['wfform.com', 'wfform.com\n', 'wfform.com\r\n']) {
+    test('adopts matching GitHub-created CNAME: ${jsonEncode(content)}', () {
+      release('first');
+      final cname = File('${target.path}/CNAME')..writeAsStringSync(content);
+      prepareWebsite(source, target);
+      expect(cname.readAsStringSync(), 'wfform.com\n');
+      final ownership =
+          jsonDecode(
+                File(
+                  '${target.path}/.wfform-deployment.json',
+                ).readAsStringSync(),
+              )
+              as Map;
+      expect(
+        ownership['files'],
+        containsPair('CNAME', sha256(utf8.encode('wfform.com\n'))),
+      );
+      expect(prepareWebsite(source, target).changedPaths, isEmpty);
+    });
+  }
+
+  for (final content in [
+    'another.example\n',
+    'www.wfform.com\n',
+    'wfform.com\nanother.example\n',
+  ]) {
+    test('conflicting unowned CNAME is preserved: ${jsonEncode(content)}', () {
+      release('first');
+      final cname = File('${target.path}/CNAME')..writeAsStringSync(content);
+      expect(() => prepareWebsite(source, target), throwsStateError);
+      expect(cname.readAsStringSync(), content);
+      expect(target.listSync().length, 1);
+    });
+  }
 
   test('manually changed owned CNAME is preserved and reported', () {
     release('first');
@@ -105,8 +131,11 @@ void main() {
     ownership.writeAsStringSync(jsonEncode(previous));
     final cname = File('${target.path}/CNAME')
       ..writeAsStringSync('human-edit.example\n');
+    final originalIndex = File('${target.path}/index.html').readAsStringSync();
+    release('next');
     expect(() => prepareWebsite(source, target), throwsStateError);
     expect(cname.readAsStringSync(), 'human-edit.example\n');
+    expect(File('${target.path}/index.html').readAsStringSync(), originalIndex);
   });
 
   test(

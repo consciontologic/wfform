@@ -1,9 +1,9 @@
 # Search and project metadata
 
 Updated 2026-10-07. The canonical public site is
-**https://consciontologic.github.io/wfform.com/**, using free GitHub Pages hosting.
-The user does not own the `wfform.com` domain; it is only the destination
-repository name. No domain purchase, DNS configuration or custom domain is needed.
+**https://wfform.com/**, using GitHub Pages hosting with the user's custom domain.
+The domain replaces the earlier `consciontologic.github.io/wfform.com/` URL.
+The source repository and artifact destination remain unchanged.
 
 ## Implemented metadata
 
@@ -16,13 +16,12 @@ repository name. No domain purchase, DNS configuration or custom domain is neede
 - `web/about.html` is a small, visible product and getting-started document with
   its own title, description, canonical URL and sharing metadata. It works
   without JavaScript and links back to the Flutter app and source repository.
-- `web/sitemap.xml` lists the homepage and About page under `/wfform.com/`.
-  The shipped `web/robots.txt` copy documents the sitemap URL and a scoped
-  `/wfform.com/config/` rule, but **Google does not use a robots.txt file in a
-  subdirectory**. Crawlers consult `https://consciontologic.github.io/robots.txt`,
-  which is outside this project repository's deployed path. Do not claim the
-  project copy controls crawling. The public HTML permits indexing through its
-  robots meta tags, and the sitemap can be submitted directly to Search Console.
+- `web/sitemap.xml` lists the homepage and About page at the custom-domain root.
+  The shipped `web/robots.txt` is served at `https://wfform.com/robots.txt`, where
+  crawlers consult it. It permits public app resources, excludes `/config/` from
+  crawling and advertises the sitemap. This rule is not access control; public
+  builds still exclude local configuration. The public HTML permits indexing
+  through its robots meta tags.
 - `web/manifest.json` adds productivity/utility categories and a descriptive
   summary while preserving the existing installed-app `id`, `start_url` and
   `scope`. The same logo serves as the app icon and social preview image.
@@ -52,22 +51,22 @@ claim eligibility for a particular Google rich result.
 
 ## Publishing and Google Search Console
 
-1. Deploy the public build with Flutter base href `/wfform.com/` and enable
-   GitHub Pages for the destination repository. Leave its custom-domain setting
-   empty and do not publish a `CNAME` file. Follow the
+1. Deploy the public build with Flutter base href `/` and enable GitHub Pages
+   for the destination repository, with custom domain `wfform.com`. The publisher
+   maintains the matching `CNAME` file. Follow the
    [publishing guide](guides/CI_CD.md) for the artifact workflow and Pages setup.
 2. Fetch the homepage, `about.html`, `sitemap.xml` and `icons/Icon-512.png`
-   beneath `https://consciontologic.github.io/wfform.com/`. Check HTTP 200,
+   beneath `https://wfform.com/`. Check HTTP 200,
    content types and canonical URLs. Unknown paths should return 404, not a
    duplicate homepage. Ensure the host does not add a `noindex` header. Check
-   the host-root robots policy separately; the project copy is informational.
-3. Add a **URL-prefix property** for
-   `https://consciontologic.github.io/wfform.com/` in Google Search Console.
-   Use its HTML-tag verification method: add the exact supplied
+   `https://wfform.com/robots.txt` separately.
+3. Add a **Domain property** for `wfform.com` in Google Search Console and use
+   its supplied DNS verification record, or add a **URL-prefix property** for
+   `https://wfform.com/`. For URL-prefix HTML-tag verification, add the exact supplied
    `google-site-verification` meta tag to `web/index.html`, redeploy, and verify.
-   No verification token is fabricated or committed here. DNS verification of
-   the unowned `github.io` or `wfform.com` domain is not part of this setup.
-4. Submit `https://consciontologic.github.io/wfform.com/sitemap.xml`. Use URL
+   No verification token is fabricated or committed here. GitHub domain setup
+   does not verify Google Search Console ownership automatically.
+4. Submit `https://wfform.com/sitemap.xml`. Use URL
    Inspection for both public pages, including the rendered HTML, then request
    indexing if appropriate.
    Use the Rich Results Test to inspect detected structured data; an absence of
@@ -76,7 +75,7 @@ claim eligibility for a particular Google rich result.
    visits. Local browser tests cannot establish indexing, ranking, Core Web
    Vitals from real visitors, or social-platform preview refreshes.
 
-Keep the canonical URL, including `/wfform.com/`, consistent across HTML,
+Keep the canonical URL `https://wfform.com/` consistent across HTML,
 JSON-LD, sharing images, sitemap, pubspec and deployment configuration. If the
 public URL changes, update these together and the metadata tests. Local links
 and startup images stay relative, so root localhost development still works.
@@ -92,7 +91,7 @@ guaranteed. Google may choose a different title or description.
 ```sh
 flutter test test/shared/seo_metadata_test.dart test/shared/pwa_identity_test.dart
 make verify
-make build
+make build.public
 ```
 
 The focused tests validate canonical/sharing agreement, descriptive metadata,

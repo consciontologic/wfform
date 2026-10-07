@@ -1,6 +1,6 @@
 # PWA and platform behavior
 
-The visible application name is **wfform**. The manifest's existing `id`, `start_url` and `scope`, and the internal `free-model-studio-*` service-worker cache namespace are intentionally preserved. A rename therefore does not create a second installed-app identity or discard the previous release's offline shell. Existing local storage keys likewise remain available for recovery.
+The visible application name is **wfform**. The manifest's existing `id`, `start_url` and `scope`, and the internal `free-model-studio-*` service-worker cache namespace are intentionally preserved. A product rename on the same origin therefore does not create a second installed-app identity or discard the previous release's offline shell. Existing local storage keys likewise remain available for recovery. Changing domains is a separate origin migration, described below.
 
 The Flutter/Dart package is **`wfform`**, including all `package:` imports. **`com.wfform`** is Android's namespace/application ID and iOS's Runner bundle identifier in the native host projects; see [native setup and verification limits](native-platforms.md). The manifest `id` stays `./`: replacing it with `com.wfform` would identify a different installed web app. This change preserves origin-scoped conversations, drafts, settings and existing PWA installation identity.
 
@@ -66,12 +66,22 @@ Settings offers an explicit offline-cache inspection. The browser adapter reads 
 
 The same snapshot aggregates the browser's Resource Timing entries since the current navigation: same-origin/configuration request counts, OpenRouter catalog/endpoint/chat counts and loaded same-origin JavaScript transfer/body sizes. These are observations from the browser's bounded timing buffer, not an assertion that every request since startup was retained. Service-worker installation requests are not included in the page's resource buffer, and cached delivery or timing restrictions may report zero bytes. Inspect immediately after launch for startup observations; later inspections include subsequent interactions. The snapshot can be recorded in the normal sanitized diagnostics surface and exported without conversation content.
 
-## GitHub Pages project path
+## GitHub Pages custom domain
 
-The public deployment uses `https://consciontologic.github.io/wfform.com/`.
-`make build.public` sets `/wfform.com/` as Flutter's base. Manifest `id`,
-`start_url`, icons and scope stay relative; the worker is registered under
-`/wfform.com/service_worker.js` and caches release assets under the same scope.
-Local development and Docker keep their root deployment behavior. Browser-local
-history is origin-scoped: localhost conversations do not automatically appear
-on `consciontologic.github.io`; use history export/import to transfer them.
+The public deployment uses `https://wfform.com/` with Flutter base `/`.
+Manifest `id`, `start_url`, icons and scope stay relative; the worker is
+registered at `/service_worker.js` and caches release assets under the root
+scope. Local development and Docker keep their existing root behavior. The
+publisher maintains `CNAME` with `wfform.com`; see the [CI/CD guide](guides/CI_CD.md)
+for GitHub Pages domain and HTTPS setup.
+
+Changing from `https://consciontologic.github.io/wfform.com/` to `https://wfform.com/`
+changes the browser origin. The new domain therefore has its own installation,
+service-worker cache, settings and history. The unchanged relative manifest ID
+does not migrate an existing installation across origins. Use conversation
+export/import to transfer history from an old tab while it still has access;
+GitHub's redirect does not transfer browser storage. No application code clears
+the old origin's data. Localhost history likewise remains separate. After the
+first successful online load on the new domain, verify its shell cache and
+installation independently; an old-origin offline check does not prove the new
+origin is ready.

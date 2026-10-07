@@ -107,3 +107,11 @@ not own `wfform.com` and chose the free GitHub project URL.
 - [x] Enable Pages with no custom domain, publish the release and verify live HTTPS, browser startup, catalog and PWA scope.
 
 Completed evidence: [live GitHub Pages verification](../reports/github-pages-verification.md).
+
+## Phase 7 — Owned custom domain
+
+Scope ID: custom-domain. Requested 2026-10-07 after the user purchased
+`wfform.com` and configured Namecheap DNS.
+
+- [x] Restore root public build paths, custom-domain publication and SEO metadata with regression coverage; update current guides.
+- [ ] Configure GitHub Pages for `wfform.com`, publish the verified release, enforce managed HTTPS and verify the public browser, live catalog and PWA scope.

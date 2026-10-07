@@ -59,3 +59,14 @@ confirmed they do not own it and chose the free project address
 public releases under `/wfform.com/`, and remove the custom-domain setting and
 legacy owned `CNAME`. The publication repository remains `consciontologic/wfform.com`.
 No domain purchase or DNS administration is needed.
+
+## Purchased custom domain — 2026-10-07
+
+The user subsequently purchased `wfform.com`, configured Namecheap A/CNAME
+records, and explicitly requested GitHub setup. This supersedes the free-URL
+decision above: public builds use `/`, SEO uses `https://wfform.com/`, and the
+publisher manages `CNAME` with `wfform.com`. GitHub Pages remains the static
+host and supplies managed HTTPS; no separate certificate or backend is added.
+The source/publication repositories and Actions secret remain unchanged.
+Browser history stays on its original origin; export/import is the supported
+transfer between the former GitHub URL and the custom domain.

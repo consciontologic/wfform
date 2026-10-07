@@ -22,7 +22,7 @@ String canonical(String html) {
 }
 
 void main() {
-  const site = 'https://consciontologic.github.io/wfform.com/';
+  const site = 'https://wfform.com/';
   final siteUri = Uri.parse(site);
 
   test(
@@ -86,7 +86,7 @@ void main() {
       final robots = document('robots.txt');
       expect(robots, contains('Sitemap: ${site}sitemap.xml'));
       expect(robots, contains('User-agent: *'));
-      expect(robots, contains('Disallow: /wfform.com/config/'));
+      expect(robots, contains('Disallow: /config/'));
       expect(robots, isNot(contains('Disallow: /\n')));
       expect(robots, isNot(contains('Disallow: /assets/')));
       expect(robots, isNot(contains('Disallow: /__releases/')));
@@ -112,7 +112,7 @@ void main() {
   });
 
   test(
-    'local navigation and icons work at the project subpath and localhost',
+    'local navigation and icons work at the custom domain and localhost',
     () {
       for (final base in [siteUri, Uri.parse('http://localhost:8765/')]) {
         final about = base.resolve('about.html');

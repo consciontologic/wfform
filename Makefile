@@ -82,9 +82,9 @@ verify: format analyze test repository.check
 ## build             Build complete versioned release PWA for Dart host
 build:
 	dart run tool/build.dart
-## build.public      Build a credential-free release for the GitHub Pages project URL
+## build.public      Build a credential-free release for https://wfform.com/
 build.public:
-	dart run tool/build.dart --public --output=build/publish-web --base-href=/wfform.com/
+	dart run tool/build.dart --public --output=build/publish-web --base-href=/
 ## serve             Serve the release on localhost:8765
 serve:
 	dart run tool/serve.dart --port=8765

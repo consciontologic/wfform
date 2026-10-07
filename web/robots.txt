@@ -1,7 +1,5 @@
-# On a GitHub project site, this subpath copy is informational. Crawlers consult
-# https://consciontologic.github.io/robots.txt at the host root instead.
 User-agent: *
 Allow: /
-Disallow: /wfform.com/config/
+Disallow: /config/
 
-Sitemap: https://consciontologic.github.io/wfform.com/sitemap.xml
+Sitemap: https://wfform.com/sitemap.xml

@@ -87,6 +87,7 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
   files['${prefix}release.json'] = immutableManifest;
   files['service_worker.js'] = _read(source, 'service_worker.js');
   files['.nojekyll'] = const [];
+  files['CNAME'] = utf8.encode('wfform.com\n');
   final credential = RegExp(
     r'sk-or-v1-[A-Za-z0-9_-]{12,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}',
   );
@@ -116,14 +117,20 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
       previous[entry.key] = entry.value as String;
     }
   }
-  // Project Pages hosting must not inherit a custom-domain redirect. Formerly
-  // managed CNAME files retire through the normal ownership/hash checks below.
+  // Setting the domain through GitHub can create CNAME before this publisher
+  // owns it. Adopt only the exact intended domain, normalizing its line ending.
+  // Other unowned domains and external edits still fail before any mutation.
   _checkPath(target, 'CNAME');
-  if (File('${target.path}/CNAME').existsSync() &&
-      !previous.containsKey('CNAME')) {
-    throw StateError(
-      'An unowned CNAME conflicts with the GitHub Pages project URL. Remove it deliberately before publishing.',
-    );
+  final cname = File('${target.path}/CNAME');
+  if (cname.existsSync() && !previous.containsKey('CNAME')) {
+    final bytes = cname.readAsBytesSync();
+    if (const {
+      'wfform.com',
+      'wfform.com\n',
+      'wfform.com\r\n',
+    }.contains(latin1.decode(bytes))) {
+      previous['CNAME'] = sha256(bytes);
+    }
   }
   final next = <String, String>{
     // Existing clients keep their immutable URLs across deployments.
@@ -214,7 +221,7 @@ bool _safe(String path) =>
 bool _managed(String path) {
   if (!_safe(path)) return false;
   if (const {
-    'CNAME', // Legacy ownership is accepted only so it can be safely retired.
+    'CNAME',
     '.nojekyll',
     'service_worker.js',
     'release.json',

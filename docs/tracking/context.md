@@ -75,6 +75,8 @@ serving remains separate.
 
 ## Free public hosting — 2026-10-07
 
+Historical intermediate deployment; superseded by the purchased-domain decision below.
+
 The user clarified they do not own `wfform.com` and requested the free URL
 `https://consciontologic.github.io/wfform.com/`. This supersedes custom-domain
 assumptions in dated reports. Publish with base `/wfform.com/`, leave Pages'
@@ -89,3 +91,14 @@ under `/wfform.com/` and cached all 37 shell assets without policy violations.
 See [hosting verification](../reports/github-pages-verification.md) for release,
 workflow evidence, test counts and limits. No new authenticated chat or actual
 network-offline reload was tested during this hosting change.
+
+## Purchased custom domain — 2026-10-07
+
+The user now owns `wfform.com`, configured Namecheap DNS, and explicitly
+authorized GitHub configuration and the required deployment updates. Active
+public builds use `/`, canonical metadata uses `https://wfform.com/`, and the
+publisher manages the `CNAME` file. GitHub provides managed HTTPS. This replaces
+the no-custom-domain configuration above without changing repository names or
+`WFFORM_DEPLOY_TOKEN`. Existing histories remain on their original browser
+origin; use export/import to transfer them. See Phase 7 of the roadmap for
+current deployment and verification acceptance.
