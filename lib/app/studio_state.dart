@@ -64,6 +64,12 @@ class StudioState extends ChangeNotifier {
           this.store.read('freeform.textScale') ?? '',
         )?.clamp(1, 2) ??
         1;
+    final savedSidebarWidth = double.tryParse(
+      this.store.read('freeform.sidebarWidth') ?? '',
+    );
+    if (savedSidebarWidth != null && savedSidebarWidth.isFinite) {
+      _sidebarWidth = savedSidebarWidth.clamp(240, 440);
+    }
     final session = this.store.read('freeform.updateSession.v1');
     _legacyUpdateSession = session;
     if (session != null) {
@@ -101,6 +107,8 @@ class StudioState extends ChangeNotifier {
   bool attachmentPicking = false;
   CancelToken? _attachmentCancel;
   double textScale = 1;
+  double _sidebarWidth = 290;
+  double get sidebarWidth => _sidebarWidth;
   bool _wasOnline = true;
   String? _lastPwaError;
   bool _disposed = false;
@@ -1078,6 +1086,15 @@ class StudioState extends ChangeNotifier {
     textScale = value;
     store.write('freeform.textScale', '$value');
     appearance.value++;
+    notifyListeners();
+  }
+
+  void setSidebarWidth(double value) {
+    if (!value.isFinite) return;
+    final next = value.clamp(240.0, 440.0);
+    if (next == _sidebarWidth) return;
+    _sidebarWidth = next;
+    store.write('freeform.sidebarWidth', '$next');
     notifyListeners();
   }
 

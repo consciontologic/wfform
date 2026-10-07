@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'selectable_surface.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import 'model_browser.dart';
 import 'utilities.dart';
 import 'retry_control.dart';
 import 'context_dialog.dart';
+import 'sidebar_resize_handle.dart';
 
 class StudioApp extends StatelessWidget {
   const StudioApp({super.key, required this.state});
@@ -59,6 +61,7 @@ class _StudioScreenState extends State<StudioScreen> {
   final chatKey = GlobalKey(debugLabel: 'Stable chat across layouts');
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool inspector = true;
+  double? sidebarPreview;
   bool syncingDraft = false;
   StudioState get state => widget.state;
   @override
@@ -178,8 +181,31 @@ class _StudioScreenState extends State<StudioScreen> {
         final scale = MediaQuery.textScalerOf(context).scale(1);
         final compact =
             box.maxWidth < 600 || (scale >= 1.8 && box.maxWidth < 800);
-        final expanded = box.maxWidth >= 1100 && scale < 1.8;
-        final wideDetails = expanded && box.maxWidth >= 1420 && inspector;
+        // Keep conversation space useful when the sidebar or text grows. The
+        // stored preference survives temporary viewport-driven constraints.
+        final sidebarMinimum = 240 + (scale - 1).clamp(0.0, .8) * 120;
+        final chatMinimum = 520 * scale.clamp(1.0, 1.5);
+        final sidebarMaximum = math.min(
+          440.0,
+          box.maxWidth - SidebarResizeHandle.extent - chatMinimum,
+        );
+        final expanded =
+            box.maxWidth >= 1100 &&
+            scale < 1.8 &&
+            sidebarMaximum >= sidebarMinimum;
+        if (!expanded) sidebarPreview = null;
+        final sidebarWidth = expanded
+            ? (sidebarPreview ?? state.sidebarWidth).clamp(
+                sidebarMinimum,
+                sidebarMaximum,
+              )
+            : 0.0;
+        final canShowInspector =
+            expanded &&
+            box.maxWidth >= 1420 &&
+            box.maxWidth - sidebarWidth - SidebarResizeHandle.extent - 310 >=
+                chatMinimum;
+        final wideDetails = canShowInspector && inspector;
         final palette = StudioPalette.of(context);
         return Scaffold(
           key: scaffoldKey,
@@ -207,7 +233,7 @@ class _StudioScreenState extends State<StudioScreen> {
                       if (expanded)
                         Container(
                           key: const ValueKey('expanded-sidebar'),
-                          width: 290,
+                          width: sidebarWidth,
                           decoration: BoxDecoration(
                             color: palette.cream,
                             border: Border(
@@ -218,6 +244,21 @@ class _StudioScreenState extends State<StudioScreen> {
                             ),
                           ),
                           child: _SidePanel(state: state),
+                        ),
+                      if (expanded)
+                        SidebarResizeHandle(
+                          key: const ValueKey('sidebar-resize-handle'),
+                          value: sidebarWidth,
+                          minimum: sidebarMinimum,
+                          maximum: sidebarMaximum,
+                          onChanged: (value) =>
+                              setState(() => sidebarPreview = value),
+                          onChangeEnd: (value) {
+                            setState(() => sidebarPreview = null);
+                            state.setSidebarWidth(value);
+                          },
+                          onCancelled: () =>
+                              setState(() => sidebarPreview = null),
                         ),
                       if (!expanded && !compact)
                         Container(
@@ -263,8 +304,7 @@ class _StudioScreenState extends State<StudioScreen> {
                                 state: state,
                                 compact: compact,
                                 expanded: expanded,
-                                onToggleDetails:
-                                    box.maxWidth >= 1420 && scale < 1.8
+                                onToggleDetails: canShowInspector
                                     ? () =>
                                           setState(() => inspector = !inspector)
                                     : null,
@@ -350,6 +390,7 @@ class _StudioScreenState extends State<StudioScreen> {
                       ),
                       if (wideDetails)
                         Container(
+                          key: const ValueKey('model-inspector'),
                           width: 310,
                           decoration: BoxDecoration(
                             color: palette.cream,
@@ -396,7 +437,21 @@ class _SidePanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => SingleChildScrollView(
+      child: SizedBox(
+        // Large text and a short viewport must not strand the utility controls
+        // below the drawer. The inner history list retains its bounded viewport.
+        height: math.max(
+          box.maxHeight,
+          440 * MediaQuery.textScalerOf(context).scale(1),
+        ),
+        child: _content(context),
+      ),
+    ),
+  );
+
+  Widget _content(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Padding(

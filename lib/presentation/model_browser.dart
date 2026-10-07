@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'selectable_surface.dart';
 import '../app/studio_state.dart';
 import '../app/theme.dart';
@@ -441,7 +442,7 @@ class _ModelRowState extends State<_ModelRow> {
   Widget build(BuildContext context) {
     final m = widget.model;
     final preview =
-        '${m.name}\n${m.id}\n${m.contextLength ?? 'Unknown'} context tokens\n${m.inputModalities.join(', ')} → ${m.outputModalities.join(', ')}\n${m.chatCompatible ? 'Free text chat' : 'Unavailable for text chat'}\nUploads: ${m.attachmentSummary}\nOpen Model details for pricing, parameters and availability.';
+        '${m.name}\n${m.id}\n${m.contextLength ?? 'Unknown'} context tokens\n${m.inputModalities.join(', ')} → ${m.outputModalities.join(', ')}\n${m.chatCompatible ? 'Free text chat' : 'Unavailable for text chat'}\nUploads: ${m.attachmentSummary}';
     return SelectableTooltip(
       tooltipKey: tooltip,
       message: preview,
@@ -625,6 +626,42 @@ class ModelDetails extends StatelessWidget {
                 ? 'No description supplied.'
                 : model.description,
           ),
+          if (model.description.trimRight().endsWith('...') ||
+              model.description.trimRight().endsWith('…')) ...[
+            const SizedBox(height: 12),
+            Text(
+              'This description ends with an ellipsis in OpenRouter’s catalog. '
+              'More information may be available on its model page.',
+              style: TextStyle(
+                fontSize: 12,
+                color: StudioPalette.of(context).muted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    Uri.https('openrouter.ai', '/${model.id}').toString(),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                SelectableIconButton(
+                  tooltip: 'Copy model page link',
+                  onPressed: () => Clipboard.setData(
+                    ClipboardData(
+                      text: Uri.https(
+                        'openrouter.ai',
+                        '/${model.id}',
+                      ).toString(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 24),
           _Detail(
             label: 'Context window',

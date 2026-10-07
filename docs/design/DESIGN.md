@@ -14,9 +14,27 @@ The design combines a live normalized catalog, bounded health observations, one 
 |---|---|
 | Compact, below 600 logical pixels | Focused chat with drawer history/utilities, model chooser dialog and tap-accessible details. |
 | Medium, 600–1099 | Navigation rail; history, selection and details open as overlays. |
-| Expanded, 1100 and above | Persistent history sidebar with utilities at its bottom; optional model panel from 1420. |
+| Expanded, 1100 and above with enough space at the current text size | Resizable history sidebar with utilities at its bottom; optional model panel from 1420 when enough chat width remains. |
 
 Text scaling can select a less dense arrangement. Controllers and focus nodes survive layout transitions. New conversation, model changes and history switches are guarded while a response/history transition is active. Model details use text labels, focus/pointer previews and explicit information actions; no essential information depends solely on hover.
+
+The sidebar divider supports pointer/touch dragging and keyboard adjustment.
+Arrow keys adjust in 16-pixel steps; Home/End select limits and Enter resets.
+Its preferred width is saved locally on release, rather than writing storage
+on each pointer move. Width is bounded by the viewport and text size so the
+conversation retains usable space; switching to a drawer or navigation rail
+does not discard the preference. The default is 290 logical pixels, with a
+240–440 preferred range and tighter effective bounds when needed. The inspector
+is omitted when it would crowd the conversation. Short sidebars/drawers scroll
+to keep utilities reachable. Settings offers 100%, 125%, 150% and 200% text.
+
+Model details and the inspector display the complete description supplied by
+the API, without a line limit. Some upstream descriptions already end in an
+ellipsis; these receive a source notice and a copyable OpenRouter model-page
+link. Missing paragraphs are not reconstructed, and additional API requests
+are not made to fetch identical descriptions. The repetitive instruction to
+open details is omitted from model-row hover previews; their explicit details
+buttons remain accessible.
 
 The composer grows over several lines and clears when a valid send is accepted. A next draft can be written while the answer streams. Explicit retry reuses the failed user turn; edit/resend appends a revised copy. Returned reasoning is separate and collapsible. Context exclusions and continuation are explicit actions, preserving earlier records.
 

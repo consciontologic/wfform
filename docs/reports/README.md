@@ -2,6 +2,10 @@
 
 Reports must state their date, revision/release when known, commands, fixture/live/browser distinction and any unverified checks. A prior passing count is not a result for a changed build. Runtime logs and generated screenshots are evidence, not configuration or application source.
 
+## Current application evidence
+
+- [Sidebar and model readability](sidebar-readability-verification.md): 7 October 2026 adaptive resizing, 125% text, truthful source descriptions and release/browser regression checks.
+
 ## Current migration evidence
 
 - [Custom-domain hosting](custom-domain-verification.md): 7 October 2026 purchased `wfform.com`, managed HTTPS, root release, redirects and actual browser/catalog/cache verification.

@@ -109,3 +109,16 @@ all 37 shell assets without policy violations. CI passed 358 app/tool tests,
 14 repository tests and six Chrome storage checks. See the
 [custom-domain report](../reports/custom-domain-verification.md) for exact runs,
 revision, release and verification limits.
+
+## Sidebar and model readability — 2026-10-07
+
+Expanded layouts now have a keyboard/pointer/touch resizable sidebar. Its saved
+240–440 logical-pixel preference is temporarily constrained by text scale and
+available chat space; medium rails and compact drawers remain adaptive. Settings
+now include 125% text. Drag previews do not write storage until release.
+
+Model descriptions preserve the complete API value. Some upstream descriptions,
+including Cohere North Mini Code, themselves end in an ellipsis; the inspector
+and details dialog explain this and provide a selectable/copyable model-page
+URL. Do not invent missing paragraphs or scrape the website. The repeated model
+hover instruction was removed. See the [verification report](../reports/sidebar-readability-verification.md).

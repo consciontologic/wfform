@@ -117,3 +117,14 @@ Scope ID: custom-domain. Requested 2026-10-07 after the user purchased
 - [x] Configure GitHub Pages for `wfform.com`, publish the verified release, enforce managed HTTPS and verify the public browser, live catalog and PWA scope.
 
 Completed evidence: [custom-domain verification](../reports/custom-domain-verification.md).
+
+## Phase 8 — Sidebar resizing and model readability
+
+Scope ID: sidebar-readability. Requested 2026-10-07.
+
+- [x] Add a bounded resizable history sidebar with keyboard/touch access, remembered width and preserved state across responsive layouts.
+- [x] Add a persistent 125% text option, retaining narrow and 200% text accessibility.
+- [x] Remove the repeated model hover instruction and keep complete supplied descriptions readable; explain descriptions shortened by the upstream catalog without inventing missing text.
+- [x] Run regression gates, release build and browser checks for the changed controls and layouts.
+
+Completed evidence: [sidebar and readability verification](../reports/sidebar-readability-verification.md).

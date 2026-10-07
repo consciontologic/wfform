@@ -371,7 +371,7 @@ class _SettingsState extends State<_Settings> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final scale in [1.0, 1.5, 2.0])
+                      for (final scale in [1.0, 1.25, 1.5, 2.0])
                         ChoiceChip(
                           label: Text('${(scale * 100).round()}% text'),
                           selected: widget.state.textScale == scale,
