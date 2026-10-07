@@ -13,10 +13,11 @@ The source repository and artifact destination remain unchanged.
 - The app is classified as a productivity application for AI chat and model
   discovery. Structured data describes existing features only; it contains no
   invented reviews, ratings, prices, usage guarantees, or organization claims.
-- `web/about.html` is a small, visible product and getting-started document with
-  its own title, description, canonical URL and sharing metadata. It works
-  without JavaScript and links back to the Flutter app and source repository.
-- `web/sitemap.xml` lists the homepage and About page at the custom-domain root.
+- `web/about.html`, `web/terms.html` and `web/liability.html` are public information
+  documents with individual titles, descriptions, canonical URLs and sharing
+  metadata. Their content works without JavaScript. Shared local CSS supplies
+  responsive light/dark presentation, and all pages link back to the app and repository.
+- `web/sitemap.xml` lists the homepage, About, Terms and Liability pages at the custom-domain root.
   The shipped `web/robots.txt` is served at `https://wfform.com/robots.txt`, where
   crawlers consult it. It permits public app resources, excludes `/config/` from
   crawling and advertises the sitemap. This rule is not access control; public
@@ -29,8 +30,8 @@ The source repository and artifact destination remain unchanged.
   description and relevant project topics. It remains unpublished to pub.dev.
 
 These files are included in the release by `tool/build.dart` and remain ordinary
-static assets. They add no application framework, API proxy, tracking script or
-runtime package. All chat, storage and interaction logic remains Flutter/Dart.
+static assets. They add no application framework, API proxy or runtime package. The user-requested
+Google tag is the only added third-party analytics integration. All chat, storage and interaction logic remains Flutter/Dart.
 
 ## Flutter boundary
 
@@ -110,3 +111,30 @@ checks serving and Flutter startup; public indexing requires a reachable Pages s
 - [Search Console: add a URL-prefix property](https://support.google.com/webmasters/answer/34592?hl=en)
 - [Search Console: HTML-tag ownership verification](https://support.google.com/webmasters/answer/9008080?hl=en)
 - [Schema.org WebApplication](https://schema.org/WebApplication)
+
+## Google Analytics and visible version
+
+Each of the four HTML pages includes the supplied Google tag for
+`G-P3K2ZN7YTL` once, immediately after `<head>`. The standard asynchronous
+loader initializes page measurement. No custom analytics events or user IDs
+are added for messages, API keys, attachments or conversation history.
+Collection can be blocked by browser privacy settings or extensions; no app
+feature depends on analytics success. About and Terms disclose analytics and
+link to Google's privacy information. Analytics cookies/property options remain
+managed by Google and the site operator; these informational pages do not
+certify jurisdiction-specific legal compliance.
+
+The PWA only caches approved same-origin shell files. Google scripts, requests
+and responses are not included in that shell cache. Nginx permits the Google
+loader, a hash of the exact inline snippet and the specified analytics
+connection/image origins. Changing inline whitespace requires updating the
+CSP hash; regression tests check the actual snippet on every page. See
+[Google's current CSP guidance](https://developers.google.com/tag-platform/security/guides/csp)
+(verified 2026-10-07) and the [Docker guide](guides/DOCKER.md).
+
+The Flutter footer and public documents display version **0.1.0**. When bumping
+a release, update `pubspec.yaml`, `lib/app/app_identity.dart`, the static page
+footers and any structured version metadata together; deterministic tests
+check consistency. Footer information links open separately to retain the chat
+and draft. Compact layouts use an Info menu; the footer yields space while
+a software keyboard is open.

@@ -68,3 +68,12 @@ resize during an active request are additionally covered by deterministic tests;
 the active response is a fake stream, not an authenticated live inference.
 This slice does not claim a new native, offline-install, cross-browser, or
 authenticated-chat acceptance run.
+
+## Public deployment
+
+Source commit [`51b5b32`](https://github.com/consciontologic/wfform/commit/51b5b323fc4d051fa4b67c71c83cd5e67d5c13dd)
+completed [source workflow 37640120686](https://github.com/consciontologic/wfform/actions/runs/37640120686),
+including the additional real Chrome storage checks, build and publication.
+Destination commit [`67111d9`](https://github.com/consciontologic/wfform.com/commit/67111d9bb87e3808b7f75d63e82e746cc9f4d4be)
+completed [Pages deployment 37640527853](https://github.com/consciontologic/wfform.com/actions/runs/37640527853).
+The custom domain remains HTTPS-enforced.

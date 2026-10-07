@@ -1,6 +1,6 @@
 # Codex Setup
 
-> wfform: open `/home/serhatakbak/code/projects/wfform` as the project.
+> wfform: open the repository checkout as the project.
 > Flutter/Dart commands are in `make help`; run `make verify` before staging.
 > CodeGraph is enabled through `.codex/config.toml`; see [MCP setup](MCP_SETUP.md).
 > The remaining sections describe the shared agent workflow, not app runtime dependencies.

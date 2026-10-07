@@ -87,13 +87,29 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
   );
 
   test('public SEO documents are hashed and published with the shell', () {
-    for (final path in ['about.html', 'robots.txt', 'sitemap.xml']) {
+    for (final path in [
+      'about.html',
+      'terms.html',
+      'liability.html',
+      'site.css',
+      'github-mark.svg',
+      'robots.txt',
+      'sitemap.xml',
+    ]) {
       File('${source.path}/$path').writeAsStringSync('public fixture $path');
     }
     final release = build.prepareRelease(source, template);
     final target = Directory('${scratch.path}/public');
     build.publishRelease(release, target);
-    for (final path in ['about.html', 'robots.txt', 'sitemap.xml']) {
+    for (final path in [
+      'about.html',
+      'terms.html',
+      'liability.html',
+      'site.css',
+      'github-mark.svg',
+      'robots.txt',
+      'sitemap.xml',
+    ]) {
       expect(release.assets, contains(path));
       expect(
         File('${target.path}/$path').readAsStringSync(),

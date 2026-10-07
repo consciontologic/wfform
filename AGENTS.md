@@ -28,7 +28,7 @@ session before doing real work.
 
 ## wfform context
 
-- Canonical workspace: `/home/serhatakbak/code/projects/wfform`. This is an
+- Work from this repository's root (the checkout containing this file). This is an
   existing Flutter 3.38.5 / Dart 3.10.4 web application, not a blank template.
 - Dart package: `wfform`; Android namespace/application ID and iOS Runner bundle
   ID: `com.wfform`. Native hosts exist; web remains the verified release target.

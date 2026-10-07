@@ -50,4 +50,4 @@ The browser repository keeps durable store versioning separate from export/sessi
 
 ## Verification boundaries
 
-DTO/SSE/transport/history tests are deterministic unless explicitly labeled live or browser. Real catalog testing is opt-in and unauthenticated; chat probes and messages require a configured key and available upstream service. CORS can be diagnosed only from actual browser evidence; an opaque network failure is not proof of CORS. See the [README commands](../../README.md#checks) and [reports index](../reports/README.md).
+DTO/SSE/transport/history tests are deterministic unless explicitly labeled live or browser. Real catalog testing is opt-in and unauthenticated; chat probes and messages require a configured key and available upstream service. CORS can be diagnosed only from actual browser evidence; an opaque network failure is not proof of CORS. See the [verification commands](../guides/README.md#checks) and [reports index](../reports/README.md).

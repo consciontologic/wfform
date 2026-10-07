@@ -2,6 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wfform/app/app_identity.dart';
+
+const publicPages = [
+  'index.html',
+  'about.html',
+  'terms.html',
+  'liability.html',
+];
 
 String document(String path) => File('web/$path').readAsStringSync();
 
@@ -28,7 +36,7 @@ void main() {
   test(
     'public documents agree on canonical, sharing and crawlable identity',
     () {
-      for (final path in ['index.html', 'about.html']) {
+      for (final path in publicPages) {
         final html = document(path);
         final url = '$site${path == 'index.html' ? '' : path}';
         expect(canonical(html), url);
@@ -94,7 +102,15 @@ void main() {
           .allMatches(document('sitemap.xml'))
           .map((match) => match.group(1))
           .toList();
-      expect(locations, unorderedEquals([site, '${site}about.html']));
+      expect(
+        locations,
+        unorderedEquals([
+          site,
+          '${site}about.html',
+          '${site}terms.html',
+          '${site}liability.html',
+        ]),
+      );
       expect(document('sitemap.xml'), isNot(contains('<lastmod>')));
     },
   );
@@ -121,7 +137,7 @@ void main() {
           base.resolve('icons/Icon-192.png').path,
           '${base.path}icons/Icon-192.png',
         );
-        for (final path in ['index.html', 'about.html']) {
+        for (final path in publicPages) {
           final html = document(path);
           final localResources = RegExp('(?:src|href)="([^":]+)"')
               .allMatches(html)
@@ -158,6 +174,109 @@ void main() {
         manifest['description'],
         meta(document('index.html'), 'description'),
       );
+    },
+  );
+
+  test('every HTML page has the requested tag once immediately after head', () {
+    const tag = '''<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P3K2ZN7YTL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-P3K2ZN7YTL');
+</script>''';
+    final htmlFiles = Directory(
+      'web',
+    ).listSync().whereType<File>().where((file) => file.path.endsWith('.html'));
+    expect(htmlFiles, hasLength(publicPages.length));
+    for (final file in htmlFiles) {
+      final html = file.readAsStringSync();
+      expect(html, contains('<head>\n$tag'), reason: file.path);
+      expect(tag.allMatches(html), hasLength(1), reason: file.path);
+      expect(
+        RegExp(r'googletagmanager\.com/gtag/js').allMatches(html),
+        hasLength(1),
+      );
+      expect(html, isNot(contains("gtag('event'")));
+      expect(html, isNot(contains('localStorage')));
+      expect(html, isNot(contains('sessionStorage')));
+    }
+  });
+
+  test(
+    'every public page links useful information and versioned source footer',
+    () {
+      for (final path in publicPages) {
+        final html = document(path);
+        for (final target in ['about.html', 'terms.html', 'liability.html']) {
+          expect(html, contains('href="$target"'), reason: '$path → $target');
+        }
+        expect(html, contains('<footer'));
+        expect(html, contains('<span>$appVersion</span>'));
+        expect(
+          html,
+          contains('href="https://github.com/consciontologic/wfform"'),
+        );
+        expect(html, contains('src="github-mark.svg"'));
+        expect(html, contains('href="site.css"'));
+      }
+      expect(File('web/github-mark.svg').existsSync(), isTrue);
+      expect(File('web/site.css').existsSync(), isTrue);
+      expect(
+        File('pubspec.yaml').readAsStringSync(),
+        contains('version: $appVersion+'),
+      );
+    },
+  );
+
+  test('public document ids and local fragment links have unique targets', () {
+    final idsByPage = <String, List<String>>{
+      for (final page in publicPages)
+        page: RegExp(
+          ' id="([^"]+)"',
+        ).allMatches(document(page)).map((match) => match.group(1)!).toList(),
+    };
+    for (final entry in idsByPage.entries) {
+      expect(entry.value.toSet().length, entry.value.length, reason: entry.key);
+      for (final match in RegExp(
+        'href="([^"]+)"',
+      ).allMatches(document(entry.key))) {
+        final uri = Uri.parse(match.group(1)!);
+        if (uri.hasScheme || uri.fragment.isEmpty) continue;
+        final target = uri.path.isEmpty ? entry.key : uri.path;
+        expect(
+          idsByPage[target],
+          contains(uri.fragment),
+          reason: '${entry.key} → $uri',
+        );
+      }
+    }
+  });
+
+  test(
+    'information pages remain readable documents with truthful data notices',
+    () {
+      for (final path in publicPages.skip(1)) {
+        final html = document(path);
+        expect(html, contains('href="#content"'));
+        expect(html, contains('id="content"'));
+        expect(html, contains('aria-label="Information pages"'));
+        expect(html, isNot(contains('flutter_bootstrap')));
+        expect(html, contains('href="./"'));
+      }
+      final terms = document('terms.html');
+      expect(terms, contains('Google Analytics'));
+      expect(terms, contains('cookies'));
+      expect(terms, contains('https://openrouter.ai/terms'));
+      expect(terms, contains('https://openrouter.ai/privacy'));
+      expect(terms, contains('browser'));
+      expect(terms, contains('directly'));
+      final liability = document('liability.html');
+      expect(liability, contains('applicable law'));
+      expect(liability, contains('independent'));
+      expect(liability, isNot(contains('all liability in all circumstances')));
     },
   );
 }

@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P3K2ZN7YTL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-P3K2ZN7YTL');
+</script>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -31,6 +40,7 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="site.css">
   <title>wfform — Discover and Chat with Free OpenRouter Models</title>
   <script type="application/ld+json">
   {
@@ -85,6 +95,18 @@
     <p role="status">Opening wfform…</p>
     <p><a href="about.html">About wfform and how to get started</a></p>
     <noscript><p>JavaScript is required for the chat application. The getting-started page works without JavaScript.</p></noscript>
+    <footer class="site-footer">
+      <div class="footer-row">
+        <p class="footer-version">wfform <span>0.1.0</span></p>
+        <nav class="footer-nav" aria-label="Information pages">
+          <a href="about.html">About</a>
+          <a href="terms.html">Terms and conditions</a>
+          <a href="liability.html">Liability</a>
+        </nav>
+        <a class="source-link" href="https://github.com/consciontologic/wfform"><img src="github-mark.svg" width="36" height="36" alt=""><span>View source<br>on GitHub</span></a>
+      </div>
+      <p class="footer-note">An independent OpenRouter client. Website usage is measured with Google Analytics; <a href="terms.html#data">read how data is handled</a>.</p>
+    </footer>
   </main>
   <script src="flutter_bootstrap.js" async></script>
 </body>

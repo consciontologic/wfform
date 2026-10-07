@@ -1,6 +1,6 @@
 # Native identity clarification verification
 
-Date: 2026-10-06. Workspace: /home/serhatakbak/code/projects/wfform. Flutter 3.38.5 / Dart 3.10.4. This follows the user's clarification that `com.wfform` means Android/iOS application identity, superseding the prior Dart-package interpretation. Existing staged application/scaffold work was preserved. No commit or push was made.
+Date: 2026-10-06. Workspace: repository checkout. Flutter 3.38.5 / Dart 3.10.4. This follows the user's clarification that `com.wfform` means Android/iOS application identity, superseding the prior Dart-package interpretation. Existing staged application/scaffold work was preserved. No commit or push was made.
 
 ## Implemented
 
@@ -20,7 +20,7 @@ Commands below ran from the workspace. Build/test gates used `xops/agent/safe-ru
 | `make verify` | Formatting and analysis passed; 321 deterministic Flutter tests passed, one opt-in live test skipped; repository key/ignore checks passed |
 | `python3 work/check_native_identity.py` | Passed Android IDs/activity/permission, all three iOS Runner/test configurations, Dart imports, metadata/PWA identity, and XML parsing for 18 native host files |
 | Independent read-only native configuration review | Identity and package/path checks passed; debug signing and native feature limits recorded |
-| `CHROME_EXECUTABLE=/home/serhatakbak/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | Six real Chromium IndexedDB checks passed using disposable fixture databases |
+| `CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | Six real Chromium IndexedDB checks passed using disposable fixture databases |
 | `make build` | Release web build passed; 34 shell assets, 18,150,857 bytes |
 | `make image` and `TLS=1 make restart` | Container build and replacement passed |
 | `make tls.check` | nginx config, HTTP/HTTPS health, enforced headers, no-store config, WASM MIME and SHA-256 verification of all 34 assets passed |

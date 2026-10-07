@@ -10,8 +10,8 @@ Decisions are recorded from the user's requests and the resulting implementation
 | 2026-10-06 | Require a new conversation when changing models | User requested separate model conversations; no silent history reuse with another model. |
 | 2026-10-06 | Add explicit edit/resend, attachments, adaptive appearance and diagnostics refinements | Earlier messages and received output remain preserved; advertised capability and zero-price policy constrain inference. |
 | 2026-10-06 | Treat observed -1 router prices as unresolved exclusions | Public API evidence and router documentation support conservative exclusion; this is not an explicitly documented numeric convention. Genuine malformed metadata still fails validation. |
-| 2026-10-06 | Move application sources to /home/serhatakbak/code/projects/wfform | User supplied this exact destination. Its existing empty main branch and origin git@github.com:metaphy6/wfform.git were preserved; the move is not a commit or push. |
-| 2026-10-06 | Adopt the full agentic-workspace scaffold without MCP | Source: /home/serhatakbak/code/projects/agentic-workspace at a93e0d95e665748c700faa677cc5e8cfdb6c3ca8. Invocation used --target /home/serhatakbak/code/projects/wfform --preset full --no-mcp, without --force. Existing application files were preserved; no language preset was selected because Dart was not offered. |
+| 2026-10-06 | Move application sources into the wfform repository | User supplied the destination checkout. Its existing empty main branch and origin git@github.com:metaphy6/wfform.git were preserved; the move is not a commit or push. |
+| 2026-10-06 | Adopt the full agentic-workspace scaffold without MCP | Source: the local `agentic-workspace` checkout at a93e0d95e665748c700faa677cc5e8cfdb6c3ca8. Invocation used `--target <repository> --preset full --no-mcp`, without --force. Existing application files were preserved; no language preset was selected because Dart was not offered. |
 | 2026-10-06 | Keep MCP installation optional and explicit | The full operating workflow is useful independently of CodeGraph. --no-mcp avoids an unsolicited Node/MCP/index dependency and global changes. Local reads/searches remain the documented fallback. |
 | 2026-10-06 | Add static Docker/nginx operations and broad local file/rendering support | User-requested next work; acceptance status is maintained in the roadmap, not inferred from this decision row. Python remains operations tooling only. |
 
@@ -34,7 +34,7 @@ The user requested search metadata, CI/CD publishing web builds to `metaphy6/wff
 
 ## Migration provenance and retained evidence
 
-The original workspace was /home/serhatakbak/Documents/Codex/2026-10-05/you-are-astra-implement-and-verify. Application sources moved into the project repository on 2026-10-06. Historical generated outputs remain in that original workspace's outputs directory. Existing detailed feature and verification documents moved with the application and retain their dates and measured counts.
+Application sources moved from the original local chat workspace into the project repository on 2026-10-06. Historical generated outputs remain in that original workspace's outputs directory. Existing detailed feature and verification documents moved with the application and retain their dates and measured counts. Machine-local paths are omitted from published documentation.
 
 Framework origin observed during adaptation: git@github.com:metaphy6/agentic-workspace.git. The recorded revision identifies the source checkout inspected during scaffolding; it does not claim that every framework file was unmodified. Project-specific corrections belong in this repository and should be reviewed before a future scaffold update. Re-running with --force is not part of the documented normal workflow.
 

@@ -30,7 +30,7 @@ The composer displays an input-token estimate and output reserve. Text uses a lo
 
 When the provider completes with `finish_reason: length`, **Continue answer** sends a new explicit continuation turn. It retains the earlier answer, follows the selected context range and leaves any separately composed draft untouched. It is not an automatic retry or a guarantee of seamless continuation.
 
-Text/reasoning deltas are accumulated and published in short batches rather than rebuilding for every SSE event. Separate first-useful-output (90 seconds), useful-output idle (45 seconds) and absolute stream (300 seconds) defaults replace the ordinary request deadline for chat. Useful reasoning counts as progress; heartbeat comments and metadata do not indefinitely keep a stalled request alive. A timeout identifies its phase and retains received output and attached user turns. These policies can be configured through the keys in [README.md](../README.md#configuration). They do not shorten a provider's actual media-processing time.
+Text/reasoning deltas are accumulated and published in short batches rather than rebuilding for every SSE event. Separate first-useful-output (90 seconds), useful-output idle (45 seconds) and absolute stream (300 seconds) defaults replace the ordinary request deadline for chat. Useful reasoning counts as progress; heartbeat comments and metadata do not indefinitely keep a stalled request alive. A timeout identifies its phase and retains received output and attached user turns. These policies can be configured through the keys in the [configuration reference](guides/README.md#configuration). They do not shorten a provider's actual media-processing time.
 
 ## Browser and persistence boundaries
 

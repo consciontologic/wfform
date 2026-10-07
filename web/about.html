@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P3K2ZN7YTL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-P3K2ZN7YTL');
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>About wfform — Free OpenRouter AI Chat and Model Discovery</title>
@@ -19,52 +28,82 @@
   <meta name="twitter:description" content="Learn how wfform discovers free OpenRouter models, saves local chat history, handles supported attachments, and works as an installable browser app.">
   <meta name="twitter:image" content="https://wfform.com/icons/Icon-512.png">
   <meta name="twitter:image:alt" content="wfform chat wrapper logo">
-  <meta name="theme-color" content="#eee8f5">
+  <meta name="theme-color" content="#eee8f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#242130" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/png" href="favicon.png">
-  <style>
-    :root{color-scheme:light dark;font:18px/1.65 system-ui,sans-serif;background:#f8f5fc;color:#29243b}
-    body{margin:0} main{max-width:780px;margin:0 auto;padding:clamp(24px,6vw,64px)}
-    header{display:flex;align-items:center;gap:16px;font-size:24px;font-weight:800}
-    h1{font-size:clamp(32px,6vw,48px);line-height:1.12;letter-spacing:-.025em}
-    h2{font-size:25px;line-height:1.25;margin-top:40px} a{color:inherit;text-underline-offset:4px}
-    a:focus-visible{outline:3px solid #7653a8;outline-offset:5px}
-    .open{display:inline-block;padding:10px 20px;background:#cce4da;border:2px solid #29243b;border-radius:8px;box-shadow:3px 3px 0 #29243b;font-weight:700;text-decoration:none;color:#29243b}
-    li{margin-block:10px} footer{margin-top:48px;border-top:2px solid;padding-top:20px;font-size:16px}
-    @media(prefers-color-scheme:dark){:root{background:#191722;color:#f4edff}a:focus-visible{outline-color:#c8adee}}
-  </style>
+  <link rel="stylesheet" href="site.css">
 </head>
-<body>
-  <main>
-    <header><img src="icons/Icon-192.png" width="48" height="48" alt=""><span>wfform</span></header>
-    <h1>A browser workspace for free OpenRouter models</h1>
-    <p>wfform means Wrapper for Free Open Router Models. It helps you discover AI models with free pricing in the OpenRouter catalog, inspect their capabilities, and chat with the model you choose.</p>
-    <p><a class="open" href="./">Open wfform</a></p>
-
-    <h2>Choose a model with context</h2>
-    <p>The catalog refreshes on launch and can be refreshed manually. Search models and inspect their descriptions, context lengths, pricing, supported inputs and outputs, and request parameters. Recent health observations help explain availability; they cannot guarantee the next response.</p>
-    <p>Chat selection is limited to compatible models whose applicable prices are verified as zero. A changed or unavailable model requires a new valid selection. The app does not silently switch to paid models.</p>
-
-    <h2>Continue your conversations</h2>
-    <p>Stream replies, cancel a request, edit and resend an earlier message, or start a new conversation with another model. Conversation history and drafts stay in this browser. You can archive, restore, delete, export, and import conversations. Data is not automatically synchronized between devices or browser profiles.</p>
-
-    <h2>Work with supported files</h2>
-    <p>Preview Markdown, JSON, YAML, source code, and other supported text documents. Image, audio, video, and file inputs depend on the selected model and provider. Model details show capabilities, and the composer checks attachment compatibility and limits before sending. Uploaded or generated code is displayed as text, not executed.</p>
-
-    <h2>Get started</h2>
-    <ol>
-      <li>Open the app and add your OpenRouter API key in Settings.</li>
-      <li>Choose a compatible free model from the current catalog.</li>
-      <li>Write a message, add supported attachments if useful, and send.</li>
-    </ol>
-    <p>OpenRouter account requirements, rate limits, model availability, and provider limits still apply. Free pricing does not mean unlimited usage. Requests go directly from your browser to OpenRouter; an internet connection is needed for chat.</p>
-
-    <h2>Install it or use a browser tab</h2>
-    <p>wfform is a progressive web app with light and dark themes and layouts for narrow or wide windows. Supported browsers can install it. After a successful online load, its offline shell and cached model catalog remain available when browser storage is retained; remote chat is unavailable offline.</p>
-
-    <footer>
-      <p>wfform is an independent application and is not affiliated with OpenRouter.</p>
-      <p><a href="https://github.com/consciontologic/wfform">Source code and project documentation</a> · <a href="https://openrouter.ai/docs/quickstart">OpenRouter API documentation</a></p>
+<body class="information-page">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="wfform home"><img src="icons/Icon-192.png" width="40" height="40" alt=""><span>wfform</span></a>
+      <a class="open-app" href="./">Open the app</a>
+    </header>
+    <main id="content">
+      <div class="page-heading">
+        <h1>About wfform</h1>
+        <p class="lead">A browser workspace for finding free OpenRouter models and keeping your conversations together. Choose a model, understand its capabilities, and make it part of your workflow.</p>
+        <p class="updated">Updated <time datetime="2026-10-07">7 October 2026</time></p>
+      </div>
+      <div class="reading-layout">
+        <nav class="contents" aria-label="On this page">
+          <h2>On this page</h2>
+          <ul>
+          <li><a href="#workspace">A wrapper with a purpose</a></li>
+          <li><a href="#models">Models and availability</a></li>
+          <li><a href="#conversations">Conversations and files</a></li>
+          <li><a href="#start">Getting started</a></li>
+          <li><a href="#data">Your data and website analytics</a></li>
+          </ul>
+        </nav>
+        <article class="prose" aria-label="About wfform">
+        <section id="workspace">
+          <h2>A wrapper with a purpose</h2>
+          <p>wfform stands for <strong>Wrapper for Free Open Router Models</strong>. It brings model discovery, streaming chat and browser-local history into one workspace. It is an independent project, not an official OpenRouter product.</p>
+          <p>You choose the model for each conversation. Changing models starts a new conversation, and an unavailable model never silently turns into a paid alternative.</p>
+        </section>
+        <section id="models">
+          <h2>Know what you are choosing</h2>
+          <p>The catalog refreshes on launch. Search the current models and inspect descriptions, context lengths, pricing, supported inputs and outputs, and request parameters before you select one.</p>
+          <p>Only compatible models with verified zero prices for the applicable charges can be selected for chat. Recent health checks describe recent observations, not a guarantee of the next response. OpenRouter account requirements, rate limits and provider availability still apply.</p>
+        </section>
+        <section id="conversations">
+          <h2>Keep your work close</h2>
+          <p>Stream replies, cancel requests, or edit and resend an earlier message. Archive conversations you want to keep, restore them later, or export a backup. History is saved in this browser; it is not automatically synchronized across devices.</p>
+          <p>Preview Markdown, JSON, YAML and source code. Attachments such as images, audio, video and text files depend on the selected model and provider. The composer checks compatibility and limits before sending. Code previews display text; they do not execute it.</p>
+          <p>The app has light and dark themes and layouts for narrow and wide windows. Supported browsers can install it as a PWA. Once the offline shell is cached, you can reopen the app and inspect cached model information offline. Remote chat still requires a connection.</p>
+        </section>
+        <section id="start">
+          <h2>Start a conversation</h2>
+          <ol>
+            <li><a href="./">Open wfform</a> and add your OpenRouter API key in Settings.</li>
+            <li>Choose a compatible free model from the current catalog.</li>
+            <li>Write your message, add any supported files, and send.</li>
+          </ol>
+          <p>Free model pricing does not mean unlimited usage. Review the <a href="https://openrouter.ai/docs/quickstart">OpenRouter documentation</a> for account setup and service requirements.</p>
+        </section>
+        <section id="data">
+          <h2>Your data and website analytics</h2>
+          <p>Messages and attachments are sent directly from your browser to OpenRouter and the model providers involved in your request. Their terms and data policies apply. Conversation history, drafts and preferences are kept in browser storage; clearing site data can remove them.</p>
+          <p>This website uses <strong>Google Analytics</strong> to understand page visits and general usage. Google's tag may use cookies and process browser, device and interaction information. wfform does not add custom analytics events containing prompts, responses, attachments or API keys.</p>
+          <p>Read the <a href="terms.html#data">data and analytics explanation</a> and <a href="liability.html">service limitations</a> before using the app. The <a href="https://github.com/consciontologic/wfform">source repository</a> documents the implementation and accepts public bug reports. Do not include keys or private conversations in an issue.</p>
+        </section>
+        </article>
+      </div>
+    </main>
+    <footer class="site-footer">
+      <div class="footer-row">
+        <p class="footer-version">wfform <span>0.1.0</span></p>
+        <nav class="footer-nav" aria-label="Information pages">
+          <a href="about.html" aria-current="page">About</a>
+          <a href="terms.html">Terms and conditions</a>
+          <a href="liability.html">Liability</a>
+        </nav>
+        <a class="source-link" href="https://github.com/consciontologic/wfform"><img src="github-mark.svg" width="36" height="36" alt=""><span>View source<br>on GitHub</span></a>
+      </div>
+      <p class="footer-note">An independent OpenRouter client. Website usage is measured with Google Analytics; <a href="terms.html#data">read how data is handled</a>.</p>
     </footer>
-  </main>
+  </div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Public web metadata, publishing and logo verification
 
-Date: **2026-10-07**. Workspace: `/home/serhatakbak/code/projects/wfform`. Flutter **3.38.5**, Dart **3.10.4**. This report covers the three requested additions; earlier reports retain their original verification scope. Existing staged files were preserved. No source or remote deployment commit/push was executed.
+Date: **2026-10-07**. Workspace: `<repository>`. Flutter **3.38.5**, Dart **3.10.4**. This report covers the three requested additions; earlier reports retain their original verification scope. Existing staged files were preserved. No source or remote deployment commit/push was executed.
 
 ## Implemented
 
@@ -16,7 +16,7 @@ Run from the project root; raw logs are ignored under `outputs/public-web-*.txt`
 |---|---|
 | `make verify` | **345 tests passed**, one explicitly opt-in live test skipped; Dart formatting, Flutter analysis and repository checks passed against final source |
 | `flutter test test/deploy/website_publication_test.dart test/deploy/website_workflow_test.dart --reporter expanded` | **17 tests passed**: real temporary-file publication/integrity tests plus fake Git/gh orchestration; no real commit/push |
-| `CHROME_EXECUTABLE=/home/serhatakbak/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | **6 real Chrome IndexedDB tests passed** with disposable fixture databases |
+| `CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | **6 real Chrome IndexedDB tests passed** with disposable fixture databases |
 | `python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v` | **13 repository-operation tests passed** |
 | `make build.public` | Release build passed: **37 assets, 18,163,872 bytes**; existing local config excluded |
 | `dart run tool/prepare_website.dart build/publish-web work/website-preview` twice | Real compiled release: first preparation **80 files changed**; second **0 files changed**, no Git operations |

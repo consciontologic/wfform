@@ -46,6 +46,12 @@ abstract class PlatformBridge extends ChangeNotifier {
 
   void exportText(String filename, String content);
 
+  /// Open a user-activated link without replacing the current conversation.
+  /// New platform adapters must provide their own external URL integration.
+  void openUrl(Uri url) {
+    throw UnsupportedError('Opening links requires a platform adapter.');
+  }
+
   /// A user-selected local text export; no network operation is performed.
   Future<String?> importText({int maxBytes = 64 * 1024 * 1024}) async => null;
 }

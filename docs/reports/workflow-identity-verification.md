@@ -1,6 +1,6 @@
 # Workflow and identity verification
 
-Verified 2026-10-06 in `/home/serhatakbak/code/projects/wfform` with Flutter 3.38.5 / Dart 3.10.4. This report covers the single Makefile, CodeGraph, Settings gear and package-name follow-up. The existing staged project baseline was preserved; no commit or push was performed.
+Verified 2026-10-06 in `<repository>` with Flutter 3.38.5 / Dart 3.10.4. This report covers the single Makefile, CodeGraph, Settings gear and package-name follow-up. The existing staged project baseline was preserved; no commit or push was performed.
 
 ## Changes
 
@@ -27,7 +27,7 @@ Verified 2026-10-06 in `/home/serhatakbak/code/projects/wfform` with Flutter 3.3
 The actual Chromium command was:
 
 ```bash
-CHROME_EXECUTABLE=/home/serhatakbak/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome \
+CHROME_EXECUTABLE=/path/to/chrome \
   flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded
 ```
 
@@ -45,7 +45,7 @@ The differing hashes include the container's policy stamp. The pre-existing Flut
 ## Commands and client boundary
 
 ```bash
-cd /home/serhatakbak/code/projects/wfform
+cd /path/to/wfform
 make help
 make codeg
 make codeg.check

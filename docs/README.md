@@ -1,6 +1,6 @@
 # wfform documentation
 
-Start with the [application README](../README.md) for setup and exact run/test/build commands. This index separates implemented project contracts, active work, historical evidence and reusable agent-framework references.
+Start with the [application README](../README.md) for a quick start and the [setup guide](guides/README.md) for configuration and optional checks. This index separates implemented project contracts, active work, historical evidence and reusable agent-framework references.
 
 ## Application contracts
 

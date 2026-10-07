@@ -4,8 +4,8 @@ Verified 2026-10-06 with Flutter 3.38.5 and Dart 3.10.4 on Linux. This report co
 
 ## Delivered scope
 
-- Canonical source moved to `/home/serhatakbak/code/projects/wfform`. The destination's existing unborn `main` and `git@github.com:metaphy6/wfform.git` origin were preserved. The original chat workspace retains historical outputs and a relocation README, not a second source tree.
-- Applied `/home/serhatakbak/code/projects/agentic-workspace/xops/init/scaffold.sh --target /home/serhatakbak/code/projects/wfform --preset full --no-mcp` without forced replacement. Framework revision: `a93e0d95e665748c700faa677cc5e8cfdb6c3ca8`. No Dart preset existed, so actual Flutter rules, commands and editor/agent configuration were adapted locally.
+- Canonical source moved to `<repository>`. The destination's existing unborn `main` and `git@github.com:metaphy6/wfform.git` origin were preserved. The original chat workspace retains historical outputs and a relocation README, not a second source tree.
+- Applied `<scaffold-checkout>/xops/init/scaffold.sh --target <repository> --preset full --no-mcp` without forced replacement. Framework revision: `a93e0d95e665748c700faa677cc5e8cfdb6c3ca8`. No Dart preset existed, so actual Flutter rules, commands and editor/agent configuration were adapted locally.
 - Populated project, architecture, API, module, design, decision, roadmap and context documentation. Shared framework material is identified as reusable guidance. No CodeGraph server/index or Node application dependency was introduced.
 - Kept the development key in ignored, mode-600 `config/local.json`. Private configuration, build output, `.local/`, scratch work and screenshots are excluded from Git. The repository checker scans both prospective files and the Git index without printing credentials. The image uses an allowlisted, key-checked context and excludes local configuration.
 - Added static nginx Docker deployment, Make/xops lifecycle commands, optional read-only runtime configuration, local TLS, header/integrity checks and the [Docker guide](../guides/DOCKER.md).
@@ -22,7 +22,7 @@ All commands ran from the canonical project directory. Long commands were wrappe
 | `make image` | Credential-free allowlisted context and pinned official nginx image built successfully |
 | `TLS=1 make restart` | Project container recreated and healthy, preserving the TLS overlay |
 | `make tls.check` | Actual HTTP and HTTPS health/config/security/cache/MIME checks passed; all 33 versioned assets matched SHA-256 |
-| `CHROME_EXECUTABLE=/home/serhatakbak/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | **6 tests passed using actual Chromium IndexedDB**, covering migration, binary deduplication, incremental writes, conflicts and rollback |
+| `CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart --reporter expanded` | **6 tests passed using actual Chromium IndexedDB**, covering migration, binary deduplication, incremental writes, conflicts and rollback |
 | Agent/editor configuration validation | Five Codex TOMLs and VS Code JSON parsed; Flutter/deploy scopes present and MCP absent |
 | `python3 -m unittest discover -s xops/makefile -p 'test_*.py'` | **7 scaffold operations tests passed**; Python is repository tooling only |
 | Local documentation-link validation | 31 populated project documents, 208 local links/anchors checked; no broken targets or unresolved scaffold placeholders |
@@ -72,7 +72,7 @@ The optional blank runtime-config mount was tested as 200/no-store and its absen
 ## Run from the new workspace
 
 ```bash
-cd /home/serhatakbak/code/projects/wfform
+cd /path/to/wfform
 make deps
 make verify
 make image

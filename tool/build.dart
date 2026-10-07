@@ -299,6 +299,10 @@ bool isShellAsset(String path) {
         'manifest.json',
         'favicon.png',
         'about.html',
+        'terms.html',
+        'liability.html',
+        'site.css',
+        'github-mark.svg',
         'robots.txt',
         'sitemap.xml',
       }.contains(path);

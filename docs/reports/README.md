@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Public pages and version 0.1.0](site-pages-verification.md): Google tag placement, linked information pages, responsive footer, portable repository docs and local/remote verification evidence.
+
 - [Sidebar and model readability](sidebar-readability-verification.md): 7 October 2026 adaptive resizing, 125% text, truthful source descriptions and release/browser regression checks.
 
 ## Current migration evidence
@@ -24,6 +26,6 @@ Reports must state their date, revision/release when known, commands, fixture/li
 - [History storage guide](../history.md): deterministic and real Chromium IndexedDB scope.
 - [Performance guide](../performance.md): measurement methodology, what artifact/VM numbers do and do not establish.
 
-Historical generated outputs remain under /home/serhatakbak/Documents/Codex/2026-10-05/you-are-astra-implement-and-verify/outputs after the source move. References to outputs in old reports point to that historical workspace. They were not regenerated or copied into the new repository as fresh evidence.
+Historical generated outputs remain under the original session's ignored outputs directory after the source move. References to outputs in old reports point to that historical workspace. They were not regenerated or copied into the new repository as fresh evidence.
 
 New raw verification logs belong in this project's ignored outputs directory; dated reports here record exact commands and limitations. The [roadmap](../planning/ROADMAP.md) is authoritative for acceptance status.

@@ -23,11 +23,11 @@ Scope ID: workspace-adaptation. The following six groups correspond to the user'
 
 ### 1. Move the project
 
-- [x] Move application files to /home/serhatakbak/code/projects/wfform, preserve existing destination main/origin and unrelated files, retain historical outputs at their documented original location, and verify commands from the new working directory.
+- [x] Move application files to the project repository, preserve existing destination main/origin and unrelated files, retain historical outputs at their documented original location, and verify commands from the new working directory.
 
 ### 2. Apply the agentic-workspace scaffold
 
-- [x] Apply /home/serhatakbak/code/projects/agentic-workspace using the full preset without forced replacement or automatic MCP setup; verify installed operating surfaces and the preserved application.
+- [x] Apply the agentic-workspace scaffold using the full preset without forced replacement or automatic MCP setup; verify installed operating surfaces and the preserved application.
 
 ### 3. Ignore the local API key
 
@@ -128,3 +128,12 @@ Scope ID: sidebar-readability. Requested 2026-10-07.
 - [x] Run regression gates, release build and browser checks for the changed controls and layouts.
 
 Completed evidence: [sidebar and readability verification](../reports/sidebar-readability-verification.md).
+
+## Phase 9 — Public information and version 0.1.0
+
+Scope ID: public-information. Requested 2026-10-07.
+
+- [x] Add the supplied Google tag exactly once immediately after each HTML head and keep hosting/CSP/PWA packaging compatible.
+- [x] Publish accessible About, Terms and conditions, and Liability pages with contextual copy, a GitHub doodle, and app/page version 0.1.0.
+- [x] Replace tracked personal machine paths/usernames with portable documentation and shorten the visitor README.
+- [ ] Verify deterministic gates, release build, responsive browser behavior and the deployed public pages.

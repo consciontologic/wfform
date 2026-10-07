@@ -479,6 +479,20 @@ class BrowserPlatformBridge extends PlatformBridge {
   }
 
   @override
+  void openUrl(Uri url) {
+    if (url.scheme != 'https' && url.scheme != 'http') {
+      throw ArgumentError.value(url.scheme, 'url.scheme', 'Expected HTTP(S)');
+    }
+    final anchor = web.HTMLAnchorElement()
+      ..href = url.toString()
+      ..target = '_blank'
+      ..rel = 'noopener noreferrer';
+    web.document.body?.append(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  @override
   void exportText(String filename, String content) {
     final blob = web.Blob(
       [content.toJS].toJS,

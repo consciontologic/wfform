@@ -130,9 +130,9 @@ void validateHeaders(Map<String, String> headers, {required bool https}) {
   final csp = headers['content-security-policy'] ?? '';
   for (final directive in [
     "default-src 'none'",
-    "script-src 'self' 'wasm-unsafe-eval'",
+    "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo='",
     "script-src-attr 'none'",
-    "connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/",
+    "connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/ https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://analytics.google.com",
     "font-src 'self' data: https://fonts.gstatic.com/s/",
     "frame-ancestors 'none'",
     "object-src 'none'",
@@ -143,7 +143,7 @@ void validateHeaders(Map<String, String> headers, {required bool https}) {
   }
   if (csp.contains("'unsafe-eval'") ||
       csp.contains('https:;') ||
-      csp.contains('*')) {
+      csp.replaceAll('https://*.google-analytics.com', '').contains('*')) {
     throw StateError('CSP unexpectedly broad.');
   }
   final permissions = (headers['permissions-policy'] ?? '')

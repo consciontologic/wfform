@@ -5,10 +5,10 @@
 - Product: **wfform — Wrapper for Free Open Router Models**.
 - Purpose: discover free OpenRouter models and continue browser-local conversations.
 - Application: Flutter/Dart, verified release target web/PWA; Dart package is `wfform`. Android namespace/application ID and iOS Runner bundle ID are `com.wfform`. Native hosts are configured but native builds and adapter parity remain unverified; PWA/storage identities remain stable.
-- Canonical workspace: /home/serhatakbak/code/projects/wfform.
+- Canonical workspace: this repository's root.
 - Git origin: https://github.com/consciontologic/wfform.git. On 2026-10-07 the user explicitly authorized migration to this account without prior Git history, source push and pipeline launch. The old local Git metadata is preserved under ignored `.local/git-history-backup/`. Future history replacement still requires an explicit request.
-- Original chat workspace: /home/serhatakbak/Documents/Codex/2026-10-05/you-are-astra-implement-and-verify. Its historical outputs remain there.
-- Scaffold source/revision: /home/serhatakbak/code/projects/agentic-workspace at a93e0d95e665748c700faa677cc5e8cfdb6c3ca8, full preset with --no-mcp and no --force on 2026-10-06. No Dart language preset existed.
+- Historical chat outputs remain in their original local workspace; machine-specific paths are not published.
+- Scaffold source/revision: the local `agentic-workspace` checkout at a93e0d95e665748c700faa677cc5e8cfdb6c3ca8, full preset with --no-mcp and no --force on 2026-10-06. No Dart language preset existed.
 
 ## Latest completed work
 
@@ -25,7 +25,7 @@ On 2026-10-07 the [public-web follow-up](../reports/public-web-verification.md) 
 | Concern | Source |
 |---|---|
 | Operating policy | [AGENTS.md](../../AGENTS.md) |
-| Run/build/test and configuration | [README.md](../../README.md) |
+| Run/build/test and configuration | [Quick start](../../README.md), [setup and configuration](../guides/README.md) |
 | Product invariants | [Charter](../project/CHARTER.md) |
 | Code boundaries | [Architecture](../code/ARCHITECTURE.md), [modules](../code/MODULES.md), [API contracts](../code/API.md) |
 | Decisions and migration | [Decision log](../project/DECISION_LOG.md), [ADRs](../design/README.md) |
@@ -122,3 +122,15 @@ including Cohere North Mini Code, themselves end in an ellipsis; the inspector
 and details dialog explain this and provide a selectable/copyable model-page
 URL. Do not invent missing paragraphs or scrape the website. The repeated model
 hover instruction was removed. See the [verification report](../reports/sidebar-readability-verification.md).
+
+## Public information and version — 2026-10-07
+
+The app/package version starts at 0.1.0. About, Terms and Liability are static
+companion documents linked by the responsive Flutter footer and each other.
+Each HTML page contains the user-supplied Google tag once immediately after
+head; nginx allows the hashed bootstrap and specified Google origins. No
+custom conversation analytics were added. Keep version constants/static
+footers in sync, and update the CSP hash if the inline snippet changes.
+Machine-specific paths have been removed from tracked documentation; retain
+portable commands and relative repository references. See the
+[verification report](../reports/site-pages-verification.md).

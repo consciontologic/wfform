@@ -1,9 +1,41 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import '../../deploy/check.dart';
+import '../../tool/content_hash.dart';
 
 void main() {
+  test('Google tag has a matching narrow CSP hash on every HTML page', () {
+    final config = File('deploy/nginx/headers.conf').readAsStringSync();
+    final policy = RegExp(
+      r'add_header Content-Security-Policy "([^"]+)"',
+    ).firstMatch(config)!.group(1)!;
+    final scripts = policy
+        .split(';')
+        .singleWhere((part) => part.trim().startsWith('script-src '));
+    expect(scripts, contains('https://www.googletagmanager.com'));
+    expect(scripts, isNot(contains("'unsafe-inline'")));
+    for (final file in Directory('web').listSync().whereType<File>().where(
+      (file) => file.path.endsWith('.html'),
+    )) {
+      final inline = RegExp(r'<script>([\s\S]*?)</script>')
+          .allMatches(file.readAsStringSync())
+          .where(
+            (match) =>
+                match.group(1)!.contains("gtag('config', 'G-P3K2ZN7YTL')"),
+          )
+          .toList();
+      expect(inline, hasLength(1), reason: file.path);
+      final digest = sha256(utf8.encode(inline.single.group(1)!));
+      final hash = base64.encode([
+        for (var i = 0; i < digest.length; i += 2)
+          int.parse(digest.substring(i, i + 2), radix: 16),
+      ]);
+      expect(scripts, contains("'sha256-$hash'"), reason: file.path);
+    }
+  });
+
   Map<String, String> valid() => {
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
@@ -13,7 +45,7 @@ void main() {
     'permissions-policy':
         'camera=(), microphone=(), clipboard-read=(self), clipboard-write=(self)',
     'content-security-policy':
-        "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; script-src-attr 'none'; connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/; font-src 'self' data: https://fonts.gstatic.com/s/; frame-ancestors 'none'; object-src 'none'",
+        "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo='; script-src-attr 'none'; connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/ https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://analytics.google.com; font-src 'self' data: https://fonts.gstatic.com/s/; frame-ancestors 'none'; object-src 'none'",
   };
   test(
     'HTTP header contract allows WASM but not general eval or embedding',

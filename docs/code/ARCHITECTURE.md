@@ -54,7 +54,7 @@ History belongs to an origin, including its port. Moving the source directory do
 
 Controllers outlive responsive layout branches, preserving draft, selection, focus and pending work while resizing. Catalog refreshes, quota reads and health probes deduplicate in-flight work. Health concurrency is two. Chat has first-useful-output, idle and overall deadlines, with immediate cancellation and terminal flushing. Content retries are never automatic.
 
-Conversation length, response text, catalog bytes/pages, attachment count/size, stored histories and diagnostics are bounded. The current defaults and validation constraints are listed in the [README configuration reference](../../README.md#configuration). Long model/history lists build lazily. Narrow status notifications avoid treating every streamed character as an application-wide state change.
+Conversation length, response text, catalog bytes/pages, attachment count/size, stored histories and diagnostics are bounded. The current defaults and validation constraints are listed in the [configuration reference](../guides/README.md#configuration). Long model/history lists build lazily. Narrow status notifications avoid treating every streamed character as an application-wide state change.
 
 ## Failure handling and verification
 

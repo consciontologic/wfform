@@ -17,6 +17,7 @@ import 'utilities.dart';
 import 'retry_control.dart';
 import 'context_dialog.dart';
 import 'sidebar_resize_handle.dart';
+import 'app_footer.dart';
 
 class StudioApp extends StatelessWidget {
   const StudioApp({super.key, required this.state});
@@ -419,6 +420,9 @@ class _StudioScreenState extends State<StudioScreen> {
                     ],
                   ),
                 ),
+                // Preserve composing space while a software keyboard is raised.
+                if (MediaQuery.viewInsetsOf(context).bottom == 0)
+                  AppFooter(key: const ValueKey('app-footer'), state: state),
               ],
             ),
           ),
