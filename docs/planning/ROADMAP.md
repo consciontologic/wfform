@@ -18,7 +18,7 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Sidebar and model passport patch 0.1.1 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
 | Footer, documentation and composer focus patch 0.1.2 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
 | Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
-| Conversation drafts and saved connection 0.2.0 | 5 | 4 | Implementation and local release gates passed; remaining browser checks and publication pending |
+| Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
 
 ## Established application baseline
 
@@ -185,4 +185,4 @@ Scope ID: conversation-drafts. Requested 2026-10-07.
 - [x] Separate unsent drafts from sent conversations, with durable text and attachment recovery across navigation and reload.
 - [x] Return to a writable draft after archiving the active conversation, preserving archived history.
 - [x] Remember the explicitly saved OpenRouter key across browser restarts, including replacement and removal, with visible storage failures.
-- [ ] Verify and publish version 0.2.0 with regression tests, a release build and browser evidence.
+- [x] Verify and publish version 0.2.0 with regression tests, a release build and browser evidence.

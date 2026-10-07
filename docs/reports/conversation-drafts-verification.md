@@ -77,11 +77,24 @@ and disabled remote chat. Saving and clearing the connection were exercised
 through Settings. After closing and reopening the QA tab, the cleared field
 stayed empty despite a runtime configuration key. Exact nonempty key restoration
 is covered by the seven real Chromium storage tests; browser automation masks
-password values. The browser process itself was not restarted.
+password values. The browser process itself was not restarted. After restarting
+nginx and turning off Work offline, the catalog returned to live status and a
+saved live conversation reopened with its completed output intact. No browser
+console errors were recorded in the reopened QA tab.
 
-## Pending publication and limits
+## Publication and limits
 
-Publication of 0.2.0, its GitHub workflow and the
-resulting public deployment have not yet been verified. These remain open in
-Phase 13 of the [roadmap](../planning/ROADMAP.md). No new Safari, Firefox,
-native-platform or physical-device evidence is claimed.
+Source commit `e6a6bb04a71f86d47f9ad23bf0284b561ca6b6ee` was pushed under the
+user's existing publication authorization. [CI run 37666068066](https://github.com/consciontologic/wfform/actions/runs/37666068066)
+passed all checks and published compiled files as website commit
+`33b0f666772392a04909a0713d005d41eae420f8`.
+[Pages run 37666482966](https://github.com/consciontologic/wfform.com/actions/runs/37666482966)
+completed successfully. The public release manifest at https://wfform.com/
+matches the local release hash above; the served JavaScript, index, About,
+Terms, Liability and manifest hashes were checked against that manifest.
+A separate public browser tab detected the update, applied Save & update and
+displayed Version 0.2.0 with Chats / Drafts / Archived and a live catalog.
+
+No new Safari, Firefox, native-platform or physical-device evidence is claimed.
+Installed browser apps may need the explicit Save & update action. A browser
+process restart and a new OS-level installation were not performed in this run.

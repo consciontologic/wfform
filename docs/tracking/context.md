@@ -166,13 +166,16 @@ native persistent adapter parity remains unverified.
 
 The final local gate passed 476 tests with one opt-in live test skipped,
 14 repository-operation tests and seven actual Chromium storage tests.
-CodeGraph queries verified 151 files, 2,048 nodes, 8,568 edges and eight tools.
+CodeGraph queries verified 151 files, 2,048 nodes, 8,579 edges and eight tools.
 The bounded real catalog check observed 663 entries, 68 free-price candidates,
 17 chat-compatible models, seven unresolved-price exclusions and no quarantine.
 The final release has 40 assets / 18,270,168 bytes and passed actual nginx
 headers and immutable-asset integrity checks. Local browser evidence includes
 an explicit successful authenticated LiquidAI stream after a mandatory-reasoning
 probe fix, responsive/200% layouts, imported archive fixtures and two PWA
-updates preserving drafts. Remaining browser offline/key checks and publication
-are pending; see the [0.2.0 verification report](../reports/conversation-drafts-verification.md)
-and Phase 13 before claiming deployment completion.
+updates preserving drafts. Offline shell reload with nginx stopped, reconnect,
+saved history reopening and persisted explicit key clearing also passed.
+CI run 37666068066 and Pages run 37666482966 passed. The public release matches
+the local build, including checked JavaScript/page/manifest hashes. See the
+[0.2.0 verification report](../reports/conversation-drafts-verification.md) and
+Phase 13 for scope and remaining platform limits.
