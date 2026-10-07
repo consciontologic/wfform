@@ -33,4 +33,4 @@ Start with the [application README](../README.md) for a quick start and the [set
 | [Skills](../.agents/skills/README.md) | Reusable operating skills, loaded when applicable |
 | [xops](../xops/README.md) | Shell/Python repository operations, separate from Flutter runtime |
 
-Files ending in .template.md are reusable scaffold forms, not filled project documentation or delivered features. Existing detailed feature documents remain authoritative for their contracts. Historical verification counts must retain their original date and scope; a new build needs new evidence.
+The documents above describe this project. Update the owning document when a contract changes. Historical verification counts retain their original date and scope; a new build needs new evidence.

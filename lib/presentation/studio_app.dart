@@ -319,20 +319,26 @@ class _StudioScreenState extends State<StudioScreen> {
                               ),
                             ),
                           if (sidebarVisible)
-                            SidebarResizeHandle(
-                              key: const ValueKey('sidebar-resize-handle'),
-                              value: sidebarWidth,
-                              minimum: sidebarMinimum,
-                              maximum: sidebarMaximum,
-                              onChanged: (value) =>
-                                  setState(() => sidebarPreview = value),
-                              onChangeEnd: (value) {
-                                setState(() => sidebarPreview = null);
-                                state.setSidebarWidth(value);
-                              },
-                              onCancelled: () =>
-                                  setState(() => sidebarPreview = null),
-                              onCollapse: _collapseSidebar,
+                            TextFieldTapRegion(
+                              groupId: composerFocus,
+                              // Resizing changes layout, not the typing target.
+                              // A deliberate divider tap still focuses its
+                              // keyboard controls through its own onTap.
+                              child: SidebarResizeHandle(
+                                key: const ValueKey('sidebar-resize-handle'),
+                                value: sidebarWidth,
+                                minimum: sidebarMinimum,
+                                maximum: sidebarMaximum,
+                                onChanged: (value) =>
+                                    setState(() => sidebarPreview = value),
+                                onChangeEnd: (value) {
+                                  setState(() => sidebarPreview = null);
+                                  state.setSidebarWidth(value);
+                                },
+                                onCancelled: () =>
+                                    setState(() => sidebarPreview = null),
+                                onCollapse: _collapseSidebar,
+                              ),
                             ),
                           if (!expanded && !compact)
                             Container(
@@ -1359,6 +1365,11 @@ class _Composer extends StatelessWidget {
                       key: const ValueKey('composer'),
                       controller: controller,
                       focusNode: focus,
+                      groupId: focus,
+                      // Flutter's native touch default may leave the editor
+                      // focused when an outside action takes the gesture.
+                      // Close its input connection as well as its visible caret.
+                      onTapOutside: (_) => focus.unfocus(),
                       readOnly:
                           state.activeConversationArchived || state.historyBusy,
                       minLines:

@@ -11,4 +11,4 @@
 
 ADRs record established choices; their acceptance does not mark the current roadmap complete. Supersede an accepted ADR with a new linked decision when the choice changes.
 
-[DESIGN.template.md](DESIGN.template.md) and [ADR.template.md](ADR.template.md) remain clearly labeled reusable forms, not unfilled product deliverables.
+Write new ADRs as `ADR-NNNN-<short-slug>.md`, using the next available number. Include status, date, context, decision, consequences and considered options; link the completed decision from this index. Update the implemented interaction design in [DESIGN.md](DESIGN.md).

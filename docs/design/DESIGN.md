@@ -40,6 +40,11 @@ buttons remain accessible.
 
 The composer grows over several lines and clears when a valid send is accepted. A next draft can be written while the answer streams. Explicit retry reuses the failed user turn; edit/resend appends a revised copy. Returned reasoning is separate and collapsible. Context exclusions and continuation are explicit actions, preserving earlier records.
 
+Clicking or tapping outside the composer releases its editing focus and input
+connection, so its caret stops blinking. Keyboard focus transfer and browser
+view blur also stop editing without erasing the draft. Dragging the sidebar
+divider is an intentional exception: resizing preserves the typing target.
+
 History offers current and archived views, search, restore, export/import and direct permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
 
 ## Visual and content design
@@ -49,6 +54,10 @@ The visual system uses low-saturation neutral/pastel surfaces, strong readable b
 Readable application text is selectable. Bounded local preview and Markdown/code rendering extend this principle; their precise formats and fallbacks are specified in [file-rendering.md](../file-rendering.md). Rendering content never executes source code or expands model upload capabilities implicitly.
 
 The product mark encloses a conversation bubble in brackets, representing a wrapper around model conversations. It is decorative next to the selectable wfform name, uses theme colors, and is shared conceptually with the generated PWA/favicon artwork. The small static About document uses the same palette to provide readable product information before launching Flutter and to search crawlers.
+
+The footer groups the version and a plain GitHub text link on the left.
+Information links remain on the right, using an Info menu when space is limited.
+No GitHub logo or doodle is shipped on app or information pages.
 
 ## Resilience and trade-offs
 

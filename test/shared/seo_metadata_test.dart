@@ -223,10 +223,16 @@ void main() {
           html,
           contains('href="https://github.com/consciontologic/wfform"'),
         );
-        expect(html, contains('src="github-mark.svg"'));
+        final sourceLink = RegExp(
+          r'<a class="source-link" href="https://github.com/consciontologic/wfform">([^<]+)</a>',
+        ).firstMatch(html);
+        expect(sourceLink, isNotNull, reason: path);
+        expect(sourceLink!.group(1), 'GitHub', reason: path);
+        expect(html, isNot(contains('github-mark.svg')), reason: path);
+        expect(html, contains('class="footer-origin"'), reason: path);
         expect(html, contains('href="site.css"'));
       }
-      expect(File('web/github-mark.svg').existsSync(), isTrue);
+      expect(File('web/github-mark.svg').existsSync(), isFalse);
       expect(File('web/site.css').existsSync(), isTrue);
       expect(
         File('pubspec.yaml').readAsStringSync(),

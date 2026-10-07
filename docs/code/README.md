@@ -8,4 +8,4 @@
 
 Feature-level details remain in the [application contract index](../README.md#application-contracts). Start from these current documents before creating another overlapping overview.
 
-[ARCHITECTURE.template.md](ARCHITECTURE.template.md), [MODULE.template.md](MODULE.template.md) and [API.template.md](API.template.md) are retained reusable scaffold forms. They are not descriptions of this codebase until copied and filled for an actual new boundary.
+For a new boundary, document its purpose, public interface, invariants, dependencies and verification in the appropriate document above. Create a separate page only when the boundary needs its own maintained contract, and link it from this index.

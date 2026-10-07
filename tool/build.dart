@@ -302,7 +302,6 @@ bool isShellAsset(String path) {
         'terms.html',
         'liability.html',
         'site.css',
-        'github-mark.svg',
         'robots.txt',
         'sitemap.xml',
       }.contains(path);

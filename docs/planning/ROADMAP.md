@@ -148,3 +148,12 @@ Scope ID: sidebar-passport-patch. Requested 2026-10-07.
 - [x] Publish patch 0.1.1 with concise Open app labels; verify regressions, release build, responsive browser behavior and deployment.
 
 Completed patch evidence: [0.1.1 verification](../reports/sidebar-passport-patch-verification.md).
+
+## Phase 11 — Footer, documentation and composer focus patch 0.1.2
+
+Scope ID: footer-focus-patch. Requested 2026-10-07.
+
+- [x] Remove GitHub artwork everywhere and place a plain source link beside the left-aligned app version, preserving responsive navigation.
+- [x] Remove unused documentation templates and repair their active links/instructions.
+- [x] Fix the composer's stale blinking caret when focus moves elsewhere; preserve draft, selection, keyboard/touch behavior and resize continuity.
+- [ ] Verify and publish version 0.1.2 with tests, release build and browser evidence.

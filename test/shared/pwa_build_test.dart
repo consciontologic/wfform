@@ -92,7 +92,6 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       'terms.html',
       'liability.html',
       'site.css',
-      'github-mark.svg',
       'robots.txt',
       'sitemap.xml',
     ]) {
@@ -106,7 +105,6 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       'terms.html',
       'liability.html',
       'site.css',
-      'github-mark.svg',
       'robots.txt',
       'sitemap.xml',
     ]) {
@@ -117,6 +115,19 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       );
     }
     expect(mimeType('sitemap.xml'), 'application/xml; charset=utf-8');
+  });
+
+  test('retired source artwork is excluded even from stale build output', () {
+    File('${source.path}/github-mark.svg').writeAsStringSync('<svg/>');
+    final release = build.prepareRelease(source, template);
+    final target = Directory('${scratch.path}/public');
+    build.publishRelease(release, target);
+    expect(release.assets, isNot(contains('github-mark.svg')));
+    expect(
+      release.manifest['assets'] as Map,
+      isNot(contains('github-mark.svg')),
+    );
+    expect(File('${target.path}/github-mark.svg').existsSync(), isFalse);
   });
 
   test('public builds never read or retain development configuration', () {

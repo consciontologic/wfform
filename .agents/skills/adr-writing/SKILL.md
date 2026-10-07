@@ -16,8 +16,10 @@ async, deprecating a public API, picking a serialisation format.
 
 ## Procedure
 
-1. **Copy [`docs/design/ADR.template.md`](../../../docs/design/ADR.template.md)**
-   to `docs/design/ADR-NNNN-<short-slug>.md` (NNNN = next number).
+1. **Read the [design index](../../../docs/design/README.md)**, choose the next
+   available ADR number, and create `docs/design/ADR-NNNN-<short-slug>.md`.
+   Include the title, date and any superseded decision, followed by the
+   status and sections below. Link the completed ADR from the design index.
 2. **Status: proposed** while reviewers chew on it; **accepted** once the
    decision is locked.
 3. **Context**: one short paragraph — what situation forced a choice?

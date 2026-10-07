@@ -64,15 +64,40 @@ class AppFooter extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 24),
         child: Row(
           children: [
-            Semantics(
-              label: 'Version $appVersion',
-              excludeSemantics: true,
-              child: Text(
-                'v$appVersion',
-                style: TextStyle(fontSize: 11, color: colors.muted),
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Semantics(
+                    label: 'Version $appVersion',
+                    excludeSemantics: true,
+                    child: Text(
+                      'v$appVersion',
+                      style: TextStyle(fontSize: 11, color: colors.muted),
+                    ),
+                  ),
+                  Semantics(
+                    key: const ValueKey('footer-source'),
+                    link: true,
+                    hint: 'Opens in a new tab',
+                    child: SelectableTooltip(
+                      message: 'GitHub source code',
+                      child: TextButton(
+                        key: const ValueKey('footer-github'),
+                        onPressed: () => _open(context, sourceRepositoryUrl),
+                        style: buttonStyle.copyWith(
+                          padding: const WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 6),
+                          ),
+                        ),
+                        child: const Text('GitHub'),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
             if (compact)
               PopupMenuButton<String>(
                 tooltip: 'Information links',
@@ -127,98 +152,9 @@ class AppFooter extends StatelessWidget {
                     child: Text(entry.key),
                   ),
                 ),
-            const SizedBox(width: 4),
-            Semantics(
-              link: true,
-              hint: 'Opens in a new tab',
-              child: SelectableTooltip(
-                message: 'GitHub source code',
-                child: TextButton(
-                  key: const ValueKey('footer-github'),
-                  onPressed: () => _open(context, sourceRepositoryUrl),
-                  style: buttonStyle.copyWith(
-                    padding: WidgetStatePropertyAll(
-                      EdgeInsets.symmetric(horizontal: compact ? 6 : 12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const _GitHubDoodle(),
-                      if (!compact) ...[
-                        const SizedBox(width: 7),
-                        Text('GitHub', style: TextStyle(color: colors.ink)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       );
     },
   );
-}
-
-/// A small cat-and-code doodle, drawn locally and named by its surrounding link.
-class _GitHubDoodle extends StatelessWidget {
-  const _GitHubDoodle();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = StudioPalette.of(context);
-    return ExcludeSemantics(
-      child: CustomPaint(
-        size: const Size.square(32),
-        painter: _GitHubPainter(colors.ink, colors.sage),
-      ),
-    );
-  }
-}
-
-class _GitHubPainter extends CustomPainter {
-  const _GitHubPainter(this.ink, this.fill);
-  final Color ink, fill;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 40, size.height / 40);
-    final pen = Paint()
-      ..color = ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawOval(const Rect.fromLTWH(1, 1, 37, 37), Paint()..color = fill);
-    final cat = Path()
-      ..moveTo(12, 29)
-      ..cubicTo(6, 28, 5, 20, 9, 15)
-      ..lineTo(9, 7)
-      ..lineTo(16, 11)
-      ..quadraticBezierTo(20, 10, 24, 11)
-      ..lineTo(31, 7)
-      ..lineTo(31, 15)
-      ..cubicTo(35, 20, 34, 28, 27, 29)
-      ..quadraticBezierTo(25, 30, 26, 35)
-      ..moveTo(14, 35)
-      ..lineTo(14, 29)
-      ..moveTo(14, 32)
-      ..cubicTo(7, 34, 8, 28, 4, 28);
-    canvas.drawPath(cat, pen);
-    canvas.drawOval(const Rect.fromLTWH(13, 19, 3, 4), Paint()..color = ink);
-    canvas.drawOval(const Rect.fromLTWH(24, 19, 3, 4), Paint()..color = ink);
-    canvas.drawPath(
-      Path()
-        ..moveTo(18, 26)
-        ..quadraticBezierTo(20, 27, 22, 26),
-      pen,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_GitHubPainter oldDelegate) =>
-      oldDelegate.ink != ink || oldDelegate.fill != fill;
 }
