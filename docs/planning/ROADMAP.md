@@ -104,4 +104,6 @@ Scope ID: github-pages. Requested 2026-10-07; the user clarified that they do
 not own `wfform.com` and chose the free GitHub project URL.
 
 - [x] Adapt the public build, publishing ownership, metadata and guides for `https://consciontologic.github.io/wfform.com/`, keeping root local/Docker serving intact.
-- [ ] Enable Pages with no custom domain, publish the release and verify live HTTPS, browser startup, catalog and PWA scope.
+- [x] Enable Pages with no custom domain, publish the release and verify live HTTPS, browser startup, catalog and PWA scope.
+
+Completed evidence: [live GitHub Pages verification](../reports/github-pages-verification.md).

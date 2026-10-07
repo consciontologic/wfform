@@ -81,3 +81,11 @@ assumptions in dated reports. Publish with base `/wfform.com/`, leave Pages'
 custom domain empty and do not generate `CNAME`. Public SEO metadata uses the
 GitHub URL. Localhost/Docker remain rooted at `/`; history stays origin-scoped.
 The user authorized hosting and the associated source/publication updates.
+
+Pages is now live over HTTPS, with no custom domain. The source pipeline and
+destination Pages deployment completed successfully. The actual public browser
+loaded the live catalog, model details and Settings; the service worker is active
+under `/wfform.com/` and cached all 37 shell assets without policy violations.
+See [hosting verification](../reports/github-pages-verification.md) for release,
+workflow evidence, test counts and limits. No new authenticated chat or actual
+network-offline reload was tested during this hosting change.

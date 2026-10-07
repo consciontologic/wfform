@@ -4,6 +4,7 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current migration evidence
 
+- [Live GitHub Pages hosting](github-pages-verification.md): 7 October 2026 successful deployment at the free project URL, actual browser/catalog/PWA scope checks and exact verification limits.
 - [GitHub account migration](account-migration-verification.md): 7 October 2026 fresh source history, successful real GitHub pipeline and authenticated compiled-artifact publication to the new account.
 
 ## Preserved baseline evidence

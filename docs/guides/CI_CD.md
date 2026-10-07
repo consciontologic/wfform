@@ -67,6 +67,10 @@ The public URL is **https://consciontologic.github.io/wfform.com/**. The user
 does not own `wfform.com`; that name identifies the publication repository,
 not a custom domain. No domain registration or DNS changes are needed.
 
+This setup is live and verified on 2026-10-07; see the
+[hosting report](../reports/github-pages-verification.md) for the successful
+source pipeline, Pages deployment and actual public-browser checks.
+
 1. In `consciontologic/wfform.com` **Settings → Pages**, select
    **Deploy from a branch**, branch **main**, folder **/(root)**.
 2. Leave **Custom domain** empty and use HTTPS. The publisher must not create
