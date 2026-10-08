@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wfform/presentation/history_browser.dart';
 
 import 'composer_test.dart' show Picker, choose;
 import 'studio_test.dart' as fixture;
@@ -46,6 +47,53 @@ void main() {
       await h.dispose(tester);
     });
   }
+
+  for (final (size, scale) in [
+    (const Size(320, 740), 1.0),
+    (const Size(320, 740), 2.0),
+    (const Size(390, 844), 1.25),
+    (const Size(820, 1180), 2.0),
+  ]) {
+    testWidgets('Models label stays visible at $size and $scale text scale', (
+      tester,
+    ) async {
+      final h = fixture.Harness();
+      h.state.setTextScale(scale);
+      await h.mount(tester, size);
+      final selector = find.byKey(const ValueKey('model-selector'));
+      expect(
+        find.descendant(of: selector, matching: find.text('Models')),
+        findsOneWidget,
+      );
+      expect(find.text('Models').hitTestable(), findsOneWidget);
+      expect(tester.getRect(selector).right, lessThanOrEqualTo(size.width));
+      await tester.tap(selector);
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a free model'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await h.dispose(tester);
+    });
+  }
+
+  testWidgets('phone drawer gives reclaimed footer space to history', (
+    tester,
+  ) async {
+    final h = fixture.Harness();
+    await h.mount(tester, const Size(390, 844));
+    await tester.tap(find.byTooltip('Open sidebar'));
+    await tester.pumpAndSettle();
+    final footer = tester.getRect(
+      find.byKey(const ValueKey('sidebar-app-footer')),
+    );
+    expect(footer.height, lessThanOrEqualTo(56));
+    expect(footer.bottom, closeTo(844, 1));
+    expect(
+      tester.getSize(find.byType(ConversationHistory)).height,
+      greaterThan(584),
+    );
+    expect(tester.takeException(), isNull);
+    await h.dispose(tester);
+  });
 
   testWidgets(
     'small model control and drawer preserve composition across layouts',

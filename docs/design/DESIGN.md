@@ -1,6 +1,6 @@
 # wfform application design
 
-Status: compact controls, direct draft deletion and aligned drawer links verified and published in 0.2.3. Updated 2026-10-08. See [verification](../reports/compact-controls-verification.md) for evidence and platform limits.
+Status: compact navigation refinements for 0.2.4 passed the final regression gate; release build, browser checks and publication remain pending. Updated 2026-10-08. See [current verification](../reports/compact-navigation-verification.md) and [prior evidence](../reports/compact-controls-verification.md) for status and platform limits.
 
 ## Problem and goals
 
@@ -22,8 +22,10 @@ Compact and medium layouts reserve the bottom of the conversation for the
 composer, Context, Add files and send/cancel controls. Routine explanatory copy
 and saved/status labels are omitted there; attachment previews, active work,
 validation failures and recovery actions remain visible when relevant. The
-header's small model control retains a recognizable label and opens the existing
-searchable picker, so model browsing does not need a permanent full-width strip.
+header's small model control keeps the visible **Models** label beside its icon
+and opens the existing searchable picker, so model browsing does not need a
+permanent full-width strip. The label remains visible on phone/tablet widths
+and at enlarged text rather than becoming an icon-only action.
 Expanded layouts keep their fuller model/status presentation. Layout choice
 depends on available width and text scale, rather than a device identifier.
 
@@ -76,10 +78,12 @@ Expanded layouts group the version and a plain GitHub text link on the left of
 the footer, with information links on the right. Compact and medium layouts
 move version, GitHub, About, Terms and conditions, and Liability into the left
 navigation drawer, leaving no information footer beneath the composer.
-Version and GitHub share a left-aligned row in the drawer, stacking with the same
-left alignment when they cannot fit. Each information link occupies its own
-full-width, left-aligned touch target; the drawer scrolls as needed at enlarged
-text or short heights.
+Version, GitHub and **Info** share one compact bottom
+row with smaller typography. Info opens About, Terms and conditions, and
+Liability. The row inherits the sidebar surface without a separate panel;
+readable text, accessible controls and enlarged-text reachability are retained.
+The drawer's smaller minimum size gives the recovered space to history and
+scrolls when a short viewport cannot fit its content.
 No GitHub logo or doodle is shipped on app or information pages.
 About, Terms and Liability use the same tab after a successful draft checkpoint,
 so Open app returns to that tab's text and files. Active requests, file picking,

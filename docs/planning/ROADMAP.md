@@ -22,6 +22,7 @@ Updated 2026-10-08. This is the authoritative current user scope, not a scaffold
 | Composer continuity patch 0.2.1 | 3 | 3 | Complete; regression, browser and public deployment evidence recorded |
 | Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 3 | Complete; patched-SDK gates, release browser update, CI and public assets verified; physical phone unverified |
 | Compact conversation controls patch 0.2.3 | 6 | 6 | Complete; combined gates, browser checks, CI, Pages and public asset integrity verified |
+| Compact navigation refinement 0.2.4 | 3 | 2 | Regression gate, release build and browser checks passed; publication pending |
 
 ## Established application baseline
 
@@ -241,3 +242,13 @@ Scope ID: compact-conversation-controls. Requested 2026-10-08.
 - [x] Verify and publish version 0.2.3 with regression coverage, a release build and browser checks for narrow/medium/expanded layouts, large text, direct draft deletion and footer alignment.
 
 Current findings and verification status: [0.2.3 compact conversation controls](../reports/compact-controls-verification.md).
+
+## Phase 17 — Compact navigation refinement 0.2.4
+
+Scope ID: compact-navigation-refinement. Requested 2026-10-08.
+
+- [x] Keep the visible Models label beside its header icon on phone/tablet layouts, including narrow widths and enlarged text, while preserving picker access and composition state.
+- [x] Replace the drawer's separate link panel with a compact bottom row containing version, GitHub and an Info menu for About, Terms and conditions, and Liability; use smaller typography, the sidebar surface and proportionate drawer sizing.
+- [ ] Verify and publish version 0.2.4 with regression tests, a release build and browser checks for model selection, information navigation, narrow/medium layouts and enlarged text.
+
+Current findings and verification status: [0.2.4 compact navigation refinement](../reports/compact-navigation-verification.md).

@@ -116,6 +116,24 @@ void _expectAdjacentSourceLink(WidgetTester tester, {Finder? within}) {
   expect(find.text('GitHub').hitTestable(), findsOneWidget);
 }
 
+void _expectDrawerLinksReachable(WidgetTester tester) {
+  final footer = tester.getRect(_sidebarFooter);
+  expect(footer.height, lessThanOrEqualTo(90));
+  for (final item in [
+    find.text('v$appVersion'),
+    find.byKey(const ValueKey('footer-github')),
+    find.byTooltip('Information links'),
+  ]) {
+    expect(item.hitTestable(), findsOneWidget);
+    final bounds = tester.getRect(item);
+    expect(bounds.left, greaterThanOrEqualTo(footer.left));
+    expect(bounds.right, lessThanOrEqualTo(footer.right));
+    expect(bounds.top, greaterThanOrEqualTo(footer.top));
+    expect(bounds.bottom, lessThanOrEqualTo(footer.bottom));
+  }
+  expect(find.text('Info'), findsOneWidget);
+}
+
 void main() {
   setUpAll(() async {
     // Use the shipped font for tight, large-text layout checks. Flutter's
@@ -126,46 +144,47 @@ void main() {
         .load();
   });
 
-  testWidgets('sidebar links use aligned full-width rows at large text', (
+  testWidgets('sidebar footer uses one compact row with an Info menu', (
     tester,
   ) async {
     final (_, platform) = await _mount(
       tester,
-      const Size(260, 220),
-      scale: 2,
+      const Size(320, 220),
       sidebarOnly: true,
     );
     expect(find.text('v$appVersion'), findsOneWidget);
-    expect(find.byType(PopupMenuButton<String>), findsNothing);
-    final informationButtons = [
-      for (final label in ['About', 'Terms and conditions', 'Liability'])
-        find.widgetWithText(TextButton, label),
-    ];
-    final rows = informationButtons.map(tester.getRect).toList();
-    for (final row in rows) {
-      expect(row.width, 236);
-      expect(row.left, 12);
-    }
-    for (var index = 1; index < rows.length; index++) {
-      expect(rows[index].top, greaterThanOrEqualTo(rows[index - 1].bottom));
-    }
-    final versionBounds = tester.getRect(find.text('v$appVersion'));
-    final firstLinkBounds = tester.getRect(find.text('About'));
-    expect(versionBounds.left, firstLinkBounds.left);
+    expect(find.text('About'), findsNothing);
+    expect(find.text('Info'), findsOneWidget);
+    final info = find.byTooltip('Information links');
+    final footerBounds = tester.getRect(_sidebarFooter);
+    expect(footerBounds.height, inInclusiveRange(48, 56));
+    expect(
+      tester.getRect(info).center.dy,
+      tester.getRect(find.text('GitHub')).center.dy,
+    );
+    expect(tester.getSize(info).height, greaterThanOrEqualTo(48));
+    expect(
+      find.descendant(
+        of: _sidebarFooter,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Container && widget.decoration != null,
+        ),
+      ),
+      findsNothing,
+    );
+    _expectAdjacentSourceLink(tester, within: _sidebarFooter);
+    await tester.tap(find.text('GitHub'));
+    await tester.pump();
+    expect(platform.opened.last.toString(), sourceRepositoryUrl);
     for (final entry in {
-      'GitHub': sourceRepositoryUrl,
       'About': 'about.html',
       'Terms and conditions': 'terms.html',
       'Liability': 'liability.html',
     }.entries) {
-      final button = find.widgetWithText(TextButton, entry.key);
-      await tester.ensureVisible(button);
+      await tester.tap(info);
       await tester.pumpAndSettle();
-      expect(button.hitTestable(), findsOneWidget);
-      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
-      expect(tester.getRect(button).left, greaterThanOrEqualTo(0));
-      expect(tester.getRect(button).right, lessThanOrEqualTo(260));
-      await tester.tap(button);
+      expect(find.text(entry.key).hitTestable(), findsOneWidget);
+      await tester.tap(find.text(entry.key));
       await tester.pumpAndSettle();
       expect(platform.opened.last, Uri.base.resolve(entry.value));
       expect(tester.takeException(), isNull);
@@ -182,8 +201,10 @@ void main() {
     );
     state.setDraft('Preserve sidebar navigation draft');
     repository.gate = Completer<void>();
+    await tester.tap(find.byTooltip('Information links'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('About'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(platform.navigated, isEmpty);
     expect(state.draft, 'Preserve sidebar navigation draft');
     repository.gate!.complete();
@@ -238,9 +259,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('release version is 0.2.3', () {
+  test('release version is 0.2.4', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '0.2.3');
+    expect(appVersion, '0.2.4');
     expect(
       RegExp(
         r'^version: (.+)\+',
@@ -249,7 +270,7 @@ void main() {
       appVersion,
     );
     expect(
-      RegExp(r'^version: 0\.2\.3\+8$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 0\.2\.4\+9$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -259,7 +280,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v0.2.3'), findsOneWidget);
+      expect(find.text('v0.2.4'), findsOneWidget);
       _expectAdjacentSourceLink(tester);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {
@@ -294,11 +315,13 @@ void main() {
     await tester.tap(find.byTooltip('Open sidebar'));
     await tester.pumpAndSettle();
     expect(_sidebarFooter, findsOneWidget);
-    expect(find.byTooltip('Information links'), findsNothing);
+    expect(find.byTooltip('Information links'), findsOneWidget);
     await tester.ensureVisible(find.text('v$appVersion'));
     await tester.pumpAndSettle();
-    _expectAdjacentSourceLink(tester, within: _sidebarFooter);
+    _expectDrawerLinksReachable(tester);
     for (final label in ['About', 'Terms and conditions', 'Liability']) {
+      await tester.tap(find.byTooltip('Information links'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(label));
       await tester.pumpAndSettle();
       await tester.tap(find.text(label));
@@ -326,7 +349,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('plain source link stays beside version through resizing', (
+  testWidgets('version and source remain reachable across layout changes', (
     tester,
   ) async {
     final (state, _) = await _mount(tester, const Size(1440, 900));
@@ -343,8 +366,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('v$appVersion'));
       await tester.pumpAndSettle();
-      _expectAdjacentSourceLink(tester, within: _sidebarFooter);
-      expect(find.byTooltip('Information links'), findsNothing);
+      _expectDrawerLinksReachable(tester);
+      expect(find.byTooltip('Information links'), findsOneWidget);
       await tester.tapAt(Offset(scenario.$1.width - 1, 250));
       await tester.pumpAndSettle();
     }

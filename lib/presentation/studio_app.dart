@@ -285,10 +285,7 @@ class _StudioScreenState extends State<StudioScreen> {
                   compact: !expanded,
                   onMenu: () => scaffoldKey.currentState?.openDrawer(),
                   modelControl: !expanded
-                      ? _CompactModelControl(
-                          state: state,
-                          showLabel: box.maxWidth >= 380 * scale,
-                        )
+                      ? _CompactModelControl(state: state)
                       : null,
                 ),
                 if (state.platform.updateAvailable) _UpdateNotice(state: state),
@@ -589,7 +586,7 @@ class _SidePanel extends StatelessWidget {
         // below the drawer. The inner history list retains its bounded viewport.
         height: math.max(
           box.maxHeight,
-          (drawer ? 760 : 520) * MediaQuery.textScalerOf(context).scale(1),
+          520 * MediaQuery.textScalerOf(context).scale(1),
         ),
         child: _content(context),
       ),
@@ -776,9 +773,8 @@ class _Header extends StatelessWidget {
 /// Small layouts open the full searchable picker from the existing header,
 /// leaving no permanent selection/status row above the conversation.
 class _CompactModelControl extends StatelessWidget {
-  const _CompactModelControl({required this.state, required this.showLabel});
+  const _CompactModelControl({required this.state});
   final StudioState state;
-  final bool showLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -788,23 +784,23 @@ class _CompactModelControl extends StatelessWidget {
         : 'Change model · ${model.name}';
     return Semantics(
       value: model?.name ?? 'No model selected',
-      child: showLabel
-          ? SelectableTooltip(
-              message: description,
-              child: TextButton.icon(
-                key: const ValueKey('model-selector'),
-                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                onPressed: () => openModels(context, state),
-                icon: const Icon(Icons.bubble_chart_outlined, size: 22),
-                label: const Text('Models'),
-              ),
-            )
-          : SelectableIconButton(
-              key: const ValueKey('model-selector'),
-              tooltip: description,
-              onPressed: () => openModels(context, state),
-              icon: const Icon(Icons.bubble_chart_outlined),
+      child: SelectableTooltip(
+        message: description,
+        child: TextButton.icon(
+          key: const ValueKey('model-selector'),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            textStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+          onPressed: () => openModels(context, state),
+          icon: const Icon(Icons.bubble_chart_outlined, size: 20),
+          label: const Text('Models'),
+        ),
+      ),
     );
   }
 }

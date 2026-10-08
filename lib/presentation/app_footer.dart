@@ -74,7 +74,7 @@ class AppFooter extends StatelessWidget {
         minimumSize: const Size(48, 48),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         foregroundColor: colors.muted,
-        textStyle: const TextStyle(fontSize: 12),
+        textStyle: TextStyle(fontSize: inSidebar ? 11 : 12),
       );
       final identityItems = <Widget>[
         Semantics(
@@ -82,7 +82,10 @@ class AppFooter extends StatelessWidget {
           excludeSemantics: true,
           child: Text(
             'v$appVersion',
-            style: TextStyle(fontSize: 11, color: colors.muted),
+            style: TextStyle(
+              fontSize: inSidebar ? 10 : 11,
+              color: colors.muted,
+            ),
           ),
         ),
         Semantics(
@@ -104,55 +107,73 @@ class AppFooter extends StatelessWidget {
           ),
         ),
       ];
-      final identity = inSidebar
-          ? Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: OverflowBar(
-                alignment: MainAxisAlignment.start,
-                overflowAlignment: OverflowBarAlignment.start,
-                spacing: 8,
-                children: identityItems,
-              ),
-            )
-          : Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: identityItems,
-            );
+      final identity = Wrap(
+        spacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: identityItems,
+      );
       Widget informationLink(MapEntry<String, String> entry) => Semantics(
         key: ValueKey('footer-${entry.key.toLowerCase().split(' ').first}'),
         link: true,
         hint: 'Saves your draft and opens in this tab',
         child: TextButton(
           onPressed: () => _open(context, entry.value),
-          style: inSidebar
-              ? buttonStyle.copyWith(
-                  alignment: Alignment.centerLeft,
-                  padding: const WidgetStatePropertyAll(
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  ),
-                )
-              : buttonStyle,
+          style: buttonStyle,
           child: Text(entry.key),
         ),
       );
+      final content = Row(
+        children: [
+          Expanded(child: identity),
+          if (compact || inSidebar)
+            PopupMenuButton<String>(
+              tooltip: 'Information links',
+              onSelected: (destination) => _open(context, destination),
+              itemBuilder: (context) => [
+                for (final entry in _information.entries)
+                  PopupMenuItem(
+                    value: entry.value,
+                    child: Semantics(
+                      link: true,
+                      hint: 'Saves your draft and opens in this tab',
+                      child: Text(entry.key),
+                    ),
+                  ),
+              ],
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: inSidebar ? 6 : 12),
+                child: SizedBox(
+                  height: 48,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (iconOnlyInfo && !inSidebar)
+                        Icon(Icons.info_outline, size: 22, color: colors.muted)
+                      else
+                        Text(
+                          'Info',
+                          style: TextStyle(
+                            fontSize: inSidebar ? 11 : 12,
+                            color: colors.muted,
+                          ),
+                        ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.expand_less, size: 18, color: colors.muted),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            for (final entry in _information.entries) informationLink(entry),
+        ],
+      );
       if (inSidebar) {
-        // The drawer owns scrolling so short screens and large text can reach
-        // these direct links without another menu or a fixed-height footer.
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.cream,
-            border: Border(top: BorderSide(color: colors.border)),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              identity,
-              const SizedBox(height: 4),
-              for (final entry in _information.entries) informationLink(entry),
-            ],
-          ),
+        // Inherit the drawer surface. Large text can reflow identity labels
+        // without shrinking text or removing the visible Info affordance.
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: content,
         );
       }
       return Container(
@@ -161,53 +182,7 @@ class AppFooter extends StatelessWidget {
           border: Border(top: BorderSide(color: colors.border)),
         ),
         padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 24),
-        child: Row(
-          children: [
-            Expanded(child: identity),
-            if (compact)
-              PopupMenuButton<String>(
-                tooltip: 'Information links',
-                onSelected: (destination) => _open(context, destination),
-                itemBuilder: (context) => [
-                  for (final entry in _information.entries)
-                    PopupMenuItem(
-                      value: entry.value,
-                      child: Semantics(
-                        link: true,
-                        hint: 'Saves your draft and opens in this tab',
-                        child: Text(entry.key),
-                      ),
-                    ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: SizedBox(
-                    height: 48,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (iconOnlyInfo)
-                          Icon(
-                            Icons.info_outline,
-                            size: 22,
-                            color: colors.muted,
-                          )
-                        else
-                          Text(
-                            'Info',
-                            style: TextStyle(fontSize: 12, color: colors.muted),
-                          ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.expand_less, size: 18, color: colors.muted),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            else
-              for (final entry in _information.entries) informationLink(entry),
-          ],
-        ),
+        child: content,
       );
     },
   );

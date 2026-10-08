@@ -244,3 +244,18 @@ See the [0.2.3 report](../reports/compact-controls-verification.md) for exact
 browser dimensions and evidence limits. Source `ae55eed` passed CI 37742631235;
 website `8beb24e` passed Pages 37742940817. Public release and selected asset
 hashes match the locally verified build.
+
+## Compact navigation refinement 0.2.4 — 2026-10-08
+
+Small layouts always show Models beside its header icon. The drawer now ends
+with one compact version/GitHub/Info row, with smaller text and no separate
+surface. Info contains About, Terms and conditions, and Liability. The drawer
+minimum height reflects the reduced footer, returning space to history. Desktop
+navigation and draft checkpoint behavior remain unchanged.
+
+The local gate passed 509 tests with one opt-in live skip, 117-file formatting,
+analysis and repository checks. CodeGraph verified 155 files, 2,109 nodes, 8,935 edges
+and eight tools. The release has 40 assets / 18,273,628 bytes. Actual 390×844 and
+820×1180 browser views verified Models, the compact row, menu entries and
+Info→About→Open app with saved draft/model restoration. See the
+[0.2.4 report](../reports/compact-navigation-verification.md). Publication is pending.
