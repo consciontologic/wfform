@@ -28,9 +28,9 @@ void main() {
       final controller = editor.controller!;
       final focus = editor.focusNode!;
       controller.selection = const TextSelection.collapsed(offset: 9);
+      await tester.pumpAndSettle();
       final attachment = h.state.draftAttachments.single;
-      final footer = find.byKey(const ValueKey('app-footer'));
-      final originalFooter = tester.getRect(footer);
+      final originalComposer = tester.getRect(fixture.composer);
       addTearDown(tester.view.resetViewInsets);
 
       // Android's hide-keyboard button can keep the TextField focused. Returning
@@ -38,7 +38,7 @@ void main() {
       for (final height in [310.0, 280.0, 330.0]) {
         tester.view.viewInsets = FakeViewPadding(bottom: height);
         await tester.pumpAndSettle();
-        expect(footer, findsNothing);
+        expect(find.byKey(const ValueKey('app-footer')), findsNothing);
         expect(
           tester.getRect(fixture.composer).bottom,
           lessThanOrEqualTo(846 - height),
@@ -46,7 +46,7 @@ void main() {
         expect(focus.hasFocus, isTrue);
         tester.view.viewInsets = const FakeViewPadding();
         await tester.pumpAndSettle();
-        expect(tester.getRect(footer), originalFooter);
+        expect(tester.getRect(fixture.composer), originalComposer);
         expect(controller.text, 'Keep this draft while typing');
         expect(controller.selection, const TextSelection.collapsed(offset: 9));
         expect(h.state.draftAttachments.single.id, attachment.id);
@@ -65,7 +65,7 @@ void main() {
       tester.view.viewInsets = const FakeViewPadding();
       await tester.pumpAndSettle();
       expect(focus.hasFocus, isFalse);
-      expect(tester.getRect(footer), originalFooter);
+      expect(tester.getRect(fixture.composer), originalComposer);
       expect(controller.text, 'Keep this draft while typing');
       expect(h.transport.sends, 0);
       expect(tester.takeException(), isNull);

@@ -76,9 +76,9 @@ void main() {
       expect(h.state.chat.outputTokenLimit, 512);
       expect(h.state.chat.messages, hasLength(4));
       expect(h.state.chat.messages.first.content, 'First question');
-      expect(find.text('Context from #3'), findsOneWidget);
+      expect(find.text('Context'), findsOneWidget);
       expect((h.state.chat.exportSessionData())['contextStartIndex'], 2);
-      await tester.tap(find.text('Context from #3'));
+      await tester.tap(find.text('Context'));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(DropdownButtonFormField<int>));
       await tester.pumpAndSettle();
@@ -87,7 +87,10 @@ void main() {
       await tester.tap(find.text('Apply to next request'));
       await tester.pumpAndSettle();
       expect(h.state.chat.contextStartIndex, 4);
-      await tester.tap(find.text('Context from #5'));
+      await fixture.resize(tester, const Size(1440, 900));
+      expect(find.text('Context from #5'), findsOneWidget);
+      await fixture.resize(tester, const Size(768, 1024));
+      await tester.tap(find.text('Context'));
       await tester.pumpAndSettle();
       expect(find.text('Next message only'), findsOneWidget);
       await tester.tap(find.text('Cancel'));

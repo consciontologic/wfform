@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wfform/app/studio_state.dart';
 import 'package:wfform/app/app_identity.dart';
+import 'package:wfform/app/theme.dart';
 import 'package:wfform/features/history/conversation.dart';
 import 'package:wfform/features/history/history_repository.dart';
+import 'package:wfform/presentation/app_footer.dart';
 import 'package:wfform/presentation/studio_app.dart';
 import 'package:wfform/shared/diagnostics.dart';
 import 'package:wfform/shared/platform.dart';
@@ -52,6 +54,7 @@ Future<(StudioState, _LinksPlatform)> _mount(
   Size size, {
   double scale = 1,
   MemoryHistoryRepository? repository,
+  bool sidebarOnly = false,
 }) async {
   final platform = _LinksPlatform();
   final state = StudioState(
@@ -73,18 +76,37 @@ Future<(StudioState, _LinksPlatform)> _mount(
     tester.view.resetViewInsets();
   });
   await state.initialize();
-  await tester.pumpWidget(StudioApp(state: state));
+  await tester.pumpWidget(
+    sidebarOnly
+        ? MaterialApp(
+            theme: studioTheme(),
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  child: AppFooter(
+                    key: const ValueKey('sidebar-app-footer'),
+                    state: state,
+                    inSidebar: true,
+                  ),
+                ),
+              ),
+            ),
+          )
+        : StudioApp(state: state),
+  );
   await tester.pumpAndSettle();
   return (state, platform);
 }
 
 Finder get _footer => find.byKey(const ValueKey('app-footer'));
+Finder get _sidebarFooter => find.byKey(const ValueKey('sidebar-app-footer'));
 
-void _expectAdjacentSourceLink(WidgetTester tester) {
+void _expectAdjacentSourceLink(WidgetTester tester, {Finder? within}) {
   final version = tester.getRect(find.text('v$appVersion'));
   final source = find.byKey(const ValueKey('footer-github'));
   final sourceBounds = tester.getRect(source);
-  final footer = tester.getRect(_footer);
+  final footer = tester.getRect(within ?? _footer);
   expect(sourceBounds.left, greaterThanOrEqualTo(version.right));
   expect(sourceBounds.left - version.right, lessThanOrEqualTo(12));
   expect(version.left - footer.left, lessThanOrEqualTo(24));
@@ -102,6 +124,73 @@ void main() {
           ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))
           ..addFont(rootBundle.load('assets/fonts/Roboto-Bold.ttf')))
         .load();
+  });
+
+  testWidgets('sidebar links use aligned full-width rows at large text', (
+    tester,
+  ) async {
+    final (_, platform) = await _mount(
+      tester,
+      const Size(260, 220),
+      scale: 2,
+      sidebarOnly: true,
+    );
+    expect(find.text('v$appVersion'), findsOneWidget);
+    expect(find.byType(PopupMenuButton<String>), findsNothing);
+    final informationButtons = [
+      for (final label in ['About', 'Terms and conditions', 'Liability'])
+        find.widgetWithText(TextButton, label),
+    ];
+    final rows = informationButtons.map(tester.getRect).toList();
+    for (final row in rows) {
+      expect(row.width, 236);
+      expect(row.left, 12);
+    }
+    for (var index = 1; index < rows.length; index++) {
+      expect(rows[index].top, greaterThanOrEqualTo(rows[index - 1].bottom));
+    }
+    final versionBounds = tester.getRect(find.text('v$appVersion'));
+    final firstLinkBounds = tester.getRect(find.text('About'));
+    expect(versionBounds.left, firstLinkBounds.left);
+    for (final entry in {
+      'GitHub': sourceRepositoryUrl,
+      'About': 'about.html',
+      'Terms and conditions': 'terms.html',
+      'Liability': 'liability.html',
+    }.entries) {
+      final button = find.widgetWithText(TextButton, entry.key);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      expect(button.hitTestable(), findsOneWidget);
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+      expect(tester.getRect(button).left, greaterThanOrEqualTo(0));
+      expect(tester.getRect(button).right, lessThanOrEqualTo(260));
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(platform.opened.last, Uri.base.resolve(entry.value));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('sidebar About waits for its draft checkpoint', (tester) async {
+    final repository = _CheckpointRepository();
+    final (state, platform) = await _mount(
+      tester,
+      const Size(340, 400),
+      sidebarOnly: true,
+      repository: repository,
+    );
+    state.setDraft('Preserve sidebar navigation draft');
+    repository.gate = Completer<void>();
+    await tester.tap(find.text('About'));
+    await tester.pump();
+    expect(platform.navigated, isEmpty);
+    expect(state.draft, 'Preserve sidebar navigation draft');
+    repository.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(platform.navigated.single, Uri.base.resolve('about.html'));
+    final saved = await repository.read(state.activeConversationId!);
+    expect(saved!.draft, 'Preserve sidebar navigation draft');
   });
 
   testWidgets('About waits for durable draft then navigates in same tab', (
@@ -149,9 +238,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('release version is 0.2.2', () {
+  test('release version is 0.2.3', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '0.2.2');
+    expect(appVersion, '0.2.3');
     expect(
       RegExp(
         r'^version: (.+)\+',
@@ -160,7 +249,7 @@ void main() {
       appVersion,
     );
     expect(
-      RegExp(r'^version: 0\.2\.2\+7$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 0\.2\.3\+8$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -170,7 +259,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v0.2.2'), findsOneWidget);
+      expect(find.text('v0.2.3'), findsOneWidget);
       _expectAdjacentSourceLink(tester);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {
@@ -195,19 +284,23 @@ void main() {
     },
   );
 
-  testWidgets('compact large text footer keeps links and composer reachable', (
+  testWidgets('compact large text moves information links into drawer', (
     tester,
   ) async {
     final (_, platform) = await _mount(tester, const Size(320, 740), scale: 2);
-    expect(_footer, findsOneWidget);
-    expect(find.text('v0.2.2'), findsOneWidget);
-    _expectAdjacentSourceLink(tester);
-    expect(tester.getSize(_footer).height, lessThanOrEqualTo(56));
+    expect(_footer, findsNothing);
+    expect(_sidebarFooter, findsNothing);
     expect(composer.hitTestable(), findsOneWidget);
+    await tester.tap(find.byTooltip('Open sidebar'));
+    await tester.pumpAndSettle();
+    expect(_sidebarFooter, findsOneWidget);
+    expect(find.byTooltip('Information links'), findsNothing);
+    await tester.ensureVisible(find.text('v$appVersion'));
+    await tester.pumpAndSettle();
+    _expectAdjacentSourceLink(tester, within: _sidebarFooter);
     for (final label in ['About', 'Terms and conditions', 'Liability']) {
-      await tester.tap(find.byTooltip('Information links'));
-      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(label));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(label));
       await tester.pumpAndSettle();
     }
@@ -216,12 +309,16 @@ void main() {
       'terms.html',
       'liability.html',
     ]);
+    await tester.ensureVisible(find.text('GitHub'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('GitHub source code'));
     await tester.pump();
     expect(
       platform.opened.last.toString(),
       'https://github.com/consciontologic/wfform',
     );
+    await tester.tapAt(const Offset(319, 250));
+    await tester.pumpAndSettle();
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pump();
     expect(_footer, findsNothing);
@@ -234,15 +331,23 @@ void main() {
   ) async {
     final (state, _) = await _mount(tester, const Size(1440, 900));
     _expectAdjacentSourceLink(tester);
-    tester.view.physicalSize = const Size(750, 900);
-    state.setTextScale(1.25);
-    await tester.pumpAndSettle();
-    _expectAdjacentSourceLink(tester);
-    tester.view.physicalSize = const Size(320, 740);
-    state.setTextScale(2);
-    await tester.pumpAndSettle();
-    _expectAdjacentSourceLink(tester);
-    expect(find.byTooltip('Information links').hitTestable(), findsOneWidget);
+    for (final scenario in [
+      (const Size(750, 900), 1.25),
+      (const Size(320, 740), 2.0),
+    ]) {
+      tester.view.physicalSize = scenario.$1;
+      state.setTextScale(scenario.$2);
+      await tester.pumpAndSettle();
+      expect(_footer, findsNothing);
+      await tester.tap(find.byTooltip('Open sidebar'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('v$appVersion'));
+      await tester.pumpAndSettle();
+      _expectAdjacentSourceLink(tester, within: _sidebarFooter);
+      expect(find.byTooltip('Information links'), findsNothing);
+      await tester.tapAt(Offset(scenario.$1.width - 1, 250));
+      await tester.pumpAndSettle();
+    }
     expect(tester.takeException(), isNull);
   });
 

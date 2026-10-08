@@ -1,6 +1,6 @@
 # wfform application design
 
-Status: implemented baseline with public metadata, publishing and branding follow-up verified locally. Updated 2026-10-07. The [roadmap](../planning/ROADMAP.md) distinguishes completed deliverables from external setup.
+Status: compact controls, direct draft deletion and phone/tablet footer alignment are implemented for 0.2.3; the combined regression gate passed and final release/browser/publication checks remain pending. Updated 2026-10-08. The [roadmap](../planning/ROADMAP.md) distinguishes completed deliverables from checks still in progress.
 
 ## Problem and goals
 
@@ -12,11 +12,20 @@ The design combines a live normalized catalog, bounded health observations, one 
 
 | Available layout | Arrangement and interaction |
 |---|---|
-| Compact, below 600 logical pixels | Focused chat with drawer history/utilities, model chooser dialog and tap-accessible details. |
-| Medium, 600–1099 | Navigation rail; history, selection and details open as overlays. |
+| Compact, below 600 logical pixels | Focused chat with drawer history/utilities and information links; a small model control opens the searchable chooser and tap-accessible details. |
+| Medium, 600–1099 | Focused chat with the same header drawer access to history, utilities and information links; the small model control opens selection and details as overlays. |
 | Expanded, 1100 and above with enough space at the current text size | Resizable history sidebar with utilities at its bottom; optional model panel from 1420 when enough chat width remains. |
 
 Text scaling can select a less dense arrangement. Controllers and focus nodes survive layout transitions. New conversation, model changes and history switches are guarded while a response/history transition is active. Model details use text labels, focus/pointer previews and explicit information actions; no essential information depends solely on hover.
+
+Compact and medium layouts reserve the bottom of the conversation for the
+composer, Context, Add files and send/cancel controls. Routine explanatory copy
+and saved/status labels are omitted there; attachment previews, active work,
+validation failures and recovery actions remain visible when relevant. The
+header's small model control retains a recognizable label and opens the existing
+searchable picker, so model browsing does not need a permanent full-width strip.
+Expanded layouts keep their fuller model/status presentation. Layout choice
+depends on available width and text scale, rather than a device identifier.
 
 The sidebar divider supports pointer/touch dragging and keyboard adjustment.
 The plain line has no grip icon. Arrow keys adjust in 16-pixel steps; Home/End select limits, Enter resets, and Escape collapses. Dragging to the left edge also collapses it. Hover the outermost left edge to preview navigation; moving away hides the preview. A keyboard-focusable edge target and tap access provide the same action without hover. Activating any sidebar item restores its default width and performs that action.
@@ -25,7 +34,7 @@ the visible line; the other half matches the conversation surface. This avoids
 a light gutter without narrowing the draggable area and follows text direction.
 Its preferred width is saved locally on release, rather than writing storage
 on each pointer move. Width is bounded by the viewport and text size so the
-conversation retains usable space; switching to a drawer or navigation rail
+conversation retains usable space; switching to a drawer
 does not discard the preference. The default is 290 logical pixels, with a
 240–440 preferred range and tighter effective bounds when needed. The inspector
 is omitted when it would crowd the conversation. Short sidebars/drawers scroll
@@ -48,7 +57,12 @@ connection, so its caret stops blinking. Keyboard focus transfer and browser
 view blur also stop editing without erasing the draft. Dragging the sidebar
 divider is an intentional exception: resizing preserves the typing target.
 
-History offers Chats, Drafts and Archived views, search, restore, export/import and direct permanent deletion of archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
+History offers Chats, Drafts and Archived views, search, restore, export/import and direct permanent deletion of draft or archived records. Conflicting tabs preserve separate recovered copies. The interface reports save status and keeps in-memory work if storage fails.
+
+Draft rows provide a direct delete action without requiring selection or
+archiving first. Deleting the active draft returns to a writable workspace and
+preserves other drafts. Deletion waits for any active save and blocks new saves
+for that record until it completes; failure retains the composition for retry.
 
 ## Visual and content design
 
@@ -58,8 +72,14 @@ Readable application text is selectable. Bounded local preview and Markdown/code
 
 The product mark encloses a conversation bubble in brackets, representing a wrapper around model conversations. It is decorative next to the selectable wfform name, uses theme colors, and is shared conceptually with the generated PWA/favicon artwork. The small static About document uses the same palette to provide readable product information before launching Flutter and to search crawlers.
 
-The footer groups the version and a plain GitHub text link on the left.
-Information links remain on the right, using an Info menu when space is limited.
+Expanded layouts group the version and a plain GitHub text link on the left of
+the footer, with information links on the right. Compact and medium layouts
+move version, GitHub, About, Terms and conditions, and Liability into the left
+navigation drawer, leaving no information footer beneath the composer.
+Version and GitHub share a left-aligned row in the drawer, stacking with the same
+left alignment when they cannot fit. Each information link occupies its own
+full-width, left-aligned touch target; the drawer scrolls as needed at enlarged
+text or short heights.
 No GitHub logo or doodle is shipped on app or information pages.
 About, Terms and Liability use the same tab after a successful draft checkpoint,
 so Open app returns to that tab's text and files. Active requests, file picking,
@@ -96,7 +116,7 @@ The composer starts at three lines, or two when viewport height or 200% text nee
 
 **Add files** accepts UTF-8 text/source files up to 256 KiB on text-compatible models, including Markdown, JSON, YAML, JavaScript and C. Text files have local readable previews and are sent as named text content, without requiring a provider's native file capability. Where supported, the picker also accepts PNG/JPEG/WebP/GIF images, WAV/MP3 audio, MP4 video, and PDF with native file input. Shared limits are 4 files, 8 MiB each and 12 MiB total per message, with the smaller text-file limit applied separately. Text in the composer is optional for an attachment-only message. Draft and sent files persist as binary IndexedDB records with references from their conversation; streamed checkpoints do not rewrite unchanged files. File payloads never enter localStorage/sessionStorage recovery markers, diagnostics or the PWA cache. PDF requests explicitly disable paid parser fallback. See [the rendering guide](../file-rendering.md) for extensions, preview limits and source copying, and [the multimodal guide](../multimodal.md) for media price guards and provider limitations.
 
-The navigation sidebar contains **New conversation**, searchable history, Diagnostics and Settings. History separates **Chats**, **Drafts** and **Archived**. Only dispatching user content promotes a draft to Chats; a blank workspace does not create a row. New conversation resumes an unsent workspace for the selected model. Active response rows show a compact spinner (a static status icon when reduced motion is enabled). Archive keeps a conversation available to inspect and restore; permanent deletion is offered directly on archived rows without first selecting them or opening a confirmation dialog. Archiving the active chat opens a writable draft; reopening archived history is read-only until restored. History identifies each conversation by title, model, update time and message count. The composer shows **Unsaved changes**, **Saving…**, **Saved** or **Save failed**. **Export** saves a conversation and its attachments as a versioned JSON backup; **Import** opens a separate copy. Multiple tabs retain independent active conversations. Conflicting edits preserve both versions by saving a **Recovered copy**, with no automatic merge or overwrite. History remains browser-local, with no cloud sync. See [history.md](../history.md) for persistence, migration, capacity and recovery details.
+The navigation sidebar contains **New conversation**, searchable history, Diagnostics and Settings. History separates **Chats**, **Drafts** and **Archived**. Only dispatching user content promotes a draft to Chats; a blank workspace does not create a row. New conversation resumes an unsent workspace for the selected model. Active response rows show a compact spinner (a static status icon when reduced motion is enabled). Archive keeps a conversation available to inspect and restore; permanent deletion is offered directly on draft and archived rows without first selecting them or opening a confirmation dialog. Archiving the active chat opens a writable draft; reopening archived history is read-only until restored. History identifies each conversation by title, model, update time and message count. Expanded composer layouts show **Unsaved changes**, **Saving…**, **Saved** or **Save failed**; compact and medium layouts reserve this space for actionable storage failures. **Export** saves a conversation and its attachments as a versioned JSON backup; **Import** opens a separate copy. Multiple tabs retain independent active conversations. Conflicting edits preserve both versions by saving a **Recovered copy**, with no automatic merge or overwrite. History remains browser-local, with no cloud sync. See [history.md](../history.md) for persistence, migration, capacity and recovery details.
 
 Settings provides **System**, **Light** and **Dark** appearance choices, a persistent browser key, 100/125/150/200% text, deliberate offline mode, install where offered, and update checks. **Check allowance** explicitly retrieves the key's free-request allowance when the API reports it; no quota request is made at startup. Counts are advisory, stale observations are labeled, and health probes also consume inference requests. System is the initial appearance choice; an explicit preference persists locally. Both color schemes retain the muted neo-brutalist palette, readable borders and pastel popup headers. The model chooser, model details and diagnostics have distinct colored headings with small emoji cues and readable text labels.
 

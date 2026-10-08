@@ -224,3 +224,21 @@ Source `76db986` passed CI 37737229068; website `0d3956f` passed Pages
 local build. A public 0.2.1 → 0.2.2 Save & update preserved draft text, a source
 file and model selection. Local push initially lacked its temporary credential;
 the authorized credential was used only for publication and removed afterward.
+
+## Compact controls and draft deletion 0.2.3 — 2026-10-08
+
+Phone/tablet layouts share drawer navigation and a minimized header model
+control. The composer retains Context/Add files and actionable recovery, with
+routine helper text and root footer removed. Drawer information links now use
+aligned rows. Draft rows offer direct deletion; active deletion drains pending
+saves, blocks replacement checkpoints, removes attached files and recovery text,
+and leaves a writable workspace. Pending deletions cannot be resumed by model
+selection. Failed deletion retains work for explicit retry.
+
+The combined gate passed 504 tests (one opt-in live skip), formatting of 117 Dart
+files, analysis and repository checks. CodeGraph indexed 155 files with 2,107 nodes,
+8,926 edges and eight verified tools. The final release build contains 40 assets /
+18,274,300 bytes. Release-browser checks exercised direct draft deletion,
+writable replacement and reload, drawer alignment and compact controls.
+See the [0.2.3 report](../reports/compact-controls-verification.md) for exact
+browser dimensions and evidence limits. Publication is pending.

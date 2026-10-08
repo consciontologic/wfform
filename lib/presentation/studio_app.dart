@@ -266,7 +266,7 @@ class _StudioScreenState extends State<StudioScreen> {
         return Scaffold(
           key: scaffoldKey,
           resizeToAvoidBottomInset: true,
-          drawer: compact
+          drawer: !expanded
               ? Drawer(
                   width: (box.maxWidth - 24).clamp(260.0, 340.0),
                   child: SafeArea(
@@ -282,8 +282,14 @@ class _StudioScreenState extends State<StudioScreen> {
             child: Column(
               children: [
                 _Header(
-                  compact: compact,
+                  compact: !expanded,
                   onMenu: () => scaffoldKey.currentState?.openDrawer(),
+                  modelControl: !expanded
+                      ? _CompactModelControl(
+                          state: state,
+                          showLabel: box.maxWidth >= 380 * scale,
+                        )
+                      : null,
                 ),
                 if (state.platform.updateAvailable) _UpdateNotice(state: state),
                 Expanded(
@@ -341,67 +347,22 @@ class _StudioScreenState extends State<StudioScreen> {
                                 onCollapse: _collapseSidebar,
                               ),
                             ),
-                          if (!expanded && !compact)
-                            Container(
-                              key: const ValueKey('medium-rail'),
-                              width: 72,
-                              decoration: BoxDecoration(
-                                color: palette.cream,
-                                border: Border(
-                                  right: BorderSide(color: palette.border),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 16),
-                                  ListenableBuilder(
-                                    listenable: state.chat,
-                                    builder: (context, _) =>
-                                        SelectableIconButton(
-                                          tooltip: 'New conversation',
-                                          onPressed:
-                                              state.chat.busy ||
-                                                  state.historyBusy
-                                              ? null
-                                              : () {
-                                                  _sidebarAction();
-                                                  state.newConversation();
-                                                },
-                                          icon: const Icon(Icons.edit_square),
-                                        ),
-                                  ),
-                                  SelectableIconButton(
-                                    tooltip: 'Conversation history',
-                                    onPressed: () {
-                                      _sidebarAction();
-                                      openHistory(context, state);
-                                    },
-                                    icon: const Icon(Icons.history),
-                                  ),
-                                  const Spacer(),
-                                  _UtilityActions(
-                                    state: state,
-                                    beforeOpen: _sidebarAction,
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                              ),
-                            ),
                           Expanded(
                             child: LayoutBuilder(
                               key: chatKey,
                               builder: (context, chatBox) => Column(
                                 children: [
-                                  _SelectionBar(
-                                    state: state,
-                                    compact: compact,
-                                    expanded: expanded,
-                                    onToggleDetails: canShowInspector
-                                        ? () => setState(
-                                            () => inspector = !inspector,
-                                          )
-                                        : null,
-                                  ),
+                                  if (expanded)
+                                    _SelectionBar(
+                                      state: state,
+                                      compact: compact,
+                                      expanded: expanded,
+                                      onToggleDetails: canShowInspector
+                                          ? () => setState(
+                                              () => inspector = !inspector,
+                                            )
+                                          : null,
+                                    ),
                                   if (!state.online)
                                     _Notice(
                                       text:
@@ -476,6 +437,7 @@ class _StudioScreenState extends State<StudioScreen> {
                                     controller: composer,
                                     focus: composerFocus,
                                     compact: compact,
+                                    minimalChrome: !expanded,
                                     onSend: () => _send(),
                                     onRetry: () => _send(retry: true),
                                   ),
@@ -595,7 +557,7 @@ class _StudioScreenState extends State<StudioScreen> {
                   ),
                 ),
                 // Preserve composing space while a software keyboard is raised.
-                if (!keyboardVisible)
+                if (expanded && !keyboardVisible)
                   AppFooter(key: const ValueKey('app-footer'), state: state),
               ],
             ),
@@ -627,7 +589,7 @@ class _SidePanel extends StatelessWidget {
         // below the drawer. The inner history list retains its bounded viewport.
         height: math.max(
           box.maxHeight,
-          520 * MediaQuery.textScalerOf(context).scale(1),
+          (drawer ? 760 : 520) * MediaQuery.textScalerOf(context).scale(1),
         ),
         child: _content(context),
       ),
@@ -671,7 +633,14 @@ class _SidePanel extends StatelessWidget {
           _close(context);
         },
       ),
-      const SizedBox(height: 12),
+      if (drawer)
+        AppFooter(
+          key: const ValueKey('sidebar-app-footer'),
+          state: state,
+          inSidebar: true,
+        )
+      else
+        const SizedBox(height: 12),
     ],
   );
 }
@@ -733,9 +702,14 @@ class _UtilityActions extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.compact, required this.onMenu});
+  const _Header({
+    required this.compact,
+    required this.onMenu,
+    this.modelControl,
+  });
   final bool compact;
   final VoidCallback onMenu;
+  final Widget? modelControl;
   @override
   Widget build(BuildContext context) {
     final colors = StudioPalette.of(context);
@@ -780,6 +754,10 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
+          if (modelControl != null) ...[
+            const SizedBox(width: 8),
+            modelControl!,
+          ],
           if (!compact)
             const Text(
               'OPENROUTER / FREE ONLY',
@@ -791,6 +769,42 @@ class _Header extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Small layouts open the full searchable picker from the existing header,
+/// leaving no permanent selection/status row above the conversation.
+class _CompactModelControl extends StatelessWidget {
+  const _CompactModelControl({required this.state, required this.showLabel});
+  final StudioState state;
+  final bool showLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final model = state.catalog.selected;
+    final description = model == null
+        ? 'Choose a free model'
+        : 'Change model · ${model.name}';
+    return Semantics(
+      value: model?.name ?? 'No model selected',
+      child: showLabel
+          ? SelectableTooltip(
+              message: description,
+              child: TextButton.icon(
+                key: const ValueKey('model-selector'),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () => openModels(context, state),
+                icon: const Icon(Icons.bubble_chart_outlined, size: 22),
+                label: const Text('Models'),
+              ),
+            )
+          : SelectableIconButton(
+              key: const ValueKey('model-selector'),
+              tooltip: description,
+              onPressed: () => openModels(context, state),
+              icon: const Icon(Icons.bubble_chart_outlined),
+            ),
     );
   }
 }
@@ -1230,11 +1244,12 @@ class _Composer extends StatelessWidget {
     required this.onRetry,
     required this.maxHeight,
     required this.keyboardVisible,
+    required this.minimalChrome,
   });
   final StudioState state;
   final TextEditingController controller;
   final FocusNode focus;
-  final bool compact, keyboardVisible;
+  final bool compact, keyboardVisible, minimalChrome;
   final VoidCallback onSend, onRetry;
   final double maxHeight;
   @override
@@ -1442,7 +1457,7 @@ class _Composer extends StatelessWidget {
                           : () => openContextControls(context, state),
                       icon: const Icon(Icons.tune, size: 17),
                       label: Text(
-                        chat.contextStartIndex == 0
+                        minimalChrome || chat.contextStartIndex == 0
                             ? 'Context'
                             : 'Context from #${chat.contextStartIndex + 1}',
                       ),
@@ -1464,21 +1479,22 @@ class _Composer extends StatelessWidget {
                               },
                         child: const Text('Continue answer'),
                       ),
-                    ValueListenableBuilder<String>(
-                      valueListenable: state.historyStatus,
-                      builder: (context, status, _) => Semantics(
-                        label: 'Conversation storage: $status',
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: status == 'Save failed'
-                                ? Theme.of(context).colorScheme.error
-                                : StudioPalette.of(context).muted,
+                    if (!minimalChrome)
+                      ValueListenableBuilder<String>(
+                        valueListenable: state.historyStatus,
+                        builder: (context, status, _) => Semantics(
+                          label: 'Conversation storage: $status',
+                          child: Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: status == 'Save failed'
+                                  ? Theme.of(context).colorScheme.error
+                                  : StudioPalette.of(context).muted,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                     if (state.attachmentPicking)
                       TextButton.icon(
                         onPressed: state.cancelAttachmentPick,
@@ -1502,7 +1518,7 @@ class _Composer extends StatelessWidget {
                           label: const Text('Add files'),
                         ),
                       ),
-                    if (model != null)
+                    if (model != null && !minimalChrome)
                       Text(
                         state.attachmentPicking
                             ? 'Reading selected files…'
@@ -1514,7 +1530,7 @@ class _Composer extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (!compact)
+                if (!minimalChrome)
                   Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
@@ -1526,7 +1542,7 @@ class _Composer extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (model != null)
+                if (model != null && !minimalChrome)
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: controller,
                     builder: (context, value, _) {

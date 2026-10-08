@@ -354,31 +354,6 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                         size: 19,
                                       ),
                                     ),
-                                    SelectableIconButton(
-                                      tooltip: 'Delete ${entry.title}',
-                                      onPressed:
-                                          state.historyBusy ||
-                                              deleting ||
-                                              (active &&
-                                                  (state.chat.busy ||
-                                                      state.attachmentPicking))
-                                          ? null
-                                          : () =>
-                                                _delete(entry.id, entry.title),
-                                      icon: deleting
-                                          ? const SizedBox.square(
-                                              dimension: 19,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                semanticsLabel:
-                                                    'Deleting conversation',
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Icons.delete_outline,
-                                              size: 19,
-                                            ),
-                                    ),
                                   ] else if (!entry.isDraft)
                                     SelectableIconButton(
                                       tooltip: 'Archive ${entry.title}',
@@ -394,6 +369,33 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                         Icons.archive_outlined,
                                         size: 19,
                                       ),
+                                    ),
+                                  if (entry.isDraft || entry.archived)
+                                    SelectableIconButton(
+                                      tooltip: 'Delete ${entry.title}',
+                                      onPressed:
+                                          state.historyBusy ||
+                                              deleting ||
+                                              (active &&
+                                                  (state.chat.busy ||
+                                                      state.attachmentPicking))
+                                          ? null
+                                          : () =>
+                                                _delete(entry.id, entry.title),
+                                      icon: deleting
+                                          ? SizedBox.square(
+                                              dimension: 19,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                semanticsLabel: entry.isDraft
+                                                    ? 'Deleting draft'
+                                                    : 'Deleting conversation',
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.delete_outline,
+                                              size: 19,
+                                            ),
                                     ),
                                 ],
                               ),

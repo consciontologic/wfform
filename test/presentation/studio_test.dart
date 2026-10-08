@@ -403,6 +403,8 @@ void main() {
     final h = Harness();
     try {
       await h.mount(tester, const Size(768, 1024));
+      await tester.tap(find.byTooltip('Open sidebar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Inspect offline cache'));
@@ -515,8 +517,8 @@ void main() {
         entry.key == 'expanded' ? findsOneWidget : findsNothing,
       );
       expect(
-        find.byKey(const ValueKey('medium-rail')),
-        entry.key == 'medium' ? findsOneWidget : findsNothing,
+        find.byTooltip('Open sidebar'),
+        entry.key != 'expanded' ? findsOneWidget : findsNothing,
       );
       expect(composer, findsOneWidget);
       expect(find.byType(WfformMark), findsOneWidget);

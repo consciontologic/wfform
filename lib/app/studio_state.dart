@@ -746,7 +746,10 @@ class StudioState extends ChangeNotifier {
     final candidate = _history
         .where(
           (entry) =>
-              entry.isDraft && !entry.archived && entry.modelId == model?.id,
+              entry.isDraft &&
+              !entry.archived &&
+              !isDeletingConversation(entry.id) &&
+              entry.modelId == model?.id,
         )
         .firstOrNull;
     if (candidate != null) {
@@ -770,7 +773,11 @@ class StudioState extends ChangeNotifier {
   Future<bool> flushHistory() {
     _historyTimer?.cancel();
     _historyTimer = null;
-    if (_disposed || historyLoading) return Future.value(false);
+    if (_disposed ||
+        historyLoading ||
+        isDeletingConversation(activeConversationId ?? '')) {
+      return Future.value(false);
+    }
     if (activeConversationArchived) return Future.value(true);
     return _saving ??= _flushHistoryOnce().whenComplete(() {
       _saving = null;
@@ -1083,6 +1090,7 @@ class StudioState extends ChangeNotifier {
       final hasDestinationDraft = _history.any(
         (entry) =>
             entry.id != activeConversationId &&
+            !isDeletingConversation(entry.id) &&
             entry.isDraft &&
             !entry.archived &&
             entry.modelId == currentModel.id,
@@ -1246,13 +1254,6 @@ class StudioState extends ChangeNotifier {
     final pending = _conversationDeletions[id];
     if (pending != null) return pending;
     if (_disposed || historyBusy) return Future.value(false);
-    if ((_activeRecord?.id == id && _activeRecord!.isDraft) ||
-        _history.any((entry) => entry.id == id && entry.isDraft)) {
-      conversationNotice =
-          'Unsent work is kept in Drafts and cannot be deleted as a chat.';
-      notifyListeners();
-      return Future.value(false);
-    }
     final deletingActive = id == activeConversationId;
     if (deletingActive && !_beginHistoryNavigation()) {
       return Future.value(false);
@@ -1294,6 +1295,7 @@ class StudioState extends ChangeNotifier {
         _previousChatDispatched = false;
         draft = '';
         _draftAttachments = const [];
+        attachmentError = null;
         store.write('freeform.draft.v1', '');
         _activeRecord = _blankRecord(catalog.selected);
         _persistDraft();

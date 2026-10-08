@@ -37,7 +37,7 @@ Future<String> _sentChat(WidgetTester tester, fixture.Harness h) async {
 
 void main() {
   testWidgets(
-    'unsent workspace appears only in Drafts without archive or delete',
+    'unsent workspace appears only in Drafts with direct delete and no archive',
     (tester) async {
       final h = fixture.Harness();
       await h.mount(tester, const Size(1440, 1000));
@@ -50,7 +50,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_row(id), findsOneWidget);
       expect(find.byTooltip('Archive Unsent workspace'), findsNothing);
-      expect(find.byTooltip('Delete Unsent workspace'), findsNothing);
+      expect(find.byTooltip('Delete Unsent workspace'), findsOneWidget);
       expect(find.byTooltip('Export Unsent workspace'), findsOneWidget);
       await tester.tap(_tab('Archived'));
       await tester.pumpAndSettle();
@@ -58,6 +58,32 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('draft deletes directly and leaves a writable empty composer', (
+    tester,
+  ) async {
+    final h = fixture.Harness();
+    await h.mount(tester, const Size(1440, 1000));
+    await tester.enterText(fixture.composer, 'Delete this draft');
+    await h.state.flushHistory();
+    await tester.pumpAndSettle();
+    final id = h.state.activeConversationId!;
+    await tester.tap(_tab('Drafts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Delete Delete this draft'));
+    await tester.pumpAndSettle();
+    expect(_row(id), findsNothing);
+    expect(h.state.activeConversationId, isNot(id));
+    expect(
+      tester.widget<TextField>(fixture.composer).controller!.text,
+      isEmpty,
+    );
+    await tester.enterText(fixture.composer, 'Start fresh');
+    expect(h.state.draft, 'Start fresh');
+    await h.state.flushHistory();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'New conversation resumes draft and navigation restores its composer',

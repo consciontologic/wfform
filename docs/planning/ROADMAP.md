@@ -21,6 +21,7 @@ Updated 2026-10-08. This is the authoritative current user scope, not a scaffold
 | Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
 | Composer continuity patch 0.2.1 | 3 | 3 | Complete; regression, browser and public deployment evidence recorded |
 | Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 3 | Complete; patched-SDK gates, release browser update, CI and public assets verified; physical phone unverified |
+| Compact conversation controls patch 0.2.3 | 6 | 5 | Combined regression gate passed; final release build, browser checks and publication pending |
 
 ## Established application baseline
 
@@ -227,3 +228,16 @@ dropped from 21 to four for 20 updates; phone frame rate remains unmeasured.
 CI run 37737229068 and Pages run 37737509800 passed. Public release and selected
 asset hashes match the local build. Actual public Save & update from 0.2.1 to
 0.2.2 preserved a typed draft, source attachment and model selection.
+
+## Phase 16 — Compact conversation controls patch 0.2.3
+
+Scope ID: compact-conversation-controls. Requested 2026-10-08.
+
+- [x] Reclaim phone/tablet conversation space by removing routine bottom status and explanatory copy while retaining the composer, Context, Add files, send/cancel and actionable failures/progress.
+- [x] Move version, GitHub, About, Terms and conditions, and Liability into the left navigation drawer for compact and medium layouts; retain desktop footer navigation and draft-safe information-page navigation.
+- [x] Replace the full model selection strip on compact and medium layouts with a small recognizable control that opens the searchable picker, preserving selection, details access and live resize continuity.
+- [x] Allow direct deletion of an unsent draft from its row without first selecting or archiving it; preserve other drafts and a writable editor after deleting the active draft.
+- [x] Improve phone/tablet footer-link alignment while preserving readable version/source labels, reachable information links and enlarged-text behavior.
+- [ ] Verify and publish version 0.2.3 with regression coverage, a release build and browser checks for narrow/medium/expanded layouts, large text, direct draft deletion and footer alignment.
+
+Current findings and verification status: [0.2.3 compact conversation controls](../reports/compact-controls-verification.md).

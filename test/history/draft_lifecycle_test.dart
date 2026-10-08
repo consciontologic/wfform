@@ -203,7 +203,7 @@ void main() {
   );
 
   test(
-    'unsent work cannot be archived or deleted through state actions',
+    'unsent work cannot be archived but can be explicitly deleted',
     () async {
       final h = HistoryHarness();
       addTearDown(h.state.dispose);
@@ -212,8 +212,10 @@ void main() {
       await h.state.flushHistory();
       final id = h.state.activeConversationId!;
       expect(await h.state.archiveConversation(id), isFalse);
-      expect(await h.state.deleteConversation(id), isFalse);
       expect((await h.repo.read(id))!.draft, 'Keep unsent work');
+      expect(await h.state.deleteConversation(id), isTrue);
+      expect(await h.repo.read(id), isNull);
+      expect(h.state.draft, isEmpty);
       expect(h.state.activeConversationArchived, isFalse);
     },
   );

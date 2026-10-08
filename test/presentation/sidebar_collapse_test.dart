@@ -187,7 +187,7 @@ void main() {
       await h.mount(tester, const Size(1440, 1000));
       await _collapse(tester);
       await resize(tester, const Size(768, 1024));
-      expect(find.byKey(const ValueKey('medium-rail')), findsOneWidget);
+      expect(find.byTooltip('Open sidebar'), findsOneWidget);
       expect(_edge, findsNothing);
       await resize(tester, const Size(320, 740));
       h.state.setTextScale(2);
