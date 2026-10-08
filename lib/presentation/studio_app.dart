@@ -226,6 +226,7 @@ class _StudioScreenState extends State<StudioScreen> {
     builder: (context, _) => LayoutBuilder(
       builder: (context, box) {
         final scale = MediaQuery.textScalerOf(context).scale(1);
+        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
         final compact =
             box.maxWidth < 600 || (scale >= 1.8 && box.maxWidth < 800);
         // Keep conversation space useful when the sidebar or text grows. The
@@ -471,6 +472,7 @@ class _StudioScreenState extends State<StudioScreen> {
                                   _Composer(
                                     state: state,
                                     maxHeight: chatBox.maxHeight * .5,
+                                    keyboardVisible: keyboardVisible,
                                     controller: composer,
                                     focus: composerFocus,
                                     compact: compact,
@@ -593,7 +595,7 @@ class _StudioScreenState extends State<StudioScreen> {
                   ),
                 ),
                 // Preserve composing space while a software keyboard is raised.
-                if (MediaQuery.viewInsetsOf(context).bottom == 0)
+                if (!keyboardVisible)
                   AppFooter(key: const ValueKey('app-footer'), state: state),
               ],
             ),
@@ -1227,11 +1229,12 @@ class _Composer extends StatelessWidget {
     required this.onSend,
     required this.onRetry,
     required this.maxHeight,
+    required this.keyboardVisible,
   });
   final StudioState state;
   final TextEditingController controller;
   final FocusNode focus;
-  final bool compact;
+  final bool compact, keyboardVisible;
   final VoidCallback onSend, onRetry;
   final double maxHeight;
   @override
@@ -1241,6 +1244,8 @@ class _Composer extends StatelessWidget {
       final chat = state.chat;
       final model = state.catalog.selected;
       final mimeTypes = model?.allowedAttachmentMimeTypes ?? <String>{};
+      final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
+      final keyboardLines = largeText ? 1 : 2;
       return ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: SingleChildScrollView(
@@ -1273,7 +1278,11 @@ class _Composer extends StatelessWidget {
                   ),
                 if (state.draftAttachments.isNotEmpty)
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 90),
+                    constraints: BoxConstraints(
+                      maxHeight: keyboardVisible
+                          ? math.min(90, maxHeight * .25)
+                          : 90,
+                    ),
                     child: SingleChildScrollView(
                       child: AttachmentList(
                         files: state.draftAttachments,
@@ -1372,14 +1381,24 @@ class _Composer extends StatelessWidget {
                       onTapOutside: (_) => focus.unfocus(),
                       readOnly:
                           state.activeConversationArchived || state.historyBusy,
-                      minLines:
-                          MediaQuery.sizeOf(context).height -
-                                      MediaQuery.viewInsetsOf(context).bottom <
-                                  500 ||
-                              MediaQuery.textScalerOf(context).scale(1) >= 1.8
+                      minLines: keyboardVisible
+                          ? keyboardLines
+                          : MediaQuery.sizeOf(context).height -
+                                        MediaQuery.viewInsetsOf(
+                                          context,
+                                        ).bottom <
+                                    500 ||
+                                largeText
                           ? 2
                           : 3,
-                      maxLines: compact ? 5 : 8,
+                      // Avoid letting large text/attachments push the editor
+                      // below the keyboard. Text scrolls within the same editor
+                      // and expands again on dismissal, without losing its state.
+                      maxLines: keyboardVisible
+                          ? keyboardLines
+                          : compact
+                          ? 5
+                          : 8,
                       maxLength: 32000,
                       decoration: InputDecoration(
                         labelText: 'Message',

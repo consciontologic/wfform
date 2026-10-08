@@ -26,3 +26,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-07T19:32:56Z,wfform-composer-021,codex,codegraph,note,completed,Refreshed CodeGraph and verified eight tools for composer continuity changes,docs/reports/composer-continuity-verification.md,
 2026-10-07T19:32:56Z,wfform-composer-021,codex,composer-continuity,commit,completed,fix(chat): preserve compositions across navigation in 0.2.1,docs/reports/composer-continuity-verification.md,pending
 2026-10-07T19:39:37Z,wfform-composer-021-evidence,codex,release-verification,commit,completed,docs(release): record verified 0.2.1 deployment,docs/reports/composer-continuity-verification.md,pending
+2026-10-08T06:20:33Z,wfform-mobile-022,codex,codegraph,note,completed,Refreshed CodeGraph and verified eight tools for mobile keyboard patch,docs/reports/mobile-keyboard-verification.md,
+2026-10-08T06:20:33Z,wfform-mobile-022,codex,mobile-keyboard,commit,completed,fix(pwa): restore Android keyboard layout in 0.2.2,docs/reports/mobile-keyboard-verification.md,pending

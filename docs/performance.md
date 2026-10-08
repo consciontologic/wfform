@@ -2,6 +2,23 @@
 
 This application separates measured artifact sizes, deterministic workload timings, and actual browser observations. None alone is evidence of frame-rate or end-to-end startup improvements. The performance changes recorded here used the existing Flutter/Dart stack and minimal JavaScript bootstrap/service worker without adding an application dependency. Later scaffold and rendering additions are described in the [architecture](code/ARCHITECTURE.md) and [file-rendering guide](file-rendering.md); the historical measurements below do not measure those later changes.
 
+## Highlight work during content updates
+
+Version 0.2.2 retains one highlighted `TextSpan` per mounted code block. Source,
+language and light/dark brightness invalidate it; unrelated rebuilds reuse it.
+The existing 180 ms document preview cadence therefore avoids tokenizing the
+same visible source for every content update. Copy still uses the latest full
+source, and the final preview flush shows the latest content. The cache lives
+with its widget and does not retain every prior message or source revision.
+
+A deterministic fixture supplied 20 updates 32 ms apart over 640 ms. Generated
+highlight-tree identities fell from 21 before the change to four afterward
+(initial plus three updated previews), with final content also asserted. This
+measures avoided parsing/span allocation in the controlled workload, not phone
+FPS, browser frame time or perceived smoothness. See the
+[0.2.2 report](reports/mobile-keyboard-verification.md) for executed checks and
+the separate installed-PWA keyboard issue.
+
 ## Repeatable measurements
 
 Capture a read-only baseline before rebuilding:

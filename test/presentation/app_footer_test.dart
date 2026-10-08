@@ -149,9 +149,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('release version is 0.2.1', () {
+  test('release version is 0.2.2', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '0.2.1');
+    expect(appVersion, '0.2.2');
     expect(
       RegExp(
         r'^version: (.+)\+',
@@ -160,7 +160,7 @@ void main() {
       appVersion,
     );
     expect(
-      RegExp(r'^version: 0\.2\.1\+6$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 0\.2\.2\+7$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -170,7 +170,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v0.2.1'), findsOneWidget);
+      expect(find.text('v0.2.2'), findsOneWidget);
       _expectAdjacentSourceLink(tester);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {
@@ -200,7 +200,7 @@ void main() {
   ) async {
     final (_, platform) = await _mount(tester, const Size(320, 740), scale: 2);
     expect(_footer, findsOneWidget);
-    expect(find.text('v0.2.1'), findsOneWidget);
+    expect(find.text('v0.2.2'), findsOneWidget);
     _expectAdjacentSourceLink(tester);
     expect(tester.getSize(_footer).height, lessThanOrEqualTo(56));
     expect(composer.hitTestable(), findsOneWidget);

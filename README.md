@@ -14,7 +14,7 @@ The browser calls OpenRouter directly. There is no application backend or API pr
 
 ## Run locally
 
-Requires **Flutter 3.38.5 stable / Dart 3.10.4**, Git and Make.
+Requires **Flutter 3.38.10 stable / Dart 3.10.9**, Git and Make.
 
 ```sh
 git clone https://github.com/consciontologic/wfform.git

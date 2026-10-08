@@ -1,6 +1,6 @@
 # Docker and nginx deployment
 
-wfform remains a Flutter/Dart application. nginx serves static release files; the browser calls OpenRouter directly. There is no API proxy or application backend. This guide uses the existing Flutter **3.38.5 / Dart 3.10.4** SDK, Docker Engine with Compose, Make and Bash. OpenSSL is needed only for optional local TLS.
+wfform remains a Flutter/Dart application. nginx serves static release files; the browser calls OpenRouter directly. There is no API proxy or application backend. This guide requires Flutter **3.38.10 / Dart 3.10.9**, Docker Engine with Compose, Make and Bash. OpenSSL is needed only for optional local TLS.
 
 ## Start a local container
 

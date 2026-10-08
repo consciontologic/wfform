@@ -29,7 +29,7 @@ session before doing real work.
 ## wfform context
 
 - Work from this repository's root (the checkout containing this file). This is an
-  existing Flutter 3.38.5 / Dart 3.10.4 web application, not a blank template.
+  existing Flutter 3.38.10 / Dart 3.10.9 web application, not a blank template.
 - Dart package: `wfform`; Android namespace/application ID and iOS Runner bundle
   ID: `com.wfform`. Native hosts exist; web remains the verified release target.
   Read `docs/native-platforms.md` before claiming native feature/build support.

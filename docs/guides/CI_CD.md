@@ -12,7 +12,7 @@ real run and destination publication succeeded; see the
 ## What runs automatically
 
 [`web.yml`](../../.github/workflows/web.yml) checks pull requests, pushes to
-`main`, and manual runs. It installs **Flutter 3.38.5**, resolves the checked-in
+`main`, and manual runs. It installs **Flutter 3.38.10**, resolves the checked-in
 lockfile, runs formatting/analyzer/unit/widget/repository checks, repository
 operation tests and real Chrome IndexedDB tests, then builds and validates a
 public release. Live OpenRouter inference is not part of CI.

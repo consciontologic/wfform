@@ -201,7 +201,7 @@ class _CodeBuilder extends MarkdownElementBuilder {
   }
 }
 
-class CodeBlock extends StatelessWidget {
+class CodeBlock extends StatefulWidget {
   const CodeBlock({
     super.key,
     required this.source,
@@ -210,6 +210,33 @@ class CodeBlock extends StatelessWidget {
   });
   final String source, language;
   final String? copySource;
+
+  @override
+  State<CodeBlock> createState() => _CodeBlockState();
+}
+
+class _CodeBlockState extends State<CodeBlock> {
+  TextSpan? _highlighted;
+  Brightness? _brightness;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    if (brightness != _brightness) {
+      _brightness = brightness;
+      _highlighted = null;
+    }
+  }
+
+  @override
+  void didUpdateWidget(CodeBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.source != oldWidget.source ||
+        widget.language != oldWidget.language) {
+      _highlighted = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -227,20 +254,28 @@ class CodeBlock extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                language.isEmpty ? 'text' : language,
+                widget.language.isEmpty ? 'text' : widget.language,
                 style: const TextStyle(fontSize: 12),
               ),
             ),
             SelectableIconButton(
               tooltip: 'Copy code',
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: copySource ?? source)),
+              onPressed: () => Clipboard.setData(
+                ClipboardData(text: widget.copySource ?? widget.source),
+              ),
               icon: const Icon(Icons.copy, size: 18),
             ),
           ],
         ),
         SelectableText.rich(
-          highlightedSource(source, language, Theme.of(context).brightness),
+          // A stream may rebuild this block between coalesced preview updates.
+          // Keep one span tree per mounted block, invalidated only when its
+          // source, grammar or palette changes. Copy still uses the latest input.
+          _highlighted ??= highlightedSource(
+            widget.source,
+            widget.language,
+            _brightness!,
+          ),
           style: const TextStyle(
             fontFamily: 'RobotoMono',
             fontSize: 13,

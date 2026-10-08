@@ -13,7 +13,13 @@ The [project context](../tracking/context.md) and [AGENTS.md](../../AGENTS.md) g
 
 ## Local release setup
 
-Run these commands from the repository root with **Flutter 3.38.5 / Dart 3.10.4**:
+Run these commands from the repository root with **Flutter 3.38.10 / Dart 3.10.9**:
+
+Make targets use an SDK at ignored `.local/flutter-sdk` when present; otherwise
+they use `PATH`. This allows a project-only SDK upgrade without changing a shared
+installation. For direct `flutter`/`dart` commands with that local SDK, first run
+`export PATH="$PWD/.local/flutter-sdk/bin:$PATH"`. The package's SDK constraints
+reject the older runtime that contains the Android keyboard regression.
 
 ```sh
 flutter pub get

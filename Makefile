@@ -12,6 +12,12 @@
 PYTHON ?= python3
 XOPS   := $(PYTHON) xops/makefile
 
+# Optional isolated SDK; leave shared/global installations untouched. CI uses
+# its pinned SDK on PATH when this ignored project-local checkout is absent.
+ifneq ($(wildcard $(CURDIR)/.local/flutter-sdk/bin/flutter),)
+export PATH := $(CURDIR)/.local/flutter-sdk/bin:$(PATH)
+endif
+
 # Tracking append defaults (override on CLI: make track.add ACTION=note SUMMARY="...")
 ACTION  ?= note
 STATUS  ?= completed

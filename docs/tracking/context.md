@@ -201,3 +201,20 @@ identity and publication status.
 Source `2c755b5` passed CI 37675339117; website `94b24a2` passed Pages
 37675720016. The public release manifest and checked JavaScript, HTML and web
 manifest hashes match the locally verified 0.2.1 build.
+
+## Mobile keyboard recovery 0.2.2 — 2026-10-08
+
+Flutter is pinned to 3.38.10 / Dart 3.10.9, including the upstream Android web
+keyboard-dismissal engine correction. An optional ignored project-local SDK
+is preferred by Makefile without modifying shared SDKs. Composer lines and
+attachment space are bounded while the keyboard is visible, including at 200%
+text. Code previews reuse highlighted spans between their existing update ticks.
+
+The full local gate passed 493 tests with one opt-in live skip, formatting,
+analyzer and repository checks; seven actual Chromium storage tests and 14
+operation tests passed. CodeGraph and a public release build passed. Focused
+release-browser checks preserved text and source/image files through viewport
+shrink/restore, landscape-sized layout and reload. No physical Samsung IME or
+phone frame-rate measurement was available. See the
+[0.2.2 report](../reports/mobile-keyboard-verification.md) for evidence and
+publication status.

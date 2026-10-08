@@ -1,6 +1,6 @@
 # wfform roadmap
 
-Updated 2026-10-07. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
+Updated 2026-10-08. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
 
 ## Status snapshot
 
@@ -19,7 +19,8 @@ Updated 2026-10-07. This is the authoritative current user scope, not a scaffold
 | Footer, documentation and composer focus patch 0.1.2 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
 | Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
 | Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
-| Composer continuity patch 0.2.1 | 3 | 2 | Implemented; local gates/build and main browser paths passed, additional browser checks and publication pending |
+| Composer continuity patch 0.2.1 | 3 | 3 | Complete; regression, browser and public deployment evidence recorded |
+| Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 2 | Implemented; patched-SDK regression gates and release build passed, browser checks/publication pending; physical phone unverified |
 
 ## Established application baseline
 
@@ -205,3 +206,21 @@ text and Markdown/PNG attachments through model changes, same-tab About → Open
 app, Save & update, browser Back and reload. File previews reopened and live
 resizing passed at 390×844, 820×1180 and 1440×900. CI run 37675339117 and Pages
 run 37675720016 passed; public release and checked asset hashes match the local build.
+
+## Phase 15 — Mobile keyboard recovery and efficiency patch 0.2.2
+
+Scope ID: mobile-keyboard-patch. Requested 2026-10-08.
+
+- [x] Restore the available app height after dismissing the mobile software keyboard, preserving composer text, attachments, focus behavior and responsive layouts.
+- [x] Reduce measured unnecessary mobile UI work without changing chat, history, model selection or draft persistence behavior; document the scope and limits of performance evidence.
+- [ ] Verify and publish version 0.2.2 with regression tests, a release build and browser checks, explicitly distinguishing browser simulation from the user's installed Android PWA.
+
+Current findings and verification status: [0.2.2 mobile keyboard recovery](../reports/mobile-keyboard-verification.md).
+
+Local gates passed on Flutter 3.38.10 / Dart 3.10.9: 493 tests with one opt-in
+live skip, formatting, analysis, repository checks, seven Chromium storage
+checks, 14 operation tests and CodeGraph. The public release build contains
+40 assets / 18,274,364 bytes. Three keyboard-metrics regressions cover repeated
+show/dismiss at 100%, 125% and 200% text; these test app geometry and composition
+continuity, not a physical Android keyboard. Controlled highlight-tree work
+dropped from 21 to four for 20 updates; phone frame rate remains unmeasured.

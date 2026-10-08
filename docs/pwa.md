@@ -6,7 +6,21 @@ The Flutter/Dart package is **`wfform`**, including all `package:` imports. **`c
 
 Naming rules checked on 2026-10-06 against the [Dart pubspec name specification](https://dart.dev/tools/pub/pubspec#name), [Flutter Android application ID guidance](https://docs.flutter.dev/deployment/android#application-id), and [Web Application Manifest identity specification](https://www.w3.org/TR/appmanifest/#id-member).
 
-Verified documentation on 2026-10-05. Flutter 3.38.5 / Dart 3.10.4 is the tested SDK. Flutter's current documentation does not promise a generated production service worker; this app owns the small worker and verifies the release output. The SDK's older generated worker is explicitly disabled.
+The current build requires Flutter 3.38.10 / Dart 3.10.9. Earlier PWA verification
+used Flutter 3.38.5 / Dart 3.10.4; those dated results remain in the reports.
+Flutter's documentation does not promise a generated production service worker;
+this app owns the small worker and verifies the release output. The SDK's older
+generated worker is explicitly disabled. The
+[0.2.2 keyboard report](reports/mobile-keyboard-verification.md) records why the
+web engine patch was selected and which mobile checks remain unverified.
+
+For mobile keyboard recovery, use this SDK when building a release: the earlier
+3.38.5 engine has an upstream Android PWA inset regression corrected in the
+3.38 patch series. The app keeps Flutter's standard keyboard avoidance, without
+an extra JavaScript viewport resize workaround. Browser viewport emulation is
+useful for layout checks but does not replace installed-PWA keyboard checks on
+the target phone. Apply the offered **Save & update** to load a newly built
+engine while preserving the draft.
 
 ## Build and serve
 

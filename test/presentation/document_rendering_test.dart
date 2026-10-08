@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:ui' show PointerDeviceKind;
 
@@ -228,6 +229,100 @@ void main() {
       await mount(tester, const SizedBox());
       await tester.pump(const Duration(seconds: 1));
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'streaming source highlights each displayed preview once, not every delta',
+    (tester) async {
+      const format = DocumentFormat('JavaScript', 'javascript');
+      String source(int index) => 'const count = $index;';
+      TextSpan renderedSpan() => tester
+          .widgetList<SelectableText>(find.byType(SelectableText))
+          .singleWhere((text) => text.textSpan != null)
+          .textSpan!;
+      await mount(
+        tester,
+        DocumentView(source: source(0), format: format, streaming: true),
+      );
+      final rendered = HashSet<TextSpan>.identity()..add(renderedSpan());
+      for (var update = 1; update <= 20; update++) {
+        await mount(
+          tester,
+          DocumentView(source: source(update), format: format, streaming: true),
+        );
+        await tester.pump(const Duration(milliseconds: 32));
+        rendered.add(renderedSpan());
+      }
+      expect(
+        rendered,
+        hasLength(4),
+        reason:
+            'Twenty 32 ms updates expose only three new 180 ms previews; '
+            'the unchanged source must reuse its highlighted spans.',
+      );
+      // Copy uses the newest complete input even before the preview catches up.
+      await tester.tap(find.byTooltip('Copy code'));
+      expect(copied, source(20));
+      await mount(tester, DocumentView(source: source(20), format: format));
+      expect(renderedSpan().toPlainText(), source(20));
+      expect(rendered.contains(renderedSpan()), isFalse);
+    },
+  );
+
+  testWidgets(
+    'highlight memo follows source language and brightness while copy stays current',
+    (tester) async {
+      const source = 'const value = 3;';
+      Future<void> show({
+        String text = source,
+        String language = 'javascript',
+        Brightness brightness = Brightness.light,
+        String? copySource,
+      }) => tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: Scaffold(
+            body: CodeBlock(
+              source: text,
+              language: language,
+              copySource: copySource,
+            ),
+          ),
+        ),
+      );
+      TextSpan span() =>
+          tester.widget<SelectableText>(find.byType(SelectableText)).textSpan!;
+      await show();
+      final original = span();
+      await show(copySource: 'full source beyond this preview');
+      expect(identical(span(), original), isTrue);
+      await tester.tap(find.byTooltip('Copy code'));
+      expect(copied, 'full source beyond this preview');
+      await show(brightness: Brightness.dark);
+      await tester.pumpAndSettle();
+      final dark = span();
+      expect(dark.toPlainText(), source);
+      expect(identical(dark, original), isFalse);
+      Set<Color> tokenColors(TextSpan value) {
+        final result = <Color>{};
+        void visit(InlineSpan node) {
+          final color = node.style?.color;
+          if (color != null) result.add(color);
+          if (node is TextSpan) node.children?.forEach(visit);
+        }
+
+        visit(value);
+        return result;
+      }
+
+      expect(tokenColors(original), contains(const Color(0xff683394)));
+      expect(tokenColors(dark), contains(const Color(0xffcbb6ff)));
+      await show(language: 'unknown', brightness: Brightness.dark);
+      expect(span().text, source);
+      await show(text: 'const value = 4;', brightness: Brightness.dark);
+      expect(span().toPlainText(), 'const value = 4;');
+      expect(identical(span(), dark), isFalse);
     },
   );
 
