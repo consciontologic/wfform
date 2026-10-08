@@ -3,7 +3,7 @@
 Status: initial compact-layout implementation passed its local gates and build.
 Direct draft deletion and phone/tablet footer alignment are also implemented,
 and the final combined regression gate and release build passed. Browser
-verification passed; publication remains pending. Baseline source commit is
+verification and publication passed. Baseline source commit is
 `1fa24db`. Package version is
 `0.2.3+8`; app and static information-page versions are 0.2.3. The
 [roadmap](../planning/ROADMAP.md#phase-16--compact-conversation-controls-patch-023)
@@ -72,7 +72,7 @@ The final `make build.public` passed (`outputs/023-combined-build.txt`).
 Release `d480adf04ff52f68c09e9cb91e698cce7daaa255f24297f79f7d513e76361728`
 contains 40 shell assets / 18,274,300 uncompressed bytes. This combined gate and
 build include draft deletion and the aligned footer. Browser/publication checks
-are being finalized.
+also passed as recorded below.
 
 ### Focused draft regressions
 
@@ -121,5 +121,18 @@ and selected model through About → Open app and expanded/medium/compact resizi
 
 No inference POST was required for this UI patch. Real catalog retrieval was
 observed, but a live authenticated chat is not claimed. Physical Samsung IME
-behavior and phone frame rate were not measured. CI and public deployment
-results will be recorded after publication.
+behavior and phone frame rate were not measured. Source commit `ae55eed` passed [CI run 37742631235](https://github.com/consciontologic/wfform/actions/runs/37742631235),
+including repository operations and real Chromium history-storage checks.
+Website commit `8beb24e` passed [Pages run 37742940817](https://github.com/consciontologic/wfform.com/actions/runs/37742940817).
+Public `release.json`, `main.dart.js`, four HTML pages and `manifest.json` match
+local artifact SHA-256 hashes. Evidence: `outputs/023-public-integrity.json`.
+The public release is `d480adf04ff52f68c09e9cb91e698cce7daaa255f24297f79f7d513e76361728`.
+
+The public browser initially opened its cached 0.2.2 shell and offered
+**Save & update**. After applying it, a fresh tab displayed 0.2.3 and retained
+the selected model. The in-place automation handle timed out during reload,
+so this confirms the new active release without claiming a timed update or
+new draft-migration measurement. Public small-screen navigation exposed the
+version/source and all three information links in the drawer at a measured
+390×844 CSS viewport and device-pixel ratio 1.0; the final public screenshot is
+`outputs/023-public-drawer.jpg`.

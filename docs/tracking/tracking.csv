@@ -31,3 +31,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-08T06:29:09Z,wfform-mobile-022-evidence,codex,release-verification,commit,completed,docs(release): record verified 0.2.2 deployment,docs/reports/mobile-keyboard-verification.md;https://github.com/consciontologic/wfform/actions/runs/37737229068,pending
 2026-10-08T07:17:40Z,wfform-compact-023,codex,codegraph,note,completed,Refreshed CodeGraph and verified eight tools for compact controls and draft deletion,docs/reports/compact-controls-verification.md,
 2026-10-08T07:17:40Z,wfform-compact-023,codex,compact-controls,commit,completed,feat(ui): streamline small screens and add draft deletion in 0.2.3,docs/reports/compact-controls-verification.md,pending
+2026-10-08T07:26:20Z,wfform-compact-023-evidence,codex,verification,commit,completed,docs(release): record verified 0.2.3 deployment and browser evidence,docs/reports/compact-controls-verification.md,pending

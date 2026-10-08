@@ -4,7 +4,7 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
-- [Compact conversation controls patch 0.2.3](compact-controls-verification.md): phone/tablet composer space, drawer links, minimized model selection, direct draft deletion and refined footer alignment; combined regression gate passed, final release/browser checks and publication pending.
+- [Compact conversation controls patch 0.2.3](compact-controls-verification.md): compact composer/model controls, aligned drawer links and direct draft deletion; combined tests, release browser checks, CI, Pages and public asset integrity passed.
 
 - [Mobile keyboard recovery and efficiency patch 0.2.2](mobile-keyboard-verification.md): patched Flutter engine, keyboard-height geometry regressions and bounded highlighting work; local gates, browser update, CI and public asset verification passed; physical device unverified.
 

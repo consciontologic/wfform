@@ -241,4 +241,6 @@ files, analysis and repository checks. CodeGraph indexed 155 files with 2,107 no
 18,274,300 bytes. Release-browser checks exercised direct draft deletion,
 writable replacement and reload, drawer alignment and compact controls.
 See the [0.2.3 report](../reports/compact-controls-verification.md) for exact
-browser dimensions and evidence limits. Publication is pending.
+browser dimensions and evidence limits. Source `ae55eed` passed CI 37742631235;
+website `8beb24e` passed Pages 37742940817. Public release and selected asset
+hashes match the locally verified build.

@@ -1,6 +1,6 @@
 # wfform application design
 
-Status: compact controls, direct draft deletion and phone/tablet footer alignment are implemented for 0.2.3; the combined regression gate passed and final release/browser/publication checks remain pending. Updated 2026-10-08. The [roadmap](../planning/ROADMAP.md) distinguishes completed deliverables from checks still in progress.
+Status: compact controls, direct draft deletion and aligned drawer links verified and published in 0.2.3. Updated 2026-10-08. See [verification](../reports/compact-controls-verification.md) for evidence and platform limits.
 
 ## Problem and goals
 
