@@ -34,3 +34,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-08T07:26:20Z,wfform-compact-023-evidence,codex,verification,commit,completed,docs(release): record verified 0.2.3 deployment and browser evidence,docs/reports/compact-controls-verification.md,pending
 2026-10-08T07:54:32Z,wfform-navigation-024,codex,codegraph,note,completed,Refreshed CodeGraph and verified eight tools for navigation refinement,docs/reports/compact-navigation-verification.md,
 2026-10-08T07:54:32Z,wfform-navigation-024,codex,navigation,commit,completed,fix(ui): label Models and compact drawer navigation in 0.2.4,docs/reports/compact-navigation-verification.md,pending
+2026-10-08T08:05:55Z,wfform-navigation-024-evidence,codex,verification,commit,completed,docs(release): record verified 0.2.4 deployment,docs/reports/compact-navigation-verification.md,pending

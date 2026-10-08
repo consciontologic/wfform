@@ -4,7 +4,7 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
-- [Compact navigation refinement 0.2.4](compact-navigation-verification.md): persistent Models label and smaller drawer version/GitHub/Info row; regression gate, release build and browser checks passed; publication pending.
+- [Compact navigation refinement 0.2.4](compact-navigation-verification.md): persistent Models label and smaller drawer version/GitHub/Info row; regression gate, local browser checks, CI, Pages, public asset integrity and actual public PWA update passed.
 
 - [Compact conversation controls patch 0.2.3](compact-controls-verification.md): compact composer/model controls, aligned drawer links and direct draft deletion; combined tests, release browser checks, CI, Pages and public asset integrity passed.
 

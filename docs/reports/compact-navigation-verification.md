@@ -1,7 +1,9 @@
 # Compact navigation refinement 0.2.4 — 2026-10-08
 
-Status: implementation, final regression gate, source review and release build
-passed; release-browser checks passed and publication is pending. Baseline source commit is
+Status: implementation, final regression gate, source review, release build,
+local release-browser checks, CI, Pages, public asset integrity and the public
+PWA update flow passed.
+Baseline source commit is
 `e56767b`. Package version is `0.2.4+9`; app and static information-page versions
 are 0.2.4. The [roadmap](../planning/ROADMAP.md#phase-17--compact-navigation-refinement-024)
 tracks acceptance. Previous release evidence remains in the
@@ -48,9 +50,8 @@ accessible menu actions. Large-text tests use the shipped Roboto fonts rather
 than the square-glyph Flutter test font. These measurements concern
 deterministic widget geometry, not physical phone rendering or performance.
 
-Release build and the browser checks recorded below passed. Publication remains
-pending. Metadata tests and historical counts are not substitutes for these
-checks.
+Release build, the local browser checks recorded below and publication passed.
+Metadata tests and historical counts are not substitutes for these checks.
 
 Physical phone frame rate and Android software-keyboard behavior are outside
 this refinement's measured scope. Deterministic Flutter fixtures, desktop
@@ -68,6 +69,30 @@ was selected. The drawer showed a single version/GitHub/Info row flush with its
 bottom, inheriting the sidebar surface. Info exposed exactly About, Terms and
 conditions, and Liability. After verifying a draft in the Drafts list, navigating
 through Info → About → Open app restored its exact text and selected model.
-Live resizing to the tablet viewport retained that composition. Local screenshots
+Live resizing to the tablet viewport retained that composition. At 320×740
+with 200% text, Models remained visible, all three Info entries were accessible
+and the draft stayed intact. The browser error log was empty. Local screenshots
 are `outputs/024-phone-drawer.jpg`, `outputs/024-phone.jpg` and
 `outputs/024-tablet.jpg`. No inference request was sent for this UI refinement.
+
+## Publication
+
+Source commit `a152a3f52849dd282dcaa3bfb418e703e25757fb` passed
+[CI run 37746395818](https://github.com/consciontologic/wfform/actions/runs/37746395818).
+Website commit `97eb32159355d3131305a2d3ef2981cdee28d503` passed
+[Pages run 37746729176](https://github.com/consciontologic/wfform.com/actions/runs/37746729176).
+
+Seven files fetched from the public HTTPS site match the verified local build
+byte for byte: `release.json`, `main.dart.js`, `index.html`, `about.html`,
+`terms.html`, `liability.html` and `manifest.json`. They belong to release
+`4fa05ab5e03553493ab0993f01e26e586f4f23936fc920df233bade4e6c58c45`.
+Per-file hashes are recorded in `outputs/024-public-integrity.json`.
+
+At `https://wfform.com/`, the actual Save & update flow moved an existing 0.2.3
+tab to 0.2.4 while retaining model selection. At the measured 390×844 viewport,
+Models was visible, the version/GitHub/Info row sat at the drawer bottom, and
+Info opened About, Terms and conditions, and Liability. Screenshot:
+`outputs/024-public-phone-drawer.jpg`.
+
+Physical Android keyboard recovery and phone frame-rate measurements remain
+unverified in this UI refinement.

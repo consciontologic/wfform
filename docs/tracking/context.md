@@ -258,4 +258,8 @@ analysis and repository checks. CodeGraph verified 155 files, 2,109 nodes, 8,935
 and eight tools. The release has 40 assets / 18,273,628 bytes. Actual 390×844 and
 820×1180 browser views verified Models, the compact row, menu entries and
 Info→About→Open app with saved draft/model restoration. See the
-[0.2.4 report](../reports/compact-navigation-verification.md). Publication is pending.
+[0.2.4 report](../reports/compact-navigation-verification.md). Source `a152a3f`
+passed CI 37746395818; website `97eb321` passed Pages 37746729176. Seven
+published release/JS/HTML/manifest files match the verified local build. Public
+Save & update moved 0.2.3 to 0.2.4, with the selected model retained; the phone
+viewport shows Models and the bottom version/GitHub/Info row.

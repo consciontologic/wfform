@@ -1,6 +1,6 @@
 # wfform application design
 
-Status: compact navigation refinements for 0.2.4 passed the final regression gate; release build, browser checks and publication remain pending. Updated 2026-10-08. See [current verification](../reports/compact-navigation-verification.md) and [prior evidence](../reports/compact-controls-verification.md) for status and platform limits.
+Status: compact navigation refinements for 0.2.4 passed regression gates, local release-browser checks and publication. Updated 2026-10-08. See [current verification](../reports/compact-navigation-verification.md) and [prior evidence](../reports/compact-controls-verification.md) for evidence and platform limits.
 
 ## Problem and goals
 
