@@ -1,7 +1,8 @@
 # Mobile keyboard recovery and efficiency patch 0.2.2 — 2026-10-08
 
-Status: implementation, local regression gates, release build and focused
-release-browser checks passed; publication is pending. Baseline
+Status: implementation, local regression gates, release build, focused browser
+checks, public PWA update and publication passed; physical Samsung verification
+remains a device follow-up. Baseline
 source commit is `6c506d5`. Package version is `0.2.2+7`; app and static page
 footers show 0.2.2. The [roadmap](../planning/ROADMAP.md) tracks acceptance.
 Earlier release evidence remains in the
@@ -113,9 +114,23 @@ These desktop viewport operations exercise release rendering and persistence;
 they do not raise or dismiss an Android software keyboard. The 100%, 125% and
 200% keyboard-inset coverage above comes from deterministic Flutter tests.
 
+On the public HTTPS origin, an existing 0.2.1 tab was kept open with an unsent
+fixture and a JavaScript attachment. Settings → Check for update offered
+Save & update after publication. Applying it loaded version 0.2.2 and retained
+the exact composition, selected model and file chip. The version and retained
+composition are captured in `outputs/022-live-update.jpg`. No chat was sent.
+
 ## Publication and verification limits
 
-Publication and public asset verification are pending. No Android device is
+Source commit `76db986` passed
+[CI run 37737229068](https://github.com/consciontologic/wfform/actions/runs/37737229068).
+Website commit `0d3956f` passed
+[Pages run 37737509800](https://github.com/consciontologic/wfform.com/actions/runs/37737509800).
+The HTTPS public release manifest, compiled JavaScript, index, About, Terms,
+Liability and web manifest match the local artifacts byte for byte. Integrity
+evidence is in `outputs/022-published-integrity.json`.
+
+No Android device is
 available through ADB for this check. Desktop browser viewport resizing does not
 reproduce the installed Samsung PWA's software keyboard. No new live inference,
 physical Samsung device, native application or mobile frame-time measurements

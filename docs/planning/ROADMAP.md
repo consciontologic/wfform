@@ -20,7 +20,7 @@ Updated 2026-10-08. This is the authoritative current user scope, not a scaffold
 | Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
 | Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
 | Composer continuity patch 0.2.1 | 3 | 3 | Complete; regression, browser and public deployment evidence recorded |
-| Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 2 | Implemented; patched-SDK regression gates and release build passed, browser checks/publication pending; physical phone unverified |
+| Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 3 | Complete; patched-SDK gates, release browser update, CI and public assets verified; physical phone unverified |
 
 ## Established application baseline
 
@@ -213,7 +213,7 @@ Scope ID: mobile-keyboard-patch. Requested 2026-10-08.
 
 - [x] Restore the available app height after dismissing the mobile software keyboard, preserving composer text, attachments, focus behavior and responsive layouts.
 - [x] Reduce measured unnecessary mobile UI work without changing chat, history, model selection or draft persistence behavior; document the scope and limits of performance evidence.
-- [ ] Verify and publish version 0.2.2 with regression tests, a release build and browser checks, explicitly distinguishing browser simulation from the user's installed Android PWA.
+- [x] Verify and publish version 0.2.2 with regression tests, a release build and browser checks, explicitly distinguishing browser simulation from the user's installed Android PWA.
 
 Current findings and verification status: [0.2.2 mobile keyboard recovery](../reports/mobile-keyboard-verification.md).
 
@@ -224,3 +224,6 @@ checks, 14 operation tests and CodeGraph. The public release build contains
 show/dismiss at 100%, 125% and 200% text; these test app geometry and composition
 continuity, not a physical Android keyboard. Controlled highlight-tree work
 dropped from 21 to four for 20 updates; phone frame rate remains unmeasured.
+CI run 37737229068 and Pages run 37737509800 passed. Public release and selected
+asset hashes match the local build. Actual public Save & update from 0.2.1 to
+0.2.2 preserved a typed draft, source attachment and model selection.

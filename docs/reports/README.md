@@ -4,7 +4,7 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
-- [Mobile keyboard recovery and efficiency patch 0.2.2](mobile-keyboard-verification.md): patched Flutter engine, keyboard-height geometry regressions and bounded highlighting work; local gates/build passed, browser/publication checks pending, physical device unverified.
+- [Mobile keyboard recovery and efficiency patch 0.2.2](mobile-keyboard-verification.md): patched Flutter engine, keyboard-height geometry regressions and bounded highlighting work; local gates, browser update, CI and public asset verification passed; physical device unverified.
 
 - [Composer continuity patch 0.2.1](composer-continuity-verification.md): corrected information-page and model-switch continuity; local gates, browser draft/file return and reload checks, CI and public asset verification passed.
 

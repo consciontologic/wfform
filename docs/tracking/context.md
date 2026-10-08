@@ -218,3 +218,9 @@ shrink/restore, landscape-sized layout and reload. No physical Samsung IME or
 phone frame-rate measurement was available. See the
 [0.2.2 report](../reports/mobile-keyboard-verification.md) for evidence and
 publication status.
+
+Source `76db986` passed CI 37737229068; website `0d3956f` passed Pages
+37737509800. The public release and checked JS/HTML/manifest hashes match the
+local build. A public 0.2.1 → 0.2.2 Save & update preserved draft text, a source
+file and model selection. Local push initially lacked its temporary credential;
+the authorized credential was used only for publication and removed afterward.
