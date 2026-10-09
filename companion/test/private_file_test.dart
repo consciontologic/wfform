@@ -31,8 +31,10 @@ Future<void> main() async {
   final parent = Directory('.local/companion-tests')
     ..createSync(recursive: true);
   final scratch = parent.createTempSync('private-');
-  final token = File('${scratch.path}/private token.txt')
-    ..writeAsStringSync('');
+  // Both the .NET write and the PowerShell verification must treat the path
+  // literally, including characters significant to PowerShell and wildcards.
+  const tokenName = r"private [token] $ ; '.txt";
+  final token = File('${scratch.path}/$tokenName')..writeAsStringSync('');
   try {
     await protectPrivateFile(token);
     await requirePrivateFile(token);

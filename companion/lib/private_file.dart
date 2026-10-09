@@ -69,6 +69,7 @@ Future<void> _windowsFileSecurity(File file, {required bool protect}) async {
   // and LiteralPath, never PowerShell source interpolation or command flags.
   const script = r'''
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $stage = 10
 try {
   $path = $env:WFFORM_PRIVATE_FILE
@@ -81,7 +82,9 @@ try {
     $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, 'FullControl', 'Allow')
     $acl.AddAccessRule($rule)
     $stage = 12
-    Set-Acl -LiteralPath $path -AclObject $acl
+    # Persist only the owner and DACL changed above. Set-Acl rewrites every
+    # section, including group/audit sections this fresh descriptor never set.
+    [System.IO.File]::SetAccessControl($path, $acl)
   }
   $stage = 13
   $acl = Get-Acl -LiteralPath $path

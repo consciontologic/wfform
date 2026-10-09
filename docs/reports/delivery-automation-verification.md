@@ -256,6 +256,19 @@ The updated workflow passes offline zizmor analysis with no findings.
 All 11 companion suites, analysis, and fixed PowerShell script parsing pass for
 the diagnostic changes; native ACL repair remains pending the collected evidence.
 
+The complete [native diagnostic run](https://github.com/consciontologic/wfform/actions/runs/37961268842/job/113924992445)
+passed eight companion suites and all ten package tests. The three remaining
+failures share private-file setup: the fixed diagnostic identified `Set-Acl`
+at stage 12. The replacement uses .NET `File.SetAccessControl`, which persists
+only the explicitly modified owner and DACL instead of unspecified group/audit
+sections. Ownership, inheritance and current-user-only validation remain strict.
+The regression fixture also uses brackets, dollar signs, semicolons and an
+apostrophe in its literal filename. Independent security review approved the
+change; all 11 local companion suites and analysis passed in
+`/tmp/agent-runs/windows-acl-write-companion--20261009T165115Z-536080.log`.
+PowerShell parsing and repository checks also passed. Native Windows acceptance
+remains required before promotion.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

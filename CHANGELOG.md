@@ -55,6 +55,8 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
   upload stream is cancelled, including on Windows.
 - 🌿 Fully validated PRs merge directly through GitHub protection when ready,
   avoiding an invalid attempt to enable auto-merge on an already mergeable PR.
+- 🔐 Windows credential setup applies only the intended owner and access rules,
+  while retaining strict validation that other users cannot access the file.
 
 ## [0.3.0] - 2026-10-09
 
