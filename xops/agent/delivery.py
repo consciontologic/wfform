@@ -241,20 +241,33 @@ def arm_auto_merge(api, pull, policy, creator=None):
         check_evidence(pull, checks, run, policy)
     if update_branch(creator, pull):
         return 'updated its work branch from the base; waiting for new checks'
-    if production:
+    if production or current.get('mergeStateStatus') == 'CLEAN':
         if current.get('mergeStateStatus') != 'CLEAN':
             return 'waiting for native merge requirements; no auto-merge remains armed'
         if provenance.is_promotion(pull):
             promotion_gate(api, pull['number'], pull['head']['sha'])
-        else:
+        elif production:
             latest = api.get(f'/repos/{REPO}/pulls/{pull["number"]}') or {}
             if (latest.get('head', {}).get('sha') != pull['head']['sha']
                     or pr_lane(latest) != 'hotfix' or latest.get('mergeable') is not True
                     or provenance.git_tree(api, latest.get('merge_commit_sha')) != provenance.git_tree(api, pull['head']['sha'])):
                 raise DeliveryError('Hotfix source, lane or candidate merge changed during authorization.')
+        else:
+            # GitHub rejects enabling auto-merge when a PR can merge immediately.
+            # Re-read after checks, then let native protection enforce this
+            # one-shot merge against the exact validated head.
+            latest = api.get(f'/repos/{REPO}/pulls/{pull["number"]}') or {}
+            if (pr_lane(latest) != pr_lane(pull)
+                    or latest['head']['sha'] != pull['head']['sha']
+                    or latest['head']['ref'] != pull['head']['ref']
+                    or latest['base']['ref'] != pull['base']['ref']
+                    or latest.get('mergeable') is not True
+                    or latest.get('mergeable_state') != 'clean'):
+                raise DeliveryError('Routine PR changed during authorization; wait for its current checks.')
         result = creator.request('PUT', f'/repos/{REPO}/pulls/{pull["number"]}/merge',
                                  {'sha': pull['head']['sha'], 'merge_method': 'merge'})
-        if not isinstance(result, dict) or result.get('merged') is not True:
+        if (not isinstance(result, dict) or result.get('merged') is not True
+                or not isinstance(result.get('sha'), str) or not SHA.fullmatch(result['sha'])):
             raise DeliveryError('Native merge did not complete; inspect its result before proceeding.')
         return 'merged the validated revision through native PR protection'
     if current.get('autoMergeRequest'):

@@ -237,6 +237,25 @@ companion suites and analysis in
 `/tmp/agent-runs/chunked-overflow-companion-final--20261009T163405Z-519242.log`.
 Independent review approved the bounded response and cancellation ordering.
 
+Native [job 113921248787](https://github.com/consciontologic/wfform/actions/runs/37960174748/job/113921248787)
+confirmed both HTTP regressions and the server, stdio MCP, static host, session,
+process-group and process-runner suites on Windows. It then failed Windows
+private-file ACL setup with a generic error. Fixed stage/numeric diagnostics
+identify the operation without exposing file paths, exception text or secrets;
+all existing ACL requirements remain mandatory. The Windows test loop now
+collects every failing suite and fails the job before packaging, so a single run
+provides complete runtime diagnostics rather than stopping at its first failure.
+
+The routine merger also handles GitHub's `CLEAN` state through an immediate,
+SHA-bound native merge after all existing guards and a fresh PR snapshot.
+[GitHub's CLI uses the same distinction](https://github.com/cli/cli/blob/trunk/pkg/cmd/pr/merge/merge_test.go#L1784).
+Blocked develop PRs still use native auto-merge. Refused or uncertain writes do
+not trigger a second merge attempt. All 107 operation tests pass in
+`/tmp/agent-runs/clean-merge-green--20261009T164147Z-527337.log`.
+The updated workflow passes offline zizmor analysis with no findings.
+All 11 companion suites, analysis, and fixed PowerShell script parsing pass for
+the diagnostic changes; native ACL repair remains pending the collected evidence.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

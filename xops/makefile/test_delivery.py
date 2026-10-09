@@ -75,6 +75,29 @@ class FakeAPI:
         return {'id': 'task-1', 'state': 'queued', 'html_url': f'https://github.com/{REPO}/tasks/task-1'}
 
 
+def clean_merge_fixture(head='feature/tools'):
+    api, creator = FakeAPI(), FakeAPI()
+    pull = pr(head, mergeable=True, mergeable_state='clean')
+    checks, runs = evidence()
+    api.reads[f'/repos/{REPO}/commits/{SHA}/check-runs?filter=latest'] = checks
+    api.reads[f'/repos/{REPO}/pulls/7'] = copy.deepcopy(pull)
+    for number, run in runs.items():
+        api.reads[f'/repos/{REPO}/actions/runs/{number}'] = run
+    native = {'id': 'PR_7', 'headRefOid': SHA, 'isDraft': False,
+              'baseRefName': 'develop', 'mergeStateStatus': 'CLEAN', 'autoMergeRequest': None,
+              'baseRef': {'branchProtectionRule': {
+                  'requiresStatusChecks': True, 'requiresStrictStatusChecks': True,
+                  'requiresConversationResolution': True, 'isAdminEnforced': True,
+                  'bypassPullRequestAllowances': {'totalCount': 0},
+                  'requiredStatusCheckContexts': list(policy()['checks'])}}}
+    api.request = lambda *args: {'data': {'repository': {'pullRequest': native}}}
+    def merge(method, path, body):
+        creator.writes.append((method, path, body))
+        return {'merged': True, 'sha': 'b' * 40}
+    creator.request = merge
+    return api, creator, pull, native
+
+
 class DeliverySafetyTest(unittest.TestCase):
     def test_expected_gitflow_lanes(self):
         cases = [('feature/tools', 'develop', 'feature'),
@@ -545,7 +568,7 @@ class DeliverySafetyTest(unittest.TestCase):
         api.reads[f'/repos/{REPO}/commits/{SHA}/check-runs?filter=latest'] = checks
         for number, run in runs.items():
             api.reads[f'/repos/{REPO}/actions/runs/{number}'] = run
-        native = {'id': 'PR_7', 'headRefOid': SHA, 'isDraft': False,
+        native = {'id': 'PR_7', 'headRefOid': SHA, 'isDraft': False, 'mergeStateStatus': 'BLOCKED',
                   'baseRefName': 'develop', 'autoMergeRequest': None,
                   'baseRef': {'branchProtectionRule': {
                       'requiresStatusChecks': True, 'requiresStrictStatusChecks': True,
@@ -567,6 +590,64 @@ class DeliverySafetyTest(unittest.TestCase):
         with self.assertRaises(delivery.DeliveryError):
             delivery.arm_auto_merge(api, pr(mergeable_state='clean'), policy(), creator)
         self.assertEqual(len(creator.writes), 1)
+
+    def test_clean_feature_and_backmerge_use_native_sha_bound_merge(self):
+        for head in ['feature/tools', 'bugfix/backmerge-1.0.0']:
+            with self.subTest(head=head):
+                api, creator, pull, _ = clean_merge_fixture(head)
+                self.assertIn('merged', delivery.arm_auto_merge(api, pull, policy(), creator))
+                self.assertEqual(creator.writes, [('PUT', f'/repos/{REPO}/pulls/7/merge',
+                                                  {'sha': SHA, 'merge_method': 'merge'})])
+
+    def test_clean_merge_rechecks_latest_snapshot_before_writing(self):
+        for change in ['graph_sha', 'sha', 'head', 'base', 'draft', 'closed', 'fork', 'unmergeable', 'behind']:
+            with self.subTest(change=change):
+                api, creator, pull, native = clean_merge_fixture()
+                latest = api.reads[f'/repos/{REPO}/pulls/7']
+                if change == 'graph_sha': native['headRefOid'] = 'c' * 40
+                elif change == 'sha': latest['head']['sha'] = 'c' * 40
+                elif change == 'head': latest['head']['ref'] = 'feature/another'
+                elif change == 'base': latest['base']['ref'] = 'main'
+                elif change == 'draft': latest['draft'] = True
+                elif change == 'closed': latest['state'] = 'closed'
+                elif change == 'fork': latest['head']['repo']['full_name'] = 'fork/wfform'
+                elif change == 'unmergeable': latest['mergeable'] = False
+                else: latest['mergeable_state'] = 'behind'
+                with self.assertRaises(delivery.DeliveryError):
+                    delivery.arm_auto_merge(api, pull, policy(), creator)
+                self.assertEqual(creator.writes, [])
+
+    def test_clean_merge_still_requires_genuine_checks_and_native_protection(self):
+        for change in ['missing', 'failed', 'skipped', 'producer', 'strict', 'admin', 'conversations']:
+            with self.subTest(change=change):
+                api, creator, pull, native = clean_merge_fixture()
+                checks = api.reads[f'/repos/{REPO}/commits/{SHA}/check-runs?filter=latest']
+                rule = native['baseRef']['branchProtectionRule']
+                if change == 'missing': checks.pop()
+                elif change == 'failed': checks[0]['conclusion'] = 'failure'
+                elif change == 'skipped': checks[0]['conclusion'] = 'skipped'
+                elif change == 'producer': checks[0]['app']['id'] = 666
+                elif change == 'strict': rule['requiresStrictStatusChecks'] = False
+                elif change == 'admin': rule['isAdminEnforced'] = False
+                else: rule['requiresConversationResolution'] = False
+                with self.assertRaises(delivery.DeliveryError):
+                    delivery.arm_auto_merge(api, pull, policy(), creator)
+                self.assertEqual(creator.writes, [])
+
+    def test_clean_merge_refusal_or_uncertainty_never_falls_back_to_auto_merge(self):
+        for response in [None, {'merged': False}, {'merged': True},
+                         {'merged': True, 'sha': 'not-a-commit'}, delivery.APIError('Unknown PUT outcome')]:
+            with self.subTest(response=response):
+                api, creator, pull, _ = clean_merge_fixture()
+                def refused(method, path, body):
+                    creator.writes.append((method, path, body))
+                    if isinstance(response, Exception): raise response
+                    return response
+                creator.request = refused
+                with self.assertRaises(delivery.DeliveryError):
+                    delivery.arm_auto_merge(api, pull, policy(), creator)
+                self.assertEqual(creator.writes, [('PUT', f'/repos/{REPO}/pulls/7/merge',
+                                                  {'sha': SHA, 'merge_method': 'merge'})])
 
     def test_backmerge_seeds_isolated_branch_once_and_preserves_divergence(self):
         from urllib.parse import urlencode

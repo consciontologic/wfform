@@ -33,32 +33,79 @@ Future<void> requirePrivateFile(File file) async {
   }
 }
 
+String windowsAclFailureSummary(int exitCode, String standardError) {
+  const stages = {
+    10: 'identify user',
+    11: 'construct ACL',
+    12: 'apply ACL',
+    13: 'read ACL',
+    14: 'inspect ACL',
+    30: 'unprotected ACL',
+    31: 'owner mismatch',
+    32: 'inherited access rule',
+    33: 'another identity has access',
+    34: 'non-allow access rule',
+    35: 'missing user access rule',
+  };
+  final summary =
+      '${stages[exitCode] ?? 'Windows security tool'}; exit $exitCode';
+  final match = RegExp(
+    r'^WFFORM_ACL_FAILURE:(10|11|12|13|14):(-?\d{1,10})(?::(\d{1,10}))?\r?\n?$',
+  ).firstMatch(standardError);
+  if (match == null || int.parse(match[1]!) != exitCode) return summary;
+  final hresult = int.parse(match[2]!);
+  final nativeCode = match[3] == null ? null : int.parse(match[3]!);
+  if (hresult < -2147483648 ||
+      hresult > 2147483647 ||
+      (nativeCode != null && nativeCode > 2147483647)) {
+    return summary;
+  }
+  return '$summary; HRESULT $hresult'
+      '${nativeCode == null ? '' : '; OS error $nativeCode'}';
+}
+
 Future<void> _windowsFileSecurity(File file, {required bool protect}) async {
   // The encoded script is fixed. A user path goes through an environment value
   // and LiteralPath, never PowerShell source interpolation or command flags.
   const script = r'''
 $ErrorActionPreference = 'Stop'
+$stage = 10
 try {
   $path = $env:WFFORM_PRIVATE_FILE
   $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
   if ($env:WFFORM_PROTECT_FILE -eq '1') {
+    $stage = 11
     $acl = New-Object System.Security.AccessControl.FileSecurity
     $acl.SetOwner($user)
     $acl.SetAccessRuleProtection($true, $false)
     $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, 'FullControl', 'Allow')
     $acl.AddAccessRule($rule)
+    $stage = 12
     Set-Acl -LiteralPath $path -AclObject $acl
   }
+  $stage = 13
   $acl = Get-Acl -LiteralPath $path
-  if (!$acl.AreAccessRulesProtected -or $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $user.Value) { exit 2 }
+  $stage = 14
+  if (!$acl.AreAccessRulesProtected) { exit 30 }
+  if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $user.Value) { exit 31 }
   $rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
   $allowed = $false
   foreach ($rule in $rules) {
-    if ($rule.IsInherited -or $rule.IdentityReference.Value -ne $user.Value -or $rule.AccessControlType -ne 'Allow') { exit 2 }
+    if ($rule.IsInherited) { exit 32 }
+    if ($rule.IdentityReference.Value -ne $user.Value) { exit 33 }
+    if ($rule.AccessControlType -ne 'Allow') { exit 34 }
     $allowed = $true
   }
-  if (!$allowed) { exit 2 }
-} catch { exit 2 }
+  if (!$allowed) { exit 35 }
+} catch {
+  $failure = $_.Exception.GetBaseException()
+  $diagnostic = 'WFFORM_ACL_FAILURE:' + $stage + ':' + [int]$failure.HResult
+  if ($failure -is [System.ComponentModel.Win32Exception]) {
+    $diagnostic += ':' + [int]$failure.NativeErrorCode
+  }
+  [Console]::Error.WriteLine($diagnostic)
+  exit $stage
+}
 ''';
   final units = script.codeUnits;
   final bytes = ByteData(units.length * 2);
@@ -84,8 +131,9 @@ try {
     runInShell: false,
   );
   if (result.exitCode != 0) {
-    throw const FormatException(
-      'Pairing token needs a protected current-user-only Windows file ACL.',
+    throw FormatException(
+      'Pairing token needs a protected current-user-only Windows file ACL '
+      '(${windowsAclFailureSummary(result.exitCode, result.stderr as String)}).',
     );
   }
 }
