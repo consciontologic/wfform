@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:wfformcomp/wfformcomp.dart';
+import 'package:wfformcomp/process_runner.dart' show windowsChildEnvironment;
 import '../../examples/tools_playground/settings.dart';
 
 void check(bool condition, String message) {
@@ -193,9 +194,14 @@ Future<void> main() async {
 
     // Exercise the same standalone server through stdio, including resources
     // for MCP clients that support them (wfform currently exposes tools only).
-    child = await Process.start(Platform.resolvedExecutable, [
-      File('examples/tools_playground/server.dart').absolute.path,
-    ], includeParentEnvironment: false);
+    child = await Process.start(
+      Platform.resolvedExecutable,
+      [File('examples/tools_playground/server.dart').absolute.path],
+      environment: Platform.isWindows
+          ? windowsChildEnvironment(const {})
+          : const {},
+      includeParentEnvironment: false,
+    );
     lines = StreamIterator(
       child.stdout.transform(utf8.decoder).transform(const LineSplitter()),
     );

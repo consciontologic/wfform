@@ -221,6 +221,8 @@ never copies parent variables into the configured tool. Native CI must confirm
 this compatibility correction before promotion. All 11 companion suites and
 analysis passed in `/tmp/agent-runs/windows-empty-env-companion--20261009T162245Z-507569.log`;
 independent review approved the narrow environment exception.
+The standalone playground test also uses this Windows compatibility environment
+when starting its fixture directly, preserving the same no-inheritance contract.
 
 ## References
 
