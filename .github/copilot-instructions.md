@@ -114,17 +114,20 @@ hotfix or release. Use the appropriate isolated work branch; keep main/develop
 free of direct implementation. Local coordinating agents publish validated work
 branches through `make git`; delegated agents return evidence without publishing.
 GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2,
-with an explicit low-cost model. Routine delivery submits authorized tasks and
-follows PR/check/release progress. Quality/security checks run only for PRs into
-`develop` and hotfix PRs into `main`; other main promotions reuse successful
-develop evidence for the exact source tree inside the delivery controller. Release
-preparation targets `develop`. Auto-merge preserves resolved conversations and
-any native GitHub constraints;
-configured human PR approvals are zero. The sole human release gate is
-**consciontologic** approving the `production` deployment before the combined
-tag/release/website job. Never approve that deployment, call its approval API,
-bypass protection or push source directly to `main`/`develop`.
-Read [CI/CD setup](../docs/guides/CI_CD.md#one-time-automation-setup) for the separate
-Copilot/PR user credential, optional PR-author App and deployment credential.
-Never copy a temporary chat token into a permanent secret or expose privileged
-credentials to a PR checkout.
+with the explicit MAI model policy. Tasks are assigned manually; no Routine
+delivery workflow submits tasks, merges PRs or starts releases. Quality/security
+checks run only for PRs into `develop` and hotfix PRs into `main`. Other main
+promotions must preserve the exact previously tested develop tree; the release
+authorizer checks its evidence before publication. Release preparation targets
+`develop`. Coordinate protected promotion and back-merge PRs explicitly and
+respect resolved conversations and native GitHub constraints; configured human
+PR approvals are zero. Start releases using **Packages and release → Run workflow**
+on `main` with the version, current main SHA and merged PR number.
+The sole human release gate is **consciontologic** approving the `production`
+deployment before the combined tag/release/website job. Never approve that
+deployment, call its approval API, bypass protection or push source directly to
+`main`/`develop`.
+Read [CI/CD setup](../docs/guides/CI_CD.md#one-time-release-setup) for the deployment
+credential. Manual Copilot API tasks use a process-scoped user token; never copy
+a temporary chat token into a permanent secret or expose privileged credentials
+to a PR checkout.

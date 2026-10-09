@@ -38,6 +38,21 @@ void main() {
   });
   tearDown(() => scratch.deleteSync(recursive: true));
 
+  test('image context uses the pinned anonymous official ECR runtime', () {
+    packageRelease(source: source, target: output);
+    final baseImages = File(
+      '${output.path}/Dockerfile',
+    ).readAsLinesSync().where((line) => line.startsWith('FROM '));
+    expect(baseImages, hasLength(1));
+    expect(
+      baseImages.single,
+      matches(
+        r'^FROM public\.ecr\.aws/docker/library/nginx:'
+        r'[0-9]+\.[0-9]+\.[0-9]+-alpine@sha256:[a-f0-9]{64}$',
+      ),
+    );
+  });
+
   test('packaging never deletes an unrelated existing target directory', () {
     output.createSync();
     final unrelated = File('${output.path}/keep.txt')

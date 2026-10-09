@@ -2,9 +2,30 @@
 
 User-visible changes to wfform are recorded here, starting with 0.3.0.
 
+## [Unreleased]
+
+### ➖ Removed
+
+- 🤖 Routine delivery no longer starts AI tasks, merges PRs, opens promotions or
+  back-merges, or dispatches releases. Maintainers coordinate these steps
+  explicitly; protected PR checks and the final human deployment approval remain.
+
+### ✨ Added
+
+- 🐳 Approved releases can publish a Linux amd64 web container to GitHub Container
+  Registry under a plain SemVer tag, with cached dependencies, verified
+  public assets and no extra registry secret. Existing version tags cannot be replaced.
+
+### 🩹 Fixed
+
+- 📦 Container builds pull the identical pinned nginx image from Docker's official
+  ECR Public mirror, avoiding Docker Hub's shared-runner anonymous pull limit.
+- 🛠️ Container packaging uses the runner's bundled Docker builder, removing an
+  additional Docker Hub image pull before builds can start.
+
 ## [1.0.0] - 2026-10-09
 
-📦 Prepared for the reviewed release workflow; publication is a separate gate.
+📦 Published through the reviewed release workflow with human production approval.
 
 ### ✨ Added
 

@@ -1,6 +1,6 @@
 # wfform roadmap
 
-Updated 2026-10-09. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
+Updated 2026-10-10. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
 
 ## Status snapshot
 
@@ -31,11 +31,31 @@ Updated 2026-10-09. This is the authoritative current user scope, not a scaffold
 | Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
 | Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
 | Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
-| Routine delivery automation with human release approval | 8 | 7 | MAI verified live; alternatives and CI lanes/caches tested; all history consolidated in PR #5 into develop; native CI and main activation pending |
+| Routine delivery automation with human release approval | 8 | 7 | Historical scope; routine orchestration superseded by Phase 27; final human release approval retained |
+| Manual delivery and GHCR container publishing | 3 | 3 | Complete locally; reviewed and verified configuration, Docker smoke and all local gates passed; registry publication remains a future approved-release gate |
+
+## Phase 27 — Manual delivery and GHCR container publishing
+
+Scope ID: manual-delivery-ghcr. Requested 2026-10-09, after checking out the
+latest `main`. This supersedes Phase 26's routine orchestration, without removing
+its release provenance checks or final human production approval.
+
+- [x] Remove the Routine delivery Actions workflow and update active agent/user guidance for explicit task assignment, protected PR promotion/back-merge and release dispatch.
+- [x] Add Linux amd64 GHCR publishing to the existing approved release path, using verified public assets, cached dependencies/build tools, a job-scoped registry token and immutable plain SemVer tags.
+- [x] Review and verify the changed workflows, registry safeguards and documentation; distinguish configured publication from an actually published, publicly pullable image.
+
+Quality and security remain limited to PRs into `develop` and hotfix PRs into
+`main`. GHCR publication waits for the same `production` approval as packages
+and the website. No existing tag, release asset or container version is replaced.
+First-time package visibility and live publication remain explicit evidence gates.
 
 ## Phase 26 — Routine delivery automation with human release approval
 
 Scope ID: delivery-automation. Requested 2026-10-09.
+
+**Historical scope:** the later Phase 27 request removes the Routine delivery
+workflow. Its original implementation checklist and evidence remain below; the
+current workflow is documented in [Gitflow](../guides/GITFLOW.md).
 
 **Goal:** automate routine AI work, PR coordination and verified release delivery,
 while retaining the owner's final production deployment approval.
