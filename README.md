@@ -2,7 +2,7 @@
 
 **Wrapper for Free Open Router Models** — a Flutter web app for discovering and chatting with OpenRouter’s free models.
 
-**[Open wfform](https://wfform.com/)** · [Documentation](docs/README.md)
+**[Open wfform](https://wfform.com/)** · [Documentation](docs/README.md) · [Release notes](CHANGELOG.md)
 
 - Search the live free-model catalog and inspect pricing, capabilities and recent availability.
 - Stream responses, edit and resend messages, and attach supported text, source files or media.
@@ -44,5 +44,7 @@ make build.public  # credential-free release in build/publish-web
 - [History and backups](docs/history.md), [file rendering](docs/file-rendering.md) and [PWA behavior](docs/pwa.md)
 - [Architecture](docs/code/ARCHITECTURE.md) and [interface behavior](docs/design/DESIGN.md)
 - [Verification reports](docs/reports/README.md), [roadmap](docs/planning/ROADMAP.md) and [contributor instructions](AGENTS.md)
+
+During 0.x development, minor releases may change application interfaces; review the release notes before upgrading.
 
 Web is the verified release target. Android/iOS host identifiers are configured; [native platform support remains limited](docs/native-platforms.md).

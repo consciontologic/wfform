@@ -609,7 +609,7 @@ class _SidePanel extends StatelessWidget {
                       _close(context);
                     }
                   },
-            icon: const Icon(Icons.edit_square, size: 18),
+            icon: const BrandIcon(BrandGlyph.chat),
             label: const Text('New conversation'),
           ),
         ),
@@ -653,7 +653,7 @@ class _UtilityActions extends StatelessWidget {
   final VoidCallback? beforeOpen;
   @override
   Widget build(BuildContext context) {
-    Widget action(String label, IconData icon, VoidCallback open) {
+    Widget action(String label, BrandGlyph glyph, VoidCallback open) {
       void invoke() {
         beforeOpen?.call();
         open();
@@ -667,7 +667,7 @@ class _UtilityActions extends StatelessWidget {
                 child: ListTile(
                   dense: true,
                   minVerticalPadding: 8,
-                  leading: Icon(icon),
+                  leading: BrandIcon(glyph),
                   title: Text(label),
                   onTap: invoke,
                 ),
@@ -676,7 +676,7 @@ class _UtilityActions extends StatelessWidget {
           : SelectableIconButton(
               tooltip: label,
               onPressed: invoke,
-              icon: Icon(icon),
+              icon: BrandIcon(glyph),
             );
     }
 
@@ -685,12 +685,12 @@ class _UtilityActions extends StatelessWidget {
       children: [
         action(
           'Diagnostics',
-          Icons.monitor_heart_outlined,
+          BrandGlyph.diagnostics,
           () => openDiagnostics(context, state),
         ),
         action(
           'Settings',
-          Icons.settings_outlined,
+          BrandGlyph.settings,
           () => openSettings(context, state),
         ),
       ],
@@ -797,7 +797,7 @@ class _CompactModelControl extends StatelessWidget {
             ),
           ),
           onPressed: () => openModels(context, state),
-          icon: const Icon(Icons.bubble_chart_outlined, size: 20),
+          icon: const BrandIcon(BrandGlyph.models),
           label: const Text('Models'),
         ),
       ),
@@ -848,7 +848,7 @@ class _SelectionBar extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.bubble_chart_outlined, size: 20),
+                      const BrandIcon(BrandGlyph.models),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -985,14 +985,22 @@ class _ConversationState extends State<_Conversation> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    Text(
-                      'START A CONVERSATION',
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w700,
-                        color: StudioPalette.of(context).muted,
-                      ),
+                    Row(
+                      children: [
+                        const BrandIcon(BrandGlyph.chat, size: 32),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'START A CONVERSATION',
+                            style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w700,
+                              color: StudioPalette.of(context).muted,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -1451,7 +1459,7 @@ class _Composer extends StatelessWidget {
                       onPressed: chat.busy || state.historyBusy
                           ? null
                           : () => openContextControls(context, state),
-                      icon: const Icon(Icons.tune, size: 17),
+                      icon: const BrandIcon(BrandGlyph.context),
                       label: Text(
                         minimalChrome || chat.contextStartIndex == 0
                             ? 'Context'
@@ -1510,7 +1518,7 @@ class _Composer extends StatelessWidget {
                                   !state.activeConversationArchived
                               ? () => state.pickAttachments(mimeTypes)
                               : null,
-                          icon: const Icon(Icons.attach_file, size: 18),
+                          icon: const BrandIcon(BrandGlyph.documents),
                           label: const Text('Add files'),
                         ),
                       ),

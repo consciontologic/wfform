@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'selectable_surface.dart';
+import 'brand_mark.dart';
 import '../app/studio_state.dart';
 import '../app/theme.dart';
 import '../features/models/model.dart';
@@ -55,18 +56,21 @@ class PaperPanel extends StatelessWidget {
   );
 }
 
-/// A colored, readable identity for each popup; its emoji is decorative while
+/// A colored, readable identity for each popup; its artwork is decorative while
 /// the heading and close button retain stable screen-reader names.
 class StudioDialogHeader extends StatelessWidget {
   const StudioDialogHeader({
     super.key,
     required this.title,
-    required this.emoji,
+    this.emoji,
+    this.glyph,
     required this.color,
     required this.closeTooltip,
     required this.onClose,
-  });
-  final String title, emoji, closeTooltip;
+  }) : assert((emoji == null) != (glyph == null));
+  final String title, closeTooltip;
+  final String? emoji;
+  final BrandGlyph? glyph;
   final Color color;
   final VoidCallback onClose;
 
@@ -102,12 +106,16 @@ class StudioDialogHeader extends StatelessWidget {
                 width: compact ? 36 : 44,
                 height: compact ? 36 : 44,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  border: Border.all(color: palette.border),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _emojiAssets.containsKey(emoji)
+                decoration: glyph == null
+                    ? BoxDecoration(
+                        color: palette.surface,
+                        border: Border.all(color: palette.border),
+                        borderRadius: BorderRadius.circular(10),
+                      )
+                    : null,
+                child: glyph != null
+                    ? BrandIcon(glyph!, size: compact ? 28 : 34)
+                    : _emojiAssets.containsKey(emoji)
                     ? Image.asset(
                         _emojiAssets[emoji]!,
                         width: compact ? 24 : 30,
@@ -162,7 +170,7 @@ Future<void> openModels(BuildContext context, StudioState state) =>
             children: [
               StudioDialogHeader(
                 title: 'Choose a free model',
-                emoji: '🧭',
+                glyph: BrandGlyph.models,
                 color: StudioPalette.of(context).modelChooser,
                 closeTooltip: 'Close model browser',
                 onClose: () => Navigator.pop(context),
@@ -195,7 +203,7 @@ Future<void> openDetails(
         children: [
           StudioDialogHeader(
             title: 'Model details',
-            emoji: '🔎',
+            glyph: BrandGlyph.models,
             color: StudioPalette.of(context).modelDetails,
             closeTooltip: 'Close model details',
             onClose: () => Navigator.pop(context),

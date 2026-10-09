@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Soft wrapper branding](soft-wrapper-branding-verification.md): approved logo and ten companion icons, transparent light/dark variants, browser-tab/PWA/native launcher sources, 532 passing tests, public build and local browser checks; remote deployment and native builds remain separate.
+
 - [Compact navigation refinement 0.2.4](compact-navigation-verification.md): persistent Models label and smaller drawer version/GitHub/Info row; regression gate, local browser checks, CI, Pages, public asset integrity and actual public PWA update passed.
 
 - [Compact conversation controls patch 0.2.3](compact-controls-verification.md): compact composer/model controls, aligned drawer links and direct draft deletion; combined tests, release browser checks, CI, Pages and public asset integrity passed.

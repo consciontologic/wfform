@@ -1,52 +1,160 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// Deterministic original pixel artwork, encoded without image dependencies.
+import 'package:wfform/presentation/brand_artwork.dart';
+
+enum IconStyle { favicon, launcher, maskable, store }
+
+/// Regenerate every checked-in launcher from the same canonical Flutter mark.
 void main() {
   Directory('web/icons').createSync(recursive: true);
   for (final size in [192, 512]) {
-    final bytes = iconPng(size);
-    File('web/icons/Icon-$size.png').writeAsBytesSync(bytes);
-    File('web/icons/Icon-maskable-$size.png').writeAsBytesSync(bytes);
+    File(
+      'web/icons/Icon-$size.png',
+    ).writeAsBytesSync(iconPng(size, style: IconStyle.launcher));
+    File(
+      'web/icons/Icon-maskable-$size.png',
+    ).writeAsBytesSync(iconPng(size, style: IconStyle.maskable));
+    File(
+      'web/icons/Icon-dark-$size.png',
+    ).writeAsBytesSync(iconPng(size, style: IconStyle.launcher, dark: true));
+    File(
+      'web/icons/Icon-maskable-dark-$size.png',
+    ).writeAsBytesSync(iconPng(size, style: IconStyle.maskable, dark: true));
   }
-  File('web/favicon.png').writeAsBytesSync(iconPng(48));
+  for (final size in [16, 32, 48]) {
+    final path = size == 48 ? 'web/favicon.png' : 'web/favicon-$size.png';
+    File(path).writeAsBytesSync(iconPng(size));
+    File(
+      'web/favicon-dark-$size.png',
+    ).writeAsBytesSync(iconPng(size, dark: true));
+  }
+  const androidSizes = {
+    'mdpi': 48,
+    'hdpi': 72,
+    'xhdpi': 96,
+    'xxhdpi': 144,
+    'xxxhdpi': 192,
+  };
+  for (final entry in androidSizes.entries) {
+    File(
+      'android/app/src/main/res/mipmap-${entry.key}/ic_launcher.png',
+    ).writeAsBytesSync(iconPng(entry.value, style: IconStyle.launcher));
+    final night = File(
+      'android/app/src/main/res/mipmap-night-${entry.key}/ic_launcher.png',
+    );
+    night.parent.createSync(recursive: true);
+    night.writeAsBytesSync(
+      iconPng(entry.value, style: IconStyle.launcher, dark: true),
+    );
+  }
+  const iosPath = 'ios/Runner/Assets.xcassets/AppIcon.appiconset';
+  final manifest =
+      jsonDecode(File('$iosPath/Contents.json').readAsStringSync()) as Map;
+  final written = <String>{};
+  for (final image in manifest['images'] as List) {
+    final filename = image['filename'] as String;
+    if (!written.add(filename)) continue;
+    final points = double.parse((image['size'] as String).split('x').first);
+    final scale = double.parse((image['scale'] as String).split('x').first);
+    final dark = (image['appearances'] as List? ?? []).any(
+      (appearance) =>
+          appearance['appearance'] == 'luminosity' &&
+          appearance['value'] == 'dark',
+    );
+    File('$iosPath/$filename').writeAsBytesSync(
+      iconPng(
+        (points * scale).round(),
+        style: dark ? IconStyle.launcher : IconStyle.store,
+        dark: dark,
+      ),
+    );
+  }
 }
 
-List<int> iconPng(int size) {
-  const background = [248, 245, 252];
-  const ink = [41, 36, 59];
-  const mint = [219, 239, 229];
+/// Four samples per axis keep rounded strokes legible even at 16 pixels.
+/// Maskable marks fit within the central 80%-diameter safe circle.
+List<int> iconPng(
+  int size, {
+  IconStyle style = IconStyle.favicon,
+  bool dark = false,
+}) {
+  if (size < 1 || size > 2048) throw ArgumentError.value(size, 'size');
+  const samples = 4;
+  final opaque = style == IconStyle.maskable || style == IconStyle.store;
+  final raster = _Raster(
+    size * samples,
+    opaque ? (dark ? brandDarkSurface : brandLightSurface) : 0,
+  );
+  final ink = dark ? brandPaper : brandInk;
+  final accent = dark ? brandDarkLavender : brandLavender;
+  final scale = switch (style) {
+    IconStyle.favicon => 1.0,
+    IconStyle.launcher => .75,
+    IconStyle.maskable => .76,
+    IconStyle.store => .75,
+  };
+  math.Point<double> transform(math.Point<double> p) =>
+      math.Point((p.x - 50) * scale + 50, (p.y - 50) * scale + 50);
+  final points = <math.Point<double>>[const math.Point(20, 19)];
+  for (final c in wrapperCurves) {
+    final start = points.last;
+    for (var step = 1; step <= 16; step++) {
+      final t = step / 16;
+      final u = 1 - t;
+      points.add(
+        math.Point(
+          u * u * u * start.x +
+              3 * u * u * t * c[0] +
+              3 * u * t * t * c[2] +
+              t * t * t * c[4],
+          u * u * u * start.y +
+              3 * u * u * t * c[1] +
+              3 * u * t * t * c[3] +
+              t * t * t * c[5],
+        ),
+      );
+    }
+  }
+  final outline = points.map(transform).toList();
+  final stroke = style == IconStyle.favicon
+      ? math.max(wrapperStroke, 160 / size)
+      : wrapperStroke;
+  raster.stroke(outline, stroke * scale, ink);
+  raster.polygon(
+    _roundedRect(
+      wrapperCore.left,
+      wrapperCore.top,
+      wrapperCore.width,
+      wrapperCore.height,
+      wrapperCoreRadius,
+    ).map(transform).toList(),
+    accent,
+  );
   final pixels = BytesBuilder();
   for (var y = 0; y < size; y++) {
     pixels.addByte(0); // PNG filter: none.
     for (var x = 0; x < size; x++) {
-      // Match the Flutter header's bracketed conversation mark. Its artwork is
-      // inset to stay inside a maskable icon's central safe circle.
-      final u = (x / size - .14) / .72 * 48;
-      final v = (y / size - .14) / .72 * 48;
-      var color = background;
-      bool rect(double l, double t, double r, double b) =>
-          u >= l && u <= r && v >= t && v <= b;
-      if (rect(2.6, 7.6, 5.4, 40.4) ||
-          rect(2.6, 7.6, 11.4, 10.4) ||
-          rect(2.6, 37.6, 11.4, 40.4) ||
-          rect(42.6, 7.6, 45.4, 40.4) ||
-          rect(36.6, 7.6, 45.4, 10.4) ||
-          rect(36.6, 37.6, 45.4, 40.4)) {
-        color = ink;
-      }
-      if (rect(12.6, 13.6, 35.4, 31.4) ||
-          (rect(16.6, 30, 24, 37) && v <= 37 - (u - 16.6) * 5 / 6)) {
-        color = ink;
-      }
-      if (rect(15.4, 16.4, 32.6, 28.6)) color = mint;
-      for (final cx in [19.0, 24.0, 29.0]) {
-        if ((u - cx) * (u - cx) + (v - 22.5) * (v - 22.5) <= 1.5625) {
-          color = ink;
+      var red = 0, green = 0, blue = 0, alpha = 0;
+      for (var sy = 0; sy < samples; sy++) {
+        for (var sx = 0; sx < samples; sx++) {
+          final rgb = raster
+              .pixels[(y * samples + sy) * raster.size + x * samples + sx];
+          final a = (rgb >> 24) & 255;
+          alpha += a;
+          red += ((rgb >> 16) & 255) * a;
+          green += ((rgb >> 8) & 255) * a;
+          blue += (rgb & 255) * a;
         }
       }
-      pixels.add(color);
+      pixels.add([
+        alpha == 0 ? 0 : (red / alpha).round(),
+        alpha == 0 ? 0 : (green / alpha).round(),
+        alpha == 0 ? 0 : (blue / alpha).round(),
+        if (!opaque) (alpha / (samples * samples)).round(),
+      ]);
     }
   }
   final output = BytesBuilder()..add([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -54,7 +162,7 @@ List<int> iconPng(int size) {
     ..setUint32(0, size)
     ..setUint32(4, size)
     ..setUint8(8, 8)
-    ..setUint8(9, 2);
+    ..setUint8(9, opaque ? 2 : 6);
   void chunk(String name, List<int> content) {
     final payload = [...ascii.encode(name), ...content];
     final length = ByteData(4)..setUint32(0, content.length);
@@ -80,4 +188,102 @@ int crc32(List<int> bytes) {
     }
   }
   return (crc ^ 0xffffffff) & 0xffffffff;
+}
+
+List<math.Point<double>> _roundedRect(
+  double x,
+  double y,
+  double width,
+  double height,
+  double radius,
+) {
+  final points = <math.Point<double>>[];
+  final centers = [
+    math.Point(x + width - radius, y + radius),
+    math.Point(x + width - radius, y + height - radius),
+    math.Point(x + radius, y + height - radius),
+    math.Point(x + radius, y + radius),
+  ];
+  for (var corner = 0; corner < 4; corner++) {
+    for (var step = 0; step <= 12; step++) {
+      final angle = (corner - 1 + step / 12) * math.pi / 2;
+      points.add(
+        math.Point(
+          centers[corner].x + radius * math.cos(angle),
+          centers[corner].y + radius * math.sin(angle),
+        ),
+      );
+    }
+  }
+  return points;
+}
+
+/// Small scanline rasterizer for the canonical filled path and rounded stroke.
+/// It is generation tooling only; Flutter paints the original cubic curves.
+class _Raster {
+  _Raster(this.size, int background) : pixels = Uint32List(size * size) {
+    pixels.fillRange(0, pixels.length, background);
+  }
+  final int size;
+  final Uint32List pixels;
+
+  void polygon(List<math.Point<double>> points, int color) {
+    final scaled = points
+        .map((p) => math.Point(p.x * size / 100, p.y * size / 100))
+        .toList();
+    final top = scaled.map((p) => p.y).reduce(math.min).floor().clamp(0, size);
+    final bottom = scaled
+        .map((p) => p.y)
+        .reduce(math.max)
+        .ceil()
+        .clamp(0, size);
+    for (var y = top; y < bottom; y++) {
+      final scan = y + .5;
+      final intersections = <double>[];
+      for (var i = 0; i < scaled.length; i++) {
+        final a = scaled[i], b = scaled[(i + 1) % scaled.length];
+        if ((a.y <= scan && b.y > scan) || (b.y <= scan && a.y > scan)) {
+          intersections.add(a.x + (scan - a.y) * (b.x - a.x) / (b.y - a.y));
+        }
+      }
+      intersections.sort();
+      for (var i = 0; i + 1 < intersections.length; i += 2) {
+        _span(y, intersections[i], intersections[i + 1], color);
+      }
+    }
+  }
+
+  void _span(int y, double left, double right, int color) {
+    final from = (left - .5).ceil().clamp(0, size);
+    final to = (right - .5).ceil().clamp(0, size);
+    if (from < to) pixels.fillRange(y * size + from, y * size + to, color);
+  }
+
+  void stroke(List<math.Point<double>> points, double width, int color) {
+    final radius = width / 2;
+    for (var i = 0; i < points.length; i++) {
+      final a = points[i], b = points[(i + 1) % points.length];
+      final dx = b.x - a.x, dy = b.y - a.y;
+      final length = math.sqrt(dx * dx + dy * dy);
+      if (length > 0) {
+        final ox = -dy / length * radius, oy = dx / length * radius;
+        polygon([
+          math.Point(a.x + ox, a.y + oy),
+          math.Point(b.x + ox, b.y + oy),
+          math.Point(b.x - ox, b.y - oy),
+          math.Point(a.x - ox, a.y - oy),
+        ], color);
+      }
+      final cx = a.x * size / 100, cy = a.y * size / 100;
+      final r = radius * size / 100;
+      final top = (cy - r).floor().clamp(0, size);
+      final bottom = (cy + r).ceil().clamp(0, size);
+      for (var y = top; y < bottom; y++) {
+        final d = y + .5 - cy;
+        if (d.abs() > r) continue;
+        final half = math.sqrt(r * r - d * d);
+        _span(y, cx - half, cx + half, color);
+      }
+    }
+  }
 }

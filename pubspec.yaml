@@ -12,7 +12,7 @@ topics:
   - pwa
   - markdown
 publish_to: none
-version: 0.2.4+9
+version: 0.3.0+10
 environment:
   sdk: ^3.10.9
   # Includes Flutter's Android web keyboard-dismissal engine fix (3.38.6).

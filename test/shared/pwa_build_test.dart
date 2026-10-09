@@ -31,6 +31,38 @@ void main() {
   });
   tearDown(() => scratch.deleteSync(recursive: true));
 
+  test('all browser-tab icons survive release hashing and publication', () {
+    const paths = [
+      'favicon-16.png',
+      'favicon-32.png',
+      'favicon.png',
+      'favicon-dark-16.png',
+      'favicon-dark-32.png',
+      'favicon-dark-48.png',
+    ];
+    for (final path in paths) {
+      File('${source.path}/$path').writeAsBytesSync(utf8.encode(path));
+    }
+    final release = build.prepareRelease(source, template);
+    final target = Directory('${scratch.path}/published');
+    build.publishRelease(release, target);
+    for (final path in paths) {
+      final expected = utf8.encode(path);
+      expect(release.assets[path], expected);
+      expect((release.manifest['assets'] as Map)[path], {
+        'sha256': sha256(expected),
+        'bytes': expected.length,
+      });
+      expect(File('${target.path}/$path').readAsBytesSync(), expected);
+      expect(
+        File(
+          '${target.path}/__releases/${release.version}/$path',
+        ).readAsBytesSync(),
+        expected,
+      );
+    }
+  });
+
   test(
     'CLI forwards a dotted Pages base and rejects traversal before compiling',
     () async {

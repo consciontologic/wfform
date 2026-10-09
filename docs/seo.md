@@ -23,6 +23,7 @@ The source repository and artifact destination remain unchanged.
   crawling and advertises the sitemap. This rule is not access control; public
   builds still exclude local configuration. The public HTML permits indexing
   through its robots meta tags.
+- All four public pages declare transparent 16px, 32px and 48px PNG favicons using the approved soft W-wrapper mark, with dark variants selected by `prefers-color-scheme`. Information-page logos use the same appearance selection through `picture`. PWA, Apple touch, sharing and public-page brand images use the matching generated launcher artwork. The release allowlist hashes and publishes every favicon size so browser tabs and offline pages receive the replacement too.
 - `web/manifest.json` adds productivity/utility categories and a descriptive
   summary while preserving the existing installed-app `id`, `start_url` and
   `scope`. The same logo serves as the app icon and social preview image.

@@ -4,6 +4,7 @@ import 'selectable_surface.dart';
 import '../app/studio_state.dart';
 import '../app/theme.dart';
 import 'model_browser.dart';
+import 'brand_mark.dart';
 
 Future<void> openHistory(BuildContext context, StudioState state) =>
     showSelectableDialog<void>(
@@ -18,7 +19,7 @@ Future<void> openHistory(BuildContext context, StudioState state) =>
             children: [
               StudioDialogHeader(
                 title: 'Conversation history',
-                emoji: '🗂️',
+                glyph: BrandGlyph.history,
                 color: StudioPalette.of(context).lilac,
                 closeTooltip: 'Close history',
                 onClose: () => Navigator.pop(context),
@@ -174,7 +175,15 @@ class _ConversationHistoryState extends State<ConversationHistory> {
               runSpacing: 4,
               children: [
                 ChoiceChip(
-                  label: const Text('Chats'),
+                  label: const Wrap(
+                    spacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      BrandIcon(BrandGlyph.chats, size: 20),
+                      Text('Chats'),
+                    ],
+                  ),
+                  showCheckmark: true,
                   selected: view == _HistoryView.chats,
                   onSelected: (_) {
                     widget.onInteracted?.call();
@@ -182,7 +191,15 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                   },
                 ),
                 ChoiceChip(
-                  label: const Text('Drafts'),
+                  label: const Wrap(
+                    spacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      BrandIcon(BrandGlyph.drafts, size: 20),
+                      Text('Drafts'),
+                    ],
+                  ),
+                  showCheckmark: true,
                   selected: view == _HistoryView.drafts,
                   onSelected: (_) {
                     widget.onInteracted?.call();
@@ -190,7 +207,15 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                   },
                 ),
                 ChoiceChip(
-                  label: const Text('Archived'),
+                  label: const Wrap(
+                    spacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      BrandIcon(BrandGlyph.archived, size: 20),
+                      Text('Archived'),
+                    ],
+                  ),
+                  showCheckmark: true,
                   selected: view == _HistoryView.archived,
                   onSelected: (_) {
                     widget.onInteracted?.call();
@@ -225,23 +250,36 @@ class _ConversationHistoryState extends State<ConversationHistory> {
           Expanded(
             child: entries.isEmpty
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        state.historyLoading
-                            ? 'Opening your history…'
-                            : query.isNotEmpty
-                            ? 'No matching conversations.'
-                            : switch (view) {
-                                _HistoryView.archived =>
-                                  'No archived conversations.',
-                                _HistoryView.drafts =>
-                                  'No drafts yet. Start a new conversation to write one.',
-                                _HistoryView.chats =>
-                                  'Sent conversations appear here. Unsent work is in Drafts.',
-                              },
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colors.muted),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BrandIcon(switch (view) {
+                              _HistoryView.chats => BrandGlyph.chats,
+                              _HistoryView.drafts => BrandGlyph.drafts,
+                              _HistoryView.archived => BrandGlyph.archived,
+                            }, size: 40),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.historyLoading
+                                  ? 'Opening your history…'
+                                  : query.isNotEmpty
+                                  ? 'No matching conversations.'
+                                  : switch (view) {
+                                      _HistoryView.archived =>
+                                        'No archived conversations.',
+                                      _HistoryView.drafts =>
+                                        'No drafts yet. Start a new conversation to write one.',
+                                      _HistoryView.chats =>
+                                        'Sent conversations appear here. Unsent work is in Drafts.',
+                                    },
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: colors.muted),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   )
@@ -365,9 +403,9 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                                                 entry.id,
                                               );
                                             },
-                                      icon: const Icon(
-                                        Icons.archive_outlined,
-                                        size: 19,
+                                      icon: const BrandIcon(
+                                        BrandGlyph.archived,
+                                        size: 20,
                                       ),
                                     ),
                                   if (entry.isDraft || entry.archived)

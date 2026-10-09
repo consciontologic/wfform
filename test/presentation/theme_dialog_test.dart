@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wfform/app/theme.dart';
+import 'package:wfform/presentation/brand_mark.dart';
 import 'package:wfform/presentation/model_browser.dart';
 import 'package:wfform/presentation/utilities.dart';
 
@@ -113,25 +114,25 @@ void main() {
         final popups = [
           (
             () => openModels(context, h.state),
-            '🧭',
+            BrandGlyph.models,
             palette.modelChooser,
             'Close model browser',
           ),
           (
             () => openDetails(context, h.state, model),
-            '🔎',
+            BrandGlyph.models,
             palette.modelDetails,
             'Close model details',
           ),
           (
             () => openDiagnostics(context, h.state),
-            '🩺',
+            BrandGlyph.diagnostics,
             palette.diagnostics,
             'Close diagnostics',
           ),
           (
             () => openSettings(context, h.state),
-            '⚙️',
+            BrandGlyph.settings,
             palette.lilac,
             'Close settings',
           ),
@@ -141,7 +142,7 @@ void main() {
           await tester.pumpAndSettle();
           final headerFinder = find.byType(StudioDialogHeader);
           final header = tester.widget<StudioDialogHeader>(headerFinder);
-          expect(header.emoji, popup.$2);
+          expect(header.glyph ?? header.emoji, popup.$2);
           expect(header.color, popup.$3);
           expect(
             Theme.of(tester.element(headerFinder)).brightness,

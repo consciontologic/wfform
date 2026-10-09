@@ -6,6 +6,7 @@ import 'selectable_surface.dart';
 import '../app/theme.dart';
 import '../features/chat/attachment.dart';
 import '../features/documents/document_view.dart';
+import 'brand_mark.dart';
 
 /// File names and payloads are conversation content, never diagnostics.
 class AttachmentList extends StatelessWidget {
@@ -19,11 +20,11 @@ class AttachmentList extends StatelessWidget {
     runSpacing: 4,
     children: files.map((file) {
       final icon = switch (file.kind) {
-        AttachmentKind.image => Icons.image_outlined,
-        AttachmentKind.audio => Icons.audio_file_outlined,
-        AttachmentKind.video => Icons.video_file_outlined,
-        AttachmentKind.pdf => Icons.picture_as_pdf_outlined,
-        AttachmentKind.text => Icons.code,
+        AttachmentKind.image => const Icon(Icons.image_outlined, size: 18),
+        AttachmentKind.audio => const Icon(Icons.audio_file_outlined, size: 18),
+        AttachmentKind.video => const Icon(Icons.video_file_outlined, size: 18),
+        AttachmentKind.pdf ||
+        AttachmentKind.text => const BrandIcon(BrandGlyph.documents, size: 22),
       };
       final size = file.byteLength < 1024 * 1024
           ? '${(file.byteLength / 1024).ceil()} KB'
@@ -32,7 +33,7 @@ class AttachmentList extends StatelessWidget {
         message:
             '${file.name} · ${file.kind == AttachmentKind.text ? file.documentFormat.label : file.mimeType} · $size',
         child: InputChip(
-          avatar: Icon(icon, size: 18),
+          avatar: icon,
           label: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 190),
             child: Text(
@@ -53,6 +54,8 @@ class AttachmentList extends StatelessWidget {
                           children: [
                             Row(
                               children: [
+                                const BrandIcon(BrandGlyph.documents),
+                                const SizedBox(width: 8),
                                 const Expanded(child: Text('File preview')),
                                 SelectableIconButton(
                                   tooltip: 'Close file preview',

@@ -33,6 +33,58 @@ void main() {
   const site = 'https://wfform.com/';
   final siteUri = Uri.parse(site);
 
+  test('favicons are transparent and every page offers a dark variant', () {
+    for (final size in [16, 32, 48]) {
+      final path = size == 48 ? 'favicon.png' : 'favicon-$size.png';
+      expect(
+        File('web/$path').readAsBytesSync()[25],
+        6,
+        reason: '$path must retain PNG alpha',
+      );
+      final darkPath = 'favicon-dark-$size.png';
+      for (final page in publicPages) {
+        expect(
+          document(page),
+          contains(
+            '<link rel="icon" type="image/png" sizes="${size}x$size" href="$darkPath" media="(prefers-color-scheme: dark)">',
+          ),
+        );
+      }
+      expect(File('web/$darkPath').existsSync(), isTrue);
+    }
+  });
+
+  test('information pages select transparent brand artwork by appearance', () {
+    for (final page in publicPages.where((page) => page != 'index.html')) {
+      expect(
+        document(page),
+        contains(
+          '<source srcset="icons/Icon-dark-192.png" media="(prefers-color-scheme: dark)">',
+        ),
+      );
+    }
+  });
+
+  test('every public page offers tab-sized and high-density favicons', () {
+    for (final page in publicPages) {
+      final html = document(page);
+      for (final entry in {
+        16: 'favicon-16.png',
+        32: 'favicon-32.png',
+        48: 'favicon.png',
+      }.entries) {
+        expect(
+          html,
+          contains(
+            '<link rel="icon" type="image/png" sizes="${entry.key}x${entry.key}" href="${entry.value}">',
+          ),
+          reason: '$page must expose the ${entry.key}px browser-tab artwork',
+        );
+        expect(File('web/${entry.value}').existsSync(), isTrue);
+      }
+    }
+  });
+
   test(
     'public documents agree on canonical, sharing and crawlable identity',
     () {

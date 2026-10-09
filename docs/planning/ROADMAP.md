@@ -1,6 +1,6 @@
 # wfform roadmap
 
-Updated 2026-10-08. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
+Updated 2026-10-09. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
 
 ## Status snapshot
 
@@ -23,6 +23,9 @@ Updated 2026-10-08. This is the authoritative current user scope, not a scaffold
 | Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 3 | Complete; patched-SDK gates, release browser update, CI and public assets verified; physical phone unverified |
 | Compact conversation controls patch 0.2.3 | 6 | 6 | Complete; combined gates, browser checks, CI, Pages and public asset integrity verified |
 | Compact navigation refinement 0.2.4 | 3 | 3 | Complete; regression gates, release-browser checks, CI, Pages, public asset integrity and PWA update verified |
+| Soft wrapper identity | 3 | 3 | Complete locally; artwork, favicon/public build and browser checks passed; remote/native releases separate |
+| Transparent icon family and appearance variants | 3 | 3 | Complete locally; 532 tests, public build and actual light/dark browser checks passed |
+| Version 0.3.0 publication | 3 | 2 | Local release gates and public artifact validation passed; publication in progress |
 
 ## Established application baseline
 
@@ -252,3 +255,29 @@ Scope ID: compact-navigation-refinement. Requested 2026-10-08.
 - [x] Verify and publish version 0.2.4 with regression tests, a release build and browser checks for model selection, information navigation, narrow/medium layouts and enlarged text.
 
 Current findings and verification status: [0.2.4 compact navigation refinement](../reports/compact-navigation-verification.md).
+
+## Phase 18 — Soft wrapper identity
+
+Scope ID: soft-wrapper-branding. Requested 2026-10-09 after visual concept approval.
+
+- [x] Replace the bracketed mark with the approved rounded W wrapping a lavender module, and add matching Models, Chat, History and Documents icons without changing labels, control behavior or the global theme.
+- [x] Replace PWA and native launcher artwork and browser-tab favicons; retain installed-app identity and include all favicon sizes in public and offline releases.
+- [x] Verify artwork, control continuity, light/dark rendering, compact/expanded layouts and the actual local release browser; run repository gates and record public/native release limits.
+
+Current evidence: [soft wrapper branding verification](../reports/soft-wrapper-branding-verification.md).
+
+## Phase 19 — Transparent icon family and appearance variants
+
+Scope ID: transparent-icon-family. Requested 2026-10-09.
+
+- [x] Add matching Settings, Diagnostics, Context, Chats, Drafts and Archived icons across controls and dialogs while preserving labels, selected states and behavior.
+- [x] Remove white backgrounds from existing and new artwork; adapt all app icons for light/dark themes and provide transparent favicon/public logo variants, with tinted platform-required launcher surfaces.
+- [x] Verify transparency, contrast, theme selection, responsive layouts and release publication assets; run local gates and inspect the actual updated browser.
+
+## Phase 20 — Version 0.3.0 publication
+
+Scope ID: release-030. Requested 2026-10-09; the user explicitly authorized committing and pushing the accumulated branding work and version bump.
+
+- [x] Set package version 0.3.0+10, synchronize app/static-page versions and add release notes.
+- [x] Run local release gates, real browser storage checks and the credential-free public build.
+- [ ] Commit and push through the existing workflow, verify CI/Pages and confirm the public PWA update and published assets.

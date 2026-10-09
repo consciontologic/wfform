@@ -7,6 +7,7 @@ import '../config/credential_preference.dart';
 import '../shared/diagnostics.dart';
 import 'model_browser.dart';
 import 'selectable_surface.dart';
+import 'brand_mark.dart';
 
 Future<void> openDiagnostics(
   BuildContext context,
@@ -24,7 +25,7 @@ Future<void> openDiagnostics(
         children: [
           StudioDialogHeader(
             title: 'Diagnostics',
-            emoji: '🩺',
+            glyph: BrandGlyph.diagnostics,
             color: StudioPalette.of(context).diagnostics,
             closeTooltip: 'Close diagnostics',
             onClose: () => Navigator.pop(context),
@@ -228,7 +229,7 @@ class _SettingsState extends State<_Settings> {
         children: [
           StudioDialogHeader(
             title: 'Settings',
-            emoji: '⚙️',
+            glyph: BrandGlyph.settings,
             color: StudioPalette.of(context).lilac,
             closeTooltip: 'Close settings',
             onClose: () => Navigator.pop(context),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'selectable_surface.dart';
 import '../app/studio_state.dart';
+import 'brand_mark.dart';
 
 Future<void> openContextControls(BuildContext context, StudioState state) =>
     showSelectableDialog<void>(
@@ -43,7 +44,13 @@ class _ContextDialogState extends State<_ContextDialog> {
     return AlertDialog(
       scrollable: true,
       insetPadding: const EdgeInsets.all(12),
-      title: const Text('Conversation context'),
+      title: const Row(
+        children: [
+          BrandIcon(BrandGlyph.context, size: 32),
+          SizedBox(width: 12),
+          Expanded(child: Text('Conversation context')),
+        ],
+      ),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(

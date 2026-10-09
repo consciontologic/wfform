@@ -1,0 +1,19 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "roboto",
+        "files": [
+          "web/about.html",
+          "web/liability.html",
+          "web/terms.html"
+        ],
+        "createdAt": "2026-10-09T09:09:52.913Z",
+        "reason": "Agent: these existing reading pages inherit bundled Roboto from unchanged web/site.css; preserving their established typography during the user-authorized icon replacement keeps the app identity consistent."
+      }
+    ]
+  }
+}
