@@ -1,0 +1,18 @@
+{
+  "production": "main",
+  "integration": "develop",
+  "branches": {
+    "feature": {"from": "develop", "pull_request_into": "develop"},
+    "bugfix": {"from": "develop", "pull_request_into": "develop"},
+    "hotfix": {"from": "main", "pull_request_into": "main", "back_merge_into": "develop"},
+    "release": {"from": "develop", "pull_request_into": "main", "back_merge_into": "develop"}
+  },
+  "agent_prefixes": ["codex", "claude", "copilot"],
+  "semver": "MAJOR.MINOR.PATCH",
+  "tag_prefix": "",
+  "required_checks": ["Web checks", "Security checks", "Linux package", "Windows package"],
+  "require_pull_request": true,
+  "require_review": true,
+  "force_push": false,
+  "note": "Copilot cloud owns copilot/* branches; preserve that platform requirement and encode the Gitflow work kind in its task/PR label and correct base. PR/review protection is enabled for main and develop with administrator bootstrap bypass. Add required CI contexts after these checks exist on GitHub."
+}

@@ -6,6 +6,22 @@ import '../../deploy/check.dart';
 import '../../tool/content_hash.dart';
 
 void main() {
+  test('MCP connections allow HTTPS endpoints and loopback ports only', () {
+    final config = File('deploy/nginx/headers.conf').readAsStringSync();
+    final policy = RegExp(
+      r'add_header Content-Security-Policy "([^"]+)"',
+    ).firstMatch(config)!.group(1)!;
+    final connections = policy
+        .split(';')
+        .singleWhere((part) => part.trim().startsWith('connect-src '))
+        .trim();
+    expect(
+      connections,
+      "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
+    );
+    expect(policy, isNot(contains("script-src 'self' https:")));
+    expect(policy, isNot(contains("connect-src *")));
+  });
   Map<String, String> valid() => {
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
@@ -15,7 +31,7 @@ void main() {
     'permissions-policy':
         'camera=(), microphone=(), clipboard-read=(self), clipboard-write=(self)',
     'content-security-policy':
-        "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo=' 'sha256-ceOprgawj2RQrm546DhERntcne7eurN77Kn5b5l2zns='; script-src-attr 'none'; connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/ https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://analytics.google.com; font-src 'self' data: https://fonts.gstatic.com/s/; frame-ancestors 'none'; object-src 'none'",
+        "default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo=' 'sha256-ceOprgawj2RQrm546DhERntcne7eurN77Kn5b5l2zns='; script-src-attr 'none'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; font-src 'self' data: https://fonts.gstatic.com/s/; frame-ancestors 'none'; object-src 'none'",
   };
 
   test('Google tag has a matching narrow CSP hash on every HTML page', () {

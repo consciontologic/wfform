@@ -75,7 +75,8 @@ void main() {
 }
 
 /// Four samples per axis keep rounded strokes legible even at 16 pixels.
-/// Maskable marks fit within the central 80%-diameter safe circle.
+/// Every style has a transparent background. Legacy maskable-sized marks retain
+/// their central 80%-diameter safe-circle footprint.
 List<int> iconPng(
   int size, {
   IconStyle style = IconStyle.favicon,
@@ -83,11 +84,7 @@ List<int> iconPng(
 }) {
   if (size < 1 || size > 2048) throw ArgumentError.value(size, 'size');
   const samples = 4;
-  final opaque = style == IconStyle.maskable || style == IconStyle.store;
-  final raster = _Raster(
-    size * samples,
-    opaque ? (dark ? brandDarkSurface : brandLightSurface) : 0,
-  );
+  final raster = _Raster(size * samples);
   final ink = dark ? brandPaper : brandInk;
   final accent = dark ? brandDarkLavender : brandLavender;
   final scale = switch (style) {
@@ -98,41 +95,41 @@ List<int> iconPng(
   };
   math.Point<double> transform(math.Point<double> p) =>
       math.Point((p.x - 50) * scale + 50, (p.y - 50) * scale + 50);
-  final points = <math.Point<double>>[const math.Point(20, 19)];
-  for (final c in wrapperCurves) {
-    final start = points.last;
-    for (var step = 1; step <= 16; step++) {
-      final t = step / 16;
-      final u = 1 - t;
-      points.add(
-        math.Point(
-          u * u * u * start.x +
-              3 * u * u * t * c[0] +
-              3 * u * t * t * c[2] +
-              t * t * t * c[4],
-          u * u * u * start.y +
-              3 * u * u * t * c[1] +
-              3 * u * t * t * c[3] +
-              t * t * t * c[5],
-        ),
-      );
+  for (final band in cradleBands) {
+    final points = <math.Point<double>>[math.Point(band.x, band.y)];
+    for (final c in band.curves) {
+      final start = points.last;
+      for (var step = 1; step <= 24; step++) {
+        final t = step / 24;
+        final u = 1 - t;
+        points.add(
+          math.Point(
+            u * u * u * start.x +
+                3 * u * u * t * c[0] +
+                3 * u * t * t * c[2] +
+                t * t * t * c[4],
+            u * u * u * start.y +
+                3 * u * u * t * c[1] +
+                3 * u * t * t * c[3] +
+                t * t * t * c[5],
+          ),
+        );
+      }
     }
+    raster.polygon(points.map(transform).toList(), ink);
   }
-  final outline = points.map(transform).toList();
-  final stroke = style == IconStyle.favicon
-      ? math.max(wrapperStroke, 160 / size)
-      : wrapperStroke;
-  raster.stroke(outline, stroke * scale, ink);
-  raster.polygon(
-    _roundedRect(
-      wrapperCore.left,
-      wrapperCore.top,
-      wrapperCore.width,
-      wrapperCore.height,
-      wrapperCoreRadius,
-    ).map(transform).toList(),
+  raster.stroke(
+    cradleNodes.map((node) => transform(math.Point(node.x, node.y))).toList(),
+    cradleLinkWidth * scale,
     accent,
   );
+  for (final node in cradleNodes) {
+    raster.circle(
+      transform(math.Point(node.x, node.y)),
+      node.radius * scale,
+      accent,
+    );
+  }
   final pixels = BytesBuilder();
   for (var y = 0; y < size; y++) {
     pixels.addByte(0); // PNG filter: none.
@@ -153,7 +150,7 @@ List<int> iconPng(
         alpha == 0 ? 0 : (red / alpha).round(),
         alpha == 0 ? 0 : (green / alpha).round(),
         alpha == 0 ? 0 : (blue / alpha).round(),
-        if (!opaque) (alpha / (samples * samples)).round(),
+        (alpha / (samples * samples)).round(),
       ]);
     }
   }
@@ -162,7 +159,7 @@ List<int> iconPng(
     ..setUint32(0, size)
     ..setUint32(4, size)
     ..setUint8(8, 8)
-    ..setUint8(9, opaque ? 2 : 6);
+    ..setUint8(9, 6);
   void chunk(String name, List<int> content) {
     final payload = [...ascii.encode(name), ...content];
     final length = ByteData(4)..setUint32(0, content.length);
@@ -190,40 +187,10 @@ int crc32(List<int> bytes) {
   return (crc ^ 0xffffffff) & 0xffffffff;
 }
 
-List<math.Point<double>> _roundedRect(
-  double x,
-  double y,
-  double width,
-  double height,
-  double radius,
-) {
-  final points = <math.Point<double>>[];
-  final centers = [
-    math.Point(x + width - radius, y + radius),
-    math.Point(x + width - radius, y + height - radius),
-    math.Point(x + radius, y + height - radius),
-    math.Point(x + radius, y + radius),
-  ];
-  for (var corner = 0; corner < 4; corner++) {
-    for (var step = 0; step <= 12; step++) {
-      final angle = (corner - 1 + step / 12) * math.pi / 2;
-      points.add(
-        math.Point(
-          centers[corner].x + radius * math.cos(angle),
-          centers[corner].y + radius * math.sin(angle),
-        ),
-      );
-    }
-  }
-  return points;
-}
-
 /// Small scanline rasterizer for the canonical filled path and rounded stroke.
 /// It is generation tooling only; Flutter paints the original cubic curves.
 class _Raster {
-  _Raster(this.size, int background) : pixels = Uint32List(size * size) {
-    pixels.fillRange(0, pixels.length, background);
-  }
+  _Raster(this.size) : pixels = Uint32List(size * size);
   final int size;
   final Uint32List pixels;
 
@@ -261,8 +228,8 @@ class _Raster {
 
   void stroke(List<math.Point<double>> points, double width, int color) {
     final radius = width / 2;
-    for (var i = 0; i < points.length; i++) {
-      final a = points[i], b = points[(i + 1) % points.length];
+    for (var i = 0; i + 1 < points.length; i++) {
+      final a = points[i], b = points[i + 1];
       final dx = b.x - a.x, dy = b.y - a.y;
       final length = math.sqrt(dx * dx + dy * dy);
       if (length > 0) {
@@ -274,16 +241,21 @@ class _Raster {
           math.Point(a.x - ox, a.y - oy),
         ], color);
       }
-      final cx = a.x * size / 100, cy = a.y * size / 100;
-      final r = radius * size / 100;
-      final top = (cy - r).floor().clamp(0, size);
-      final bottom = (cy + r).ceil().clamp(0, size);
-      for (var y = top; y < bottom; y++) {
-        final d = y + .5 - cy;
-        if (d.abs() > r) continue;
-        final half = math.sqrt(r * r - d * d);
-        _span(y, cx - half, cx + half, color);
-      }
+      circle(a, radius, color);
+    }
+    if (points.isNotEmpty) circle(points.last, radius, color);
+  }
+
+  void circle(math.Point<double> center, double radius, int color) {
+    final cx = center.x * size / 100, cy = center.y * size / 100;
+    final r = radius * size / 100;
+    final top = (cy - r).floor().clamp(0, size);
+    final bottom = (cy + r).ceil().clamp(0, size);
+    for (var y = top; y < bottom; y++) {
+      final d = y + .5 - cy;
+      if (d.abs() > r) continue;
+      final half = math.sqrt(r * r - d * d);
+      _span(y, cx - half, cx + half, color);
     }
   }
 }

@@ -1,0 +1,217 @@
+name: 📦 Packages and release
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'bugfix/**', 'hotfix/**', 'release/**']
+    tags: ['[0-9]*.[0-9]*.[0-9]*']
+  pull_request:
+    branches: [main, develop, 'feature/**', 'bugfix/**', 'hotfix/**', 'release/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wfformcomp-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  security:
+    uses: $/.github/workflows/security.yml
+  linux:
+    name: Linux package
+    needs: security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.38.10'
+          channel: stable
+          cache: true
+      - name: Check release identity
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="$(sed -n 's/^version: //p' pubspec.yaml)"
+          [[ "$GITHUB_REF_NAME" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$GITHUB_REF_NAME" = "$version"
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Resolve pinned dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Verify application and companion
+        run: bash tool/ci-step.sh "🧪 Release verification" make verify
+      - name: Build Linux companion and public web bundle
+        run: bash tool/ci-step.sh "📦 Versioned packages" make release.package
+      - name: Test the extracted Linux package
+        run: |
+          mkdir -p .local/companion-package
+          tar -xzf build/companion/wfformcomp-*-linux-x64.tar.gz -C .local/companion-package
+          export WFFORMCOMP_TEST_BINARY="$PWD/.local/companion-package/wfformcomp"
+          export WFFORMCOMP_TEST_WEB_ROOT="$PWD/.local/companion-package/web"
+          dart run companion/test/cli_test.dart
+      - name: Retain Linux package and metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: companion-linux-x64
+          path: |
+            build/companion/wfformcomp-*-linux-x64.tar.gz
+            build/companion/wfformcomp-*-linux-x64.tar.gz.sha256
+            build/companion/wfformcomp-*-linux-x64.json
+          if-no-files-found: error
+      - name: Retain versioned web release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-release
+          path: build/release/*
+          if-no-files-found: error
+      - name: Share verified public web assets with Windows
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: public-web
+          path: build/publish-web
+          if-no-files-found: error
+
+  windows:
+    name: Windows package
+    needs: linux
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.38.10'
+          channel: stable
+          cache: true
+      - name: Resolve pinned dependencies
+        run: |
+          flutter pub get --enforce-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dart pub get --offline --enforce-lockfile -C companion
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check and test native Windows runtime
+        run: |
+          dart analyze companion --fatal-infos
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($suite in @('server', 'stdio', 'static_host', 'session', 'process_group', 'process_runner', 'private_file', 'cli', 'uncertainty', 'stdio_sessions', 'example_playground')) {
+            dart run "companion/test/${suite}_test.dart"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          flutter test test/deploy/companion_package_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Download verified public web build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: public-web
+          path: build/publish-web
+      - name: Build Windows executable and ZIP twice to verify repeatability
+        run: |
+          dart run tool/build_companion.dart --web-root build/publish-web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dart run tool/build_companion.dart --web-root build/publish-web
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test extracted Windows executable, credentials, tools and web host
+        run: |
+          $archive = (Get-ChildItem build/companion/wfformcomp-*-windows-x64.zip).FullName
+          if ($archive -is [array]) { throw 'Expected exactly one Windows package' }
+          $expected = ((Get-Content "$archive.sha256" -Raw).Trim() -split ' ')[0]
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Archive checksum mismatch' }
+          Expand-Archive -LiteralPath $archive -DestinationPath .local/companion-package
+          $env:WFFORMCOMP_TEST_BINARY = (Resolve-Path .local/companion-package/wfformcomp.exe).Path
+          $env:WFFORMCOMP_TEST_WEB_ROOT = (Resolve-Path .local/companion-package/web).Path
+          dart run companion/test/cli_test.dart
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain Windows package and metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: companion-windows-x64
+          path: |
+            build/companion/wfformcomp-*-windows-x64.zip
+            build/companion/wfformcomp-*-windows-x64.zip.sha256
+            build/companion/wfformcomp-*-windows-x64.json
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [linux, windows]
+    if: github.repository == 'consciontologic/wfform' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out release notes
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download native-tested packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: companion-*
+          merge-multiple: true
+          path: build/companion
+      - name: Download versioned web package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: web-release
+          path: build/release
+      - name: Set up Flutter for checked publication tooling
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.38.10'
+          channel: stable
+          cache: false
+      - name: 📝 Select this version's release notes
+        run: dart run tool/release_notes.dart > build/release-notes.md
+      - name: 🚀 Publish verified packages for the existing semantic tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/companion/* build/release/* \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file build/release-notes.md
+      - name: 🎉 Release summary
+        run: |
+          printf '## 🎉 Released %s\n\n📦 Web · 🐧 Linux x64 · 🪟 Windows x64\n\nSHA-256 checksums and metadata accompany every download. macOS remains planned.\n' "$GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+
+  website:
+    name: Publish website
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out publication tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download verified static website
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: public-web
+          path: build/publish-web
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: '3.38.10'
+          channel: stable
+          cache: false
+      - name: 🌐 Publish flat website to consciontologic/wfform.com
+        id: publish_site
+        env:
+          WFFORM_DEPLOY_TOKEN: ${{ secrets.WFFORM_DEPLOY_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash deploy/scripts/publish-website.sh build/publish-web
+      - name: 🌐 Website status
+        env:
+          PUBLICATION_STATUS: ${{ steps.publish_site.outputs.status }}
+        run: |
+          printf '## 🌐 Website publication\n\nStatus: **%s**\n\nOnly the current main commit can replace wfform.com. Older tags keep their downloadable release without rolling back the site.\n' "$PUBLICATION_STATUS" >> "$GITHUB_STEP_SUMMARY"

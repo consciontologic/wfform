@@ -12,7 +12,7 @@
 
 ## Latest completed work
 
-The [roadmap](../planning/ROADMAP.md) records the completed six-part migration/scaffold/ignored-key/documentation/container/rendering request. The [current report](../reports/workspace-rendering-verification.md) records 321 deterministic tests, six real IndexedDB checks, seven framework operations tests, release builds and actual Docker/browser checks with explicit limitations. The coordinating parent owns final tracking/staging. Subagents return evidence and preserve concurrent edits; no agent commits or pushes.
+The [roadmap](../planning/ROADMAP.md) records the completed six-part migration/scaffold/ignored-key/documentation/container/rendering request. The [current report](../reports/workspace-rendering-verification.md) records 321 deterministic tests, six real IndexedDB checks, seven framework operations tests, release builds and actual Docker/browser checks with explicit limitations. The coordinating parent owns final tracking/staging and now publishes validated Gitflow work branches through `make git` under AGENTS.md §2. Subagents return evidence and preserve concurrent edits; `main`/`develop` change only through reviewed PRs.
 
 The subsequent [workflow and identity follow-up](../reports/workflow-identity-verification.md) consolidated the Makefile, enabled and verified CodeGraph, changed Settings to a gear emoji and renamed the Dart package to `com_wfform`. Its final gates passed 321 Flutter tests, six real IndexedDB checks and 13 repository-operation tests, plus real MCP queries and release/browser/header checks. Earlier reports remain dated evidence.
 
@@ -263,3 +263,101 @@ passed CI 37746395818; website `97eb321` passed Pages 37746729176. Seven
 published release/JS/HTML/manifest files match the verified local build. Public
 Save & update moved 0.2.3 to 0.2.4, with the selected model retained; the phone
 viewport shows Models and the bottom version/GitHub/Info row.
+
+## Parameters, MCP and wfformcomp — 2026-10-09
+
+Phase 21 adds model-aware parameter controls with omitted remote defaults,
+optional HTTP MCP connections and the optional Dart companion **wfformcomp**.
+The companion runs explicitly configured commands and allowlisted stdio MCP
+servers, and can host the same public Flutter build. Browser inference remains
+direct; ordinary chat needs no companion. Tokens are memory-only for MCP,
+connections never reconnect automatically, every call requires approval, and
+uncertain actions are never replayed. Complete tool/reasoning exchanges and
+per-conversation overrides survive history/export/restore. Parameter/tool-only
+unsent work is saved as a draft, without promoting it to a sent chat.
+
+Actual Liquid and Cohere free routes each passed ordinary chat, independent
+HTTP MCP and compiled CLI companion loops. Real CodeGraph reuse, browser
+approval/nonce/history checks and nginx PWA update passed. Final gates passed
+596 tests (four opt-in live skips), eight companion suites, seven actual Chromium
+storage tests and 14 operation tests. The Linux x64 archive contains the current
+web build and is 16.3 MB; Windows/macOS, OAuth/legacy MCP and public publication
+are not claimed. Temporary test credentials were removed; GitHub credentials
+were never used. No source commit/push or public release was performed. See the
+[dated report](../reports/connected-tools-verification.md), [tool guide](../tools.md)
+and [companion guide](../wfformcomp.md) for exact evidence and operating limits.
+
+## Planned companion installation — 2026-10-09
+
+The user requires separate Linux, Windows and macOS downloads and easy
+installation, with macOS explicitly deferred. [Phase 22](../planning/ROADMAP.md#phase-22--companion-platform-downloads-and-easy-installation)
+records future work: graphical Linux/Windows installation and launch, automatic
+private setup/browser opening, explicit pairing without manual tokens/ports,
+and UI tool configuration. Users must not need a terminal, JSON editing or a
+developer SDK. Native platform tests, process-tree cleanup, protected settings,
+upgrade/uninstall and signing evidence gate availability. This is a plan only;
+the existing Linux archive remains a manually configured developer preview.
+
+## Readable data, tools guide and Windows build — 2026-10-09
+
+Phase 23 adds shared JSON/JSONL formatting, syntax-highlighted source and decoded
+nested tool text across previews, approvals, saved tool messages and diagnostics.
+Exact original content remains available for copy/export and stored requests.
+Tools now opens a bundled beginner guide with CodeGraph and CLI examples and a
+companion setup page. Windows x64 executable/ZIP packaging, Job Object cleanup,
+private token ACLs and native CI acceptance are implemented. Native Windows
+execution still needs its runner; macOS and graphical installation remain planned.
+
+The final local gate passed 613 Flutter tests (four opt-in live skips), ten
+companion suites, formatting, analyzers and repository checks. The final Linux
+archive and extracted executable passed authentication/web-hosting/cleanup
+checks. The preview updated to release
+`2625e134a3a3fd0fe1843382fd41140cf2aa99190c950b07c293b62d89f4888e`,
+preserving the 16-message demo and other chats. Final guide/diagnostic browser
+checks passed; one earlier unreproduced scheduler event and the unrelated
+publication-failure breadcrumb remain explicitly distinguished in the
+[verification report](../reports/readable-tools-windows-verification.md).
+
+
+## Open Cradle identity — 2026-10-09
+
+Phase 24 applies the approved open folded band with linked lavender AI nodes to
+the app, ten companion glyphs, public pages, browser tabs and all 40 platform
+exports. The artwork uses transparent exterior/interior space in both themes;
+opaque platform formats retain non-white tinted surfaces. Shared deterministic
+geometry keeps Flutter and exported PNGs consistent down to 16px.
+
+The local gate passed 616 Flutter tests (four existing opt-in live skips), ten
+companion suites, formatting, analyzers and repository checks. The public build
+and actual local PWA Save & update flow loaded release
+`fb8bcd7a7bfca069fd1a8ac9ad1264d51862023164085f5d14c749890a3553d6`.
+Light/dark and 390×844 at 200% text were checked; all 14 web branding files matched
+source/build/manifest through root and immutable HTTP URLs. CodeGraph's smoke
+query limit was increased from five to 100 to include all existing callers;
+both relationship assertions and all nine tooling checks pass. Prior staged
+tools work is preserved. Publication and native binaries are not included.
+See the [branding report](../reports/open-cradle-branding-verification.md).
+
+
+The same-day no-background clarification supersedes opaque platform exceptions:
+all 40 exported icons now have alpha-zero exterior/interior space, including
+iOS and legacy maskable files. The manifest selects only transparent general-purpose
+icons; all ten in-app glyphs already had transparent backgrounds. The revised
+local release is `a66200a09fec3b0b664820538db4cc06c303d12850e8937e0c90768864fb314c`.
+See the report's clarification section for independent alpha and update evidence.
+
+## Desktop tools and 1.0.0 delivery (2026-10-09)
+
+Current version is plain 1.0.0 on codex/release/1.0.0. Phones/tablets keep ordinary
+chat but cannot connect/dispatch tools; narrow desktop windows retain them.
+Copy controls are limited to essential message/source/report actions. The
+runnable examples/tools_playground includes stdio MCP and a fixed CLI program.
+Flat PWA assets replace physical release directories while internal hashes and
+legacy browser-cache recovery remain. See [the verification report](../reports/release-100-verification.md)
+and [Gitflow](../guides/GITFLOW.md) for exact tests, local packages, remote branch
+protection/metadata and outstanding Copilot/native Windows/publication gates.
+The local coordinating parent now publishes validated Gitflow work branches
+through `make git`; assigned Copilot cloud tasks use their managed platform
+branches. `main` and `develop` change only through reviewed PRs. An eligible
+independent reviewer supplies required approval, then plain SemVer-tag CI
+publishes after merge; a Copilot PR requester cannot supply its approving review.

@@ -1,0 +1,13 @@
+{
+  "checked_on": "2026-10-09",
+  "preferred_model": "gpt-5.3-codex",
+  "allowed_models": [
+    "gpt-5.3-codex"
+  ],
+  "allow_auto": false,
+  "allow_paid_fallback": false,
+  "pricing_source": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
+  "availability_source": "https://docs.github.com/en/rest/agent-tasks/agent-tasks",
+  "note": "Lowest published rate among active REST-supported models reviewed on 2026-10-09: USD 1.75 input / 0.175 cached input / 14 output per million tokens. A live read-only task completed with the requested model reported as sweagent-capi:gpt-5.3-codex. An earlier gpt-6-luna request failed; it is not an allowed API model. Prices and availability can change; no Auto or automatic pricier fallback. Total task cost depends on usage.",
+  "verification_task": "https://github.com/consciontologic/wfform/tasks/72913e53-5a2c-46f9-9239-24744f015df9"
+}

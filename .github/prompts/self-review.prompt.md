@@ -1,11 +1,11 @@
 ---
 agent: agent
-description: Self-review the staged diff before handing off to the human.
+description: Self-review the staged diff before guarded work-branch publication.
 ---
 
 # Self-review staged diff
 
-Before the human runs `make git`, audit your own staged change:
+Before the coordinating parent runs `make git`, audit the staged change:
 
 1. Run `git diff --cached` and read it linearly.
 2. For each touched file, verify:

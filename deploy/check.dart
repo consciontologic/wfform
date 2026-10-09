@@ -86,18 +86,17 @@ Future<void> main(List<String> args) async {
     final version = manifest['version'] as String;
     final assets = manifest['assets'] as Map;
     for (final entry in assets.entries) {
-      final response = await read('/__releases/$version/${entry.key}');
+      final response = await read('/${entry.key}');
       final metadata = entry.value as Map;
       if (response.status != 200 ||
           response.body.length != metadata['bytes'] ||
           sha256(response.body) != metadata['sha256']) {
-        throw StateError(
-          'Served immutable asset failed integrity: ${entry.key}',
-        );
+        throw StateError('Served flat asset failed integrity: ${entry.key}');
       }
-      if (response.headers['cache-control'] !=
-          'public, max-age=31536000, immutable') {
-        throw StateError('Immutable cache policy missing.');
+      if (response.headers['cache-control'] != 'no-store') {
+        throw StateError(
+          'Flat assets must use no-store; verified offline caching belongs to the worker.',
+        );
       }
       if ((entry.key as String).endsWith('.wasm') &&
           response.headers['content-type'] != 'application/wasm') {
@@ -105,7 +104,7 @@ Future<void> main(List<String> args) async {
       }
     }
     stdout.writeln(
-      'PASS $base: health, enforced security headers, error/method policy, config no-store, ${assets.length} immutable assets with SHA-256, WASM MIME. Release $version',
+      'PASS $base: health, enforced security headers, error/method policy, config no-store, ${assets.length} flat assets with SHA-256, WASM MIME. Release $version',
     );
     stdout.writeln(
       'Runtime configuration: ${config.status == 404 ? 'absent (session key)' : 'explicitly mounted; contents not logged'}.',
@@ -132,7 +131,7 @@ void validateHeaders(Map<String, String> headers, {required bool https}) {
     "default-src 'none'",
     "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com 'sha256-eT57Z1ypzgtV4l0KJ9uVPW8NoWW0r07qRLOWTCZONMo=' 'sha256-ceOprgawj2RQrm546DhERntcne7eurN77Kn5b5l2zns='",
     "script-src-attr 'none'",
-    "connect-src 'self' https://openrouter.ai https://fonts.gstatic.com/s/ https://www.googletagmanager.com https://*.google-analytics.com https://www.google.com https://analytics.google.com",
+    "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
     "font-src 'self' data: https://fonts.gstatic.com/s/",
     "frame-ancestors 'none'",
     "object-src 'none'",
@@ -141,9 +140,17 @@ void validateHeaders(Map<String, String> headers, {required bool https}) {
       throw StateError('CSP directive missing: $directive');
     }
   }
-  if (csp.contains("'unsafe-eval'") ||
-      csp.contains('https:;') ||
-      csp.replaceAll('https://*.google-analytics.com', '').contains('*')) {
+  // HTTPS/custom loopback connections are intentionally permitted for MCP.
+  // All other directives keep their narrow source policy.
+  final withoutConnections = csp.replaceAll(
+    "connect-src 'self' https: http://localhost:* http://127.0.0.1:*",
+    '',
+  );
+  if (withoutConnections.contains("'unsafe-eval'") ||
+      withoutConnections.contains('https:;') ||
+      withoutConnections
+          .replaceAll('https://*.google-analytics.com', '')
+          .contains('*')) {
     throw StateError('CSP unexpectedly broad.');
   }
   final permissions = (headers['permissions-policy'] ?? '')

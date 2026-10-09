@@ -36,6 +36,14 @@ Contract: [chat and health](../chat.md). Tests: [health tests](../../test/models
 
 Contracts: [chat](../chat.md), [multimodal](../multimodal.md), [rendering](../file-rendering.md). Tests: [chat tests](../../test/chat/), [picker tests](../../test/shared/attachment_picker_test.dart), [composer tests](../../test/presentation/composer_test.dart).
 
+## Parameters and connected tools
+
+[request_parameters.dart](../../lib/features/parameters/request_parameters.dart) owns the reviewed parameter definitions and model-aware validation. Omission means remote defaults; explicit zero/false values survive. Routing, payment safeguards and tool schemas stay app-managed.
+
+[mcp_client.dart](../../lib/features/tools/mcp_client.dart) owns bounded Streamable HTTP discovery/calls, protocol and session handling. [tools.dart](../../lib/features/tools/tools.dart) maps selected qualified names to connections and validates approved dispatch. [ToolConnections](../../lib/app/tool_connections.dart) persists endpoint metadata while keeping bearer tokens in memory; it does not reconnect automatically. ChatController owns the bounded inference/tool loop and whole-exchange history; widgets supply the approval decision.
+
+The optional [companion](../../companion/) owns authenticated loopback access, fixed argv commands, stdio MCP processes and guarded static hosting. It is a separate Dart executable, not browser code. [build_companion.dart](../../tool/build_companion.dart) packages only the active public release, with checksums and no local configuration. Contracts: [tools](../tools.md), [wfformcomp](../wfformcomp.md). Tests: [parameters](../../test/parameters/), [tools](../../test/tools/), [companion](../../companion/test/), and the explicitly opt-in [live suite](../../test/live/connected_tools_live_test.dart).
+
 ## Documents and reply rendering
 
 [document_format.dart](../../lib/features/documents/document_format.dart) maps common extensions and extensionless filenames to display formats and strictly validates bounded UTF-8 content. [code_highlighter.dart](../../lib/features/documents/code_highlighter.dart) maps explicit language labels to syntax spans; it does not guess a language or execute source. [document_view.dart](../../lib/features/documents/document_view.dart) renders Markdown and source, coalesces streaming previews, bounds rich rendering and provides paged source/copy access. Chat attachments retain the original bytes; the request adapter submits text files as named text content with ordinary text-model price guards.

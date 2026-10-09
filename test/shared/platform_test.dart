@@ -68,19 +68,27 @@ void main() {
     },
   );
   test(
-    'manifest and original icons include installable sizes and maskable variants',
+    'manifest selects transparent icons without maskable background compositing',
     () {
       final manifest =
           jsonDecode(File('web/manifest.json').readAsStringSync()) as Map;
       expect(manifest['display'], 'standalone');
       expect(manifest['start_url'], './');
+      expect(manifest['id'], './');
+      expect(manifest['scope'], './');
+      expect(
+        (manifest['icons'] as List).map((icon) => icon['sizes']),
+        unorderedEquals(['192x192', '512x512']),
+      );
       for (final icon in manifest['icons'] as List) {
+        expect(icon['purpose'], 'any');
         final bytes = File('web/${icon['src']}').readAsBytesSync();
         expect(bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
         final header = ByteData.sublistView(bytes);
         final size = int.parse((icon['sizes'] as String).split('x').first);
         expect(header.getUint32(16), size);
         expect(header.getUint32(20), size);
+        expect(header.getUint8(25), 6, reason: 'Icon source retains PNG alpha');
       }
       expect(icons.crc32(ascii.encode('123456789')), 0xcbf43926);
     },

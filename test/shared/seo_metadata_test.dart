@@ -113,7 +113,8 @@ void main() {
         final imagePath = image.path.substring(siteUri.path.length);
         expect(File('web/$imagePath').existsSync(), isTrue);
         expect(meta(html, 'twitter:image'), image.toString());
-        expect(meta(html, 'og:image:alt'), isNotEmpty);
+        expect(meta(html, 'og:image:alt'), 'wfform Open Cradle logo');
+        expect(meta(html, 'twitter:image:alt'), 'wfform Open Cradle logo');
       }
     },
   );
@@ -320,8 +321,11 @@ void main() {
       expect(File('web/github-mark.svg').existsSync(), isFalse);
       expect(File('web/site.css').existsSync(), isTrue);
       expect(
-        File('pubspec.yaml').readAsStringSync(),
-        contains('version: $appVersion+'),
+        RegExp(
+          r'^version: (.+)$',
+          multiLine: true,
+        ).firstMatch(File('pubspec.yaml').readAsStringSync())?.group(1),
+        appVersion,
       );
     },
   );

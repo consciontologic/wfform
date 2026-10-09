@@ -1,8 +1,35 @@
 # Text files and rendered responses
 
-wfform renders assistant responses and local text attachments using Flutter widgets. Assistant replies support GitHub-flavored Markdown: headings, emphasis, lists, tables, block quotes, inline code and fenced code. A **Source** toggle preserves access to the original Markdown; **Copy source** copies the full response, and **Copy code** copies the contents of a code block. Reasoning remains a separate collapsible plain-text area. User prompts remain literal text.
+wfform renders assistant responses and local text attachments using Flutter widgets. Assistant replies support GitHub-flavored Markdown: headings, emphasis, lists, tables, block quotes, inline code and fenced code. A **Source** toggle preserves access to the original Markdown; the message’s copy action copies the full response, and **Copy code** copies a fenced code block. Reasoning remains separate and collapsible. Ordinary user prompts remain literal text; complete JSON objects/arrays in messages or reasoning receive the same readable data preview as other structured output.
 
 Select **Add files** with a text-compatible free model, choose a UTF-8 file, then tap its filename chip to preview it. The dialog shows its original filename (including extension), detected format and size. Markdown files have rendered/source modes; code and configuration files show source with named syntax highlighting. Unknown extensions and extensionless UTF-8 files remain usable as plain text. Filename detection controls presentation, not content execution or API modality.
+
+## Readable data throughout the app
+
+Tool approval popups, tool requests/results, expanded diagnostic records, offline
+cache reports, JSON parameter previews, response code fences and file previews
+share one safe viewer. Valid JSON is indented automatically; JSON Lines displays
+each record separately. Whitespace-only formatting preserves number spelling,
+key order, duplicate keys and string escapes. YAML and other source grammars
+retain their original indentation, comments and block scalars with highlighting.
+There is no promise of a formatter for every possible binary/file format.
+
+Nested JSON string values containing code, multiline stdout or MCP text appear
+in additional labeled sections with real line breaks. Nested JSON can receive
+its own formatted view; code uses an explicit language/filename hint when one
+is supplied. Decoded strings remain source text, never executable HTML or
+Markdown. **Source**/**Raw** retains the original content;
+display formatting never changes requests, saved conversations or exports.
+Structured parameter editors keep the text being typed and offer a separate
+**Readable preview**. Copy buttons are reserved for full messages, fenced code,
+one full-file source action and complete diagnostic/cache reports. Data and
+decoded previews remain selectable without a second row of copy shortcuts.
+
+Formatting and decoded extraction are limited to 64,000 characters, nesting
+depth 32 and 12 decoded sections. Malformed or over-budget data falls back to
+source; large decoded sections page independently. Visible source pages have
+explicit screen-reader labels and remain selectable. Ordinary prose is not
+guessed to be YAML or code.
 
 ## Formats
 

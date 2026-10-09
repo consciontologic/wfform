@@ -27,6 +27,8 @@ LocalStore createSessionStore() => implementation.createSessionStore();
 
 /// Browser capabilities stay behind this interface for future platform ports.
 abstract class PlatformBridge extends ChangeNotifier {
+  /// Device capability, not viewport width. Compact desktop windows keep tools.
+  bool get toolsAvailable => true;
   bool get online;
   bool get updateAvailable;
   bool get installAvailable;
@@ -63,3 +65,31 @@ abstract class PlatformBridge extends ChangeNotifier {
 }
 
 PlatformBridge createPlatformBridge() => implementation.createBridge();
+
+const desktopToolsExplanation =
+    'Tools work on a desktop computer, where wfform can connect to MCP servers '
+    'and wfformcomp. They are unavailable on phones and tablets. '
+    'Chatting works as usual, and your saved tool settings stay ready for your next desktop session.';
+
+/// iPadOS can advertise a Macintosh user agent in desktop browsing mode.
+/// Chrome's desktop-mode Android tablets may advertise Linux instead. Touch-only
+/// coarse input catches those; a touch laptop with a mouse/trackpad stays enabled.
+bool browserSupportsTools({
+  required String userAgent,
+  required String platform,
+  required int maxTouchPoints,
+  bool primaryPointerCoarse = false,
+  bool anyFinePointer = true,
+}) {
+  if (RegExp(
+    r'Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle|PlayBook',
+    caseSensitive: false,
+  ).hasMatch(userAgent)) {
+    return false;
+  }
+  final mac =
+      platform.toLowerCase().startsWith('mac') ||
+      userAgent.contains('Macintosh');
+  if (mac && maxTouchPoints > 1) return false;
+  return !(maxTouchPoints > 0 && primaryPointerCoarse && !anyFinePointer);
+}

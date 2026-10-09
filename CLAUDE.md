@@ -23,10 +23,11 @@ domain rules.
 
 ## ⚡ Short summary if you read nothing else
 
-- **You never `git commit` or `git push`.** Append a row to
+- **Publish validated Gitflow work through `make git`.** Append a row to
   [`docs/tracking/tracking.csv`](docs/tracking/tracking.csv) via
   [`xops/agent/tracking_append.sh`](xops/agent/tracking_append.sh), then
-  `git add -A`, then stop. The human runs `make git`.
+  `git add -A`, inspect `make git.dry`, then run `make git` on the work branch.
+  Never commit or push directly to `main`/`develop`; use reviewed PRs.
 - **Every code change ships its test in the same commit.** Skipping or
   weakening a test to make a gate green is a hard violation.
 - **Do not run system-level commands** (`apt`, `systemctl`, global git
@@ -69,3 +70,12 @@ Across Sonnet, Opus, and Haiku the same biases tend to show up:
 If anything in this repo seems to invite shortcutting (skipping a test,
 silencing a warning, force-pushing, installing a system package without
 asking), assume the rule is intentional and ask before bypassing it.
+
+## 🌿 Gitflow delivery
+
+Read [the delivery workflow](docs/guides/GITFLOW.md) before starting a feature, bugfix,
+hotfix or release. Use the appropriate isolated work branch; keep main/develop
+free of direct implementation. Local coordinating agents publish validated work
+branches through `make git`; delegated agents return evidence without publishing.
+GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
+low-cost model; human review/merge and CI release gates still apply.

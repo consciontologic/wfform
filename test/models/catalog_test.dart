@@ -673,6 +673,79 @@ void main() {
         ..['supported_parameters'] = ['reasoning', 'max_tokens'];
       expect(FreeModel.fromJson(reordered).signature, model.signature);
     });
+
+    test(
+      'reasoning metadata survives caching and invalidates capability signature',
+      () {
+        final metadata = <String, dynamic>{
+          'mandatory': true,
+          'supported_efforts': ['high', 'medium'],
+          'default_effort': 'high',
+          'default_enabled': true,
+          'supports_max_tokens': true,
+        };
+        final raw = fixture()..['reasoning'] = metadata;
+        final model = FreeModel.fromJson(raw);
+        expect(model.toJson()['reasoning'], metadata);
+        expect(FreeModel.fromJson(model.toJson()).signature, model.signature);
+        final reordered = fixture()
+          ..['reasoning'] = {
+            'supports_max_tokens': true,
+            'default_enabled': true,
+            'default_effort': 'high',
+            'supported_efforts': ['medium', 'high'],
+            'mandatory': true,
+          };
+        expect(FreeModel.fromJson(reordered).signature, model.signature);
+        for (final change in [
+          {'mandatory': false},
+          {
+            'supported_efforts': ['medium'],
+          },
+          {'default_effort': 'medium'},
+          {'default_enabled': false},
+          {'supports_max_tokens': false},
+        ]) {
+          expect(
+            FreeModel.fromJson(
+              fixture()..['reasoning'] = {...metadata, ...change},
+            ).signature,
+            isNot(model.signature),
+          );
+        }
+        expect(
+          FreeModel.fromJson(
+            fixture()..['reasoning'] = {'mandatory': false},
+          ).toJson()['reasoning'],
+          {'mandatory': false},
+        );
+        expect(
+          FreeModel.fromJson(
+            fixture()..['reasoning'] = {'supported_efforts': null},
+          ).toJson()['reasoning'],
+          {'supported_efforts': null},
+        );
+      },
+    );
+
+    test('malformed reasoning restrictions are quarantined', () {
+      for (final metadata in [
+        [],
+        {'mandatory': 'yes'},
+        {'default_enabled': 1},
+        {'supports_max_tokens': 'yes'},
+        {'supported_efforts': 'high'},
+        {
+          'supported_efforts': [2],
+        },
+        {'default_effort': false},
+      ]) {
+        expect(
+          () => FreeModel.fromJson(fixture()..['reasoning'] = metadata),
+          throwsA(isA<AppFailure>()),
+        );
+      }
+    });
   });
 
   group('Catalog lifecycle', () {

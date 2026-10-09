@@ -25,7 +25,7 @@ There is no model fallback list, retry loop or paid recovery route. Missing opti
 
 Catalog presence is not responsiveness. Explicit recheck or stale/unknown selected-model preflight fetches `/models/{author}/{slug}/endpoints` if its separate metadata cache has expired, then sends only `Reply OK.` in a tiny inference request. Metadata defaults to a 30-minute TTL; responsiveness defaults to five minutes. Names, status and uptime are supplementary metadata; undocumented status numbers are not interpreted.
 
-The probe sends `max_tokens:16` only when advertised, leaves reasoning at the model's default, and closes its subscription after the first text/reasoning output. Otherwise its timeout still applies. It never forces reasoning off: some endpoints require it, as documented in [per-model reasoning options](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#discovering-per-model-reasoning-options), rechecked on **2026-10-07**. Reasoning and visible output share the token budget on most providers; a small probe need not produce a complete visible answer. Normal chat still enables reasoning when advertised. Local cancellation does not promise that the provider stops all upstream computation. No startup bulk probes occur.
+The probe sends `max_tokens:16` only when advertised, leaves reasoning at the model's default, and closes its subscription after the first text/reasoning output. Otherwise its timeout still applies. It never forces reasoning off: some endpoints require it, as documented in [per-model reasoning options](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#discovering-per-model-reasoning-options), rechecked on **2026-10-07**. Reasoning and visible output share the token budget on most providers; a small probe need not produce a complete visible answer. Normal chat leaves reasoning and generation settings unset unless the user supplies an override. Local cancellation does not promise that the provider stops all upstream computation. No startup bulk probes occur.
 
 At most two checks run concurrently, each model's in-flight check is deduplicated, and observations are bounded to 200 models. Forced rechecks still respect cooldown. Failures use capped exponential cooldown. `Retry-After` and recognized absolute `X-RateLimit-Reset` timestamps are minimum waits and may exceed the local cap. A platform rate-limit cooldown also blocks models with fresh observations. Admission happens before reserving an attempt: cooldown-blocked Retry adds neither messages nor requests. No background timers retry or resend content.
 
@@ -51,7 +51,7 @@ Content/reasoning deltas are published at most once per 32 ms interval, with an 
 
 Inference uses separate clocks: first useful output (90 s), useful-output idle (45 s), and overall inference (300 s). Heartbeats/metadata do not postpone first-output or idle deadlines. The overall cap bounds a continuously active stream. Tiny probes keep their separate 25-second limit. Ordinary GETs retain `requestTimeoutSeconds`. Terminal paths release phase timers and cancel owned transport work.
 
-Reasoning is enabled only when advertised. Returned plain reasoning or text/summary `reasoning_details` is shown separately. Encrypted reasoning is not reconstructed or replayed. Responses remain text; this app does not execute tool calls.
+Returned plain reasoning or text/summary `reasoning_details` is shown separately. Opaque reasoning details are preserved exactly for subsequent tool rounds. Tools are optional: the model requests a call, the user reviews it, the connected server executes it, and the result returns to the same model. See [parameters and tools](tools.md).
 
 ## Context and output budget
 
@@ -59,7 +59,7 @@ Context controls explicitly begin outgoing context at a chosen user turn while p
 
 Text estimates use approximately one token per three UTF-8 bytes plus message overhead; image input reserves 1,024 estimated tokens per file and other media 4,096. These are local planning heuristics, **not tokenizer measurements or guaranteed media costs**. Resolution, duration, pages, provider preprocessing and tokenizer can change actual usage substantially. Media uncertainty and unknown context limits remain visible. An estimated over-budget request is refused before acceptance/probing: shorten the draft, explicitly exclude older context, adjust the reserve or start anew.
 
-The default output reserve is 2,048 tokens (reduced to a quarter of a smaller reported context limit). Users may choose 16–32,768 tokens per conversation, constrained by a reported provider maximum. `max_tokens` is sent only when the model advertises support. Without that support the reserve is a planning estimate only; local response/phase limits remain active. Server usage never silently changes the user's context choice.
+The default output reserve is 2,048 tokens (reduced to a quarter of a smaller reported context limit). Users may choose 16–32,768 tokens per conversation, constrained by a reported provider maximum. The default reserve is a planning estimate only. `max_tokens` is sent only after the user explicitly sets an output limit and the model advertises support; local response/phase limits remain active. Server usage never silently changes the user's context choice.
 
 New typed configuration keys in `config/example.json`:
 
@@ -70,7 +70,7 @@ New typed configuration keys in `config/example.json`:
 | `streamOverallTimeoutSeconds` | 300 | Maximum total inference duration |
 | `endpointTtlSeconds` | 1800 | Provider-metadata freshness |
 | `quotaTtlSeconds` | 300 | On-demand quota freshness |
-| `maxOutputTokens` | 2048 | Default response reserve/cap when supported |
+| `maxOutputTokens` | 2048 | Default local context planning reserve |
 
 The overall timeout must cover both phase timeouts. Existing local configurations may omit these keys and receive defaults; API keys are untouched. Changing credentials via `copyWith` retains every timing/budget policy.
 

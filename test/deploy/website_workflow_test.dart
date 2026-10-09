@@ -3,6 +3,25 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('all Gitflow preparation PRs receive quality and package checks', () {
+    for (final file in ['web', 'security', 'companion']) {
+      final workflow = File('.github/workflows/$file.yml').readAsStringSync();
+      expect(
+        workflow,
+        contains(
+          "  pull_request:\n    branches: [main, develop, 'feature/**', 'bugfix/**', 'hotfix/**', 'release/**']",
+        ),
+      );
+    }
+    final release = File('.github/workflows/companion.yml').readAsStringSync();
+    expect(release, contains('git merge-base --is-ancestor'));
+    expect(release, contains(r'test "$GITHUB_REF_NAME" = "$version"'));
+    expect(release, contains('needs: [linux, windows]'));
+    expect(
+      File('.github/workflows/web.yml').readAsStringSync(),
+      isNot(contains('publish-website.sh')),
+    );
+  });
   late Directory scratch;
   late File calls;
   late Map<String, String> environment;
@@ -20,7 +39,7 @@ void main() {
     environment = {
       'PATH': '${scratch.path}:${Platform.environment['PATH']}',
       'GITHUB_ACTIONS': 'true',
-      'GITHUB_REF': 'refs/heads/main',
+      'GITHUB_REF': 'refs/tags/1.0.0',
       'GITHUB_EVENT_NAME': 'push',
       'GITHUB_SHA': 'fixture-source-sha',
       'GITHUB_REPOSITORY': 'consciontologic/wfform',

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../app/studio_state.dart';
 import '../app/theme.dart';
 import '../config/credential_preference.dart';
+import '../features/documents/document_view.dart';
 import '../shared/diagnostics.dart';
 import 'model_browser.dart';
 import 'selectable_surface.dart';
@@ -75,16 +76,7 @@ Future<void> openDiagnostics(
                           padding: const EdgeInsets.all(16),
                           child: Align(
                             alignment: Alignment.centerLeft,
-                            child: SelectableText(
-                              const JsonEncoder.withIndent('  ').convert(event),
-                              semanticsLabel: const JsonEncoder.withIndent(
-                                '  ',
-                              ).convert(event),
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 12,
-                              ),
-                            ),
+                            child: ReadableDataView(source: jsonEncode(event)),
                           ),
                         ),
                       ],
@@ -489,10 +481,9 @@ class _SettingsState extends State<_Settings> {
                             builder: (context) => AlertDialog(
                               title: const Text('Offline cache & startup'),
                               content: SingleChildScrollView(
-                                child: SelectableText(
-                                  report,
-                                  semanticsLabel: report,
-                                  style: const TextStyle(fontSize: 12),
+                                child: SizedBox(
+                                  width: 680,
+                                  child: ReadableDataView(source: report),
                                 ),
                               ),
                               actions: [

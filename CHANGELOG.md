@@ -1,12 +1,40 @@
-# Changelog
+# 🌊 Changelog
 
 User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-09
+
+📦 Prepared for the reviewed release workflow; publication is a separate gate.
+
+### ✨ Added
+
+- 🧪 Runnable MCP and local CLI playground with safe fixtures and a short walkthrough.
+- 🌿 Gitflow branches, guarded agent publication through `make git`, plain SemVer release packages and free quality/security reports.
+- 🤖 Explicit GPT-5.3-Codex selection for Copilot tasks, verified by a completed live trial; no automatic model fallback.
+
+- Model-specific parameter controls with official explanations, validation, saved overrides and remote defaults when unset.
+- Optional Streamable HTTP MCP connections, per-conversation tools, approval before every call, streamed tool exchanges and saved tool results.
+- wfformcomp: an authenticated local Dart companion for configured commands and existing stdio MCP servers, with optional hosting of the same Flutter web build.
+- A plain-language tools, MCP and wfformcomp guide available directly from Tools.
+- Windows x64 companion executable/archive packaging and native Windows CI checks; the graphical installer and native acceptance remain separate release gates.
+
+### 🔄 Changed
+
+- 🖥️ Tools are available on desktop computers; phones/tablets show a faded control with an explanation while ordinary chat and saved settings remain usable.
+- 📋 Copy actions are limited to essential messages, code, files and diagnostic reports.
+- 📦 Web deployment uses flat assets and verified PWA caches instead of __releases folders. Release and tag names use plain MAJOR.MINOR.PATCH.
+
+- Replaced the W logo with Open Cradle: an open folded band around two linked AI nodes. Updated the ten companion symbols, favicons and launcher artwork with matching rounded shapes and light/dark variants. All 40 PNGs now have fully transparent backgrounds, including iOS and legacy maskable exports; the PWA selects general-purpose transparent icons.
+- Default output reserve is now a local context estimate; normal chat no longer implicitly sends max_tokens or enables reasoning.
+- Tool exchanges preserve opaque reasoning details and never replay actions after interruption or reload.
+- HTTP redirects are disabled to keep connection credentials at their configured endpoint.
+- Structured data shares readable previews across tool approvals/results, diagnostics, code blocks and files, with exact original content retained for copying and export.
+
 ## [0.3.0] - 2026-10-09
 
-### Changed
+### 🔄 Changed
 
 - Replaced the main logo with a rounded W wrapping a lavender module, using
   warm neutrals and restrained purple accents.

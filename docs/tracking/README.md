@@ -22,7 +22,10 @@ The initial moved repository can have an unborn main branch. Absence of an initi
 2. Implement the authorized slice with its matching tests and docs. Delegated agents return evidence; they do not append duplicate completion rows or stage the combined work.
 3. Run checks from the actual repository. Use [safe-run.sh](../../xops/agent/safe-run.sh) for long/risky commands; inspect the saved log on failure, diagnose, repair and rerun the affected gate.
 4. The parent reviews the complete changed set for scope and local secrets, updates completed roadmap items, appends the completion row, and stages according to AGENTS.md. Do not discard work simply because a gate failed.
-5. The human decides when to commit/push using make git. Agents never call git commit/push.
+5. The coordinating parent inspects `make git.dry`, then uses `make git` to
+   commit/push the validated Gitflow work branch and opens/updates its PR.
+   Never write directly to `main`/`develop`; respect review and required checks.
+   Stop at staging only when the user explicitly requested a local-only handoff.
 
 Example parent completion command, only after this slice's gates have actually passed:
 
@@ -34,7 +37,7 @@ xops/agent/tracking_append.sh \
   --refs="docs/README.md;docs/code/ARCHITECTURE.md;docs/tracking/context.md"
 ```
 
-The appender generates a run ID unless one is supplied. A pending tracking row is not a Git commit; make git.dry previews human commit behavior read-only. Read recent rows with make track.list or tail the CSV.
+The appender generates a run ID unless one is supplied. A pending tracking row is not a Git commit; `make git.dry` previews the guarded work-branch commit without writing. Read recent rows with `make track.list` or tail the CSV. Report the commit and PR separately from later merge/release outcomes.
 
 ## Corrections and evidence
 

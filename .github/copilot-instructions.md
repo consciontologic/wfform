@@ -39,9 +39,11 @@ root `.mcp.json`; see [MCP setup](../docs/guides/MCP_SETUP.md).
 
 ## ⚡ Hard rules (read AGENTS.md for the long form)
 
-1. **Never `git commit` / `git push`.** Append a tracking row via
+1. **Local coordinating agents publish validated work branches through `make git`.** Append a tracking row via
    [`xops/agent/tracking_append.sh`](../xops/agent/tracking_append.sh),
-   then `git add -A`, then stop. Human runs `make git`.
+   then `git add -A`, inspect `make git.dry`, and run `make git` on a work branch.
+   Never commit/push directly to `main`/`develop`; use reviewed PRs and respect protection.
+   Assigned GitHub Copilot cloud tasks use the managed-branch exception in AGENTS.md §2.
 2. **Tests move with code** in the same commit.
 3. **No system-level changes** without explicit per-occurrence confirmation.
 4. **Non-zero exit recovery:** wrap risky commands with
@@ -70,7 +72,7 @@ before the next phase starts — no exceptions.
 | Command | Purpose |
 |---|---|
 | `/plan` | Produce a written plan (no code) for a request. |
-| `/implement` | Execute a plan / phase end-to-end, ending in `staged` / `reverted` / `no-op` / `blocked`. |
+| `/implement` | Execute a plan / phase end-to-end, ending in `published` / `staged` / `reverted` / `no-op` / `blocked` per AGENTS.md §2. |
 | `/review` | Self-review or peer-review staged or recent changes against AGENTS.md rules. |
 | `/verify` | Run the mechanical verification gate and return PASS / FAIL. |
 | `/track` | Append a tracking row (used implicitly by `/implement`). |
@@ -96,6 +98,7 @@ Load the relevant one before the matching kind of work. Especially:
 - One short status line per loop step.
 - File paths as workspace-relative markdown links.
 - After staging: report `run_id`, files staged, tests run / passed / failed. Four lines max.
+- After publishing: report `run_id`, commit/PR, verification and any remaining review/release gate.
 - After a revert: report `run_id`, which gate failed, the corrective action.
 
 ## 🧠 Memory & notes
@@ -103,3 +106,12 @@ Load the relevant one before the matching kind of work. Especially:
 If you keep long-lived per-repo notes, store them under `docs/tracking/state/notes/`
 (gitignored). The memory tool, when available, may keep its own scope under
 `/memories/repo/` — do not duplicate large facts already in this file.
+
+## 🌿 Gitflow delivery
+
+Read [the delivery workflow](../docs/guides/GITFLOW.md) before starting a feature, bugfix,
+hotfix or release. Use the appropriate isolated work branch; keep main/develop
+free of direct implementation. Local coordinating agents publish validated work
+branches through `make git`; delegated agents return evidence without publishing.
+GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
+low-cost model; human review/merge and CI release gates still apply.

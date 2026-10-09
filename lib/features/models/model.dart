@@ -17,6 +17,7 @@ class FreeModel {
     this.topProvider = const {},
     this.architectureTokenizer,
     this.pricingOverrides = const [],
+    this.reasoning,
   });
 
   final String id;
@@ -30,6 +31,11 @@ class FreeModel {
   final Map<String, dynamic> topProvider;
   final String? architectureTokenizer;
   final List<Map<String, dynamic>> pricingOverrides;
+
+  /// Optional live model constraints, distinct from request overrides. An
+  /// omitted supported_efforts field differs from an explicitly null field.
+  final Map<String, dynamic>? reasoning;
+  bool get reasoningMandatory => reasoning?['mandatory'] == true;
 
   bool get chatCompatible => incompatibilityReason == null;
   String? get incompatibilityReason {
@@ -181,6 +187,13 @@ class FreeModel {
     'input': [...inputModalities]..sort(),
     'output': [...outputModalities]..sort(),
     'parameters': [...supportedParameters]..sort(),
+    if (reasoning != null)
+      'reasoning': {
+        for (final key in reasoning!.keys.toList()..sort())
+          key: key == 'supported_efforts' && reasoning![key] is List
+              ? ([...reasoning![key] as List]..sort())
+              : reasoning![key],
+      },
     'pricing': Map.fromEntries(
       pricing.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
     ),
@@ -204,6 +217,7 @@ class FreeModel {
     },
     'supported_parameters': supportedParameters,
     'top_provider': topProvider,
+    if (reasoning != null) 'reasoning': reasoning,
   };
 
   factory FreeModel.fromJson(Map<String, dynamic> value) {
@@ -508,6 +522,34 @@ ModelParseResult parseModel(Object? value, String path) {
     '$path.architecture.tokenizer',
     max: 100,
   );
+  Map<String, dynamic>? reasoning;
+  if (json['reasoning'] != null) {
+    final raw = _object(json['reasoning'], '$path.reasoning');
+    final parsed = <String, dynamic>{};
+    for (final key in ['mandatory', 'default_enabled', 'supports_max_tokens']) {
+      if (!raw.containsKey(key)) continue;
+      if (raw[key] is! bool) {
+        throw schemaFailure('$path.reasoning.$key', 'boolean', raw[key]);
+      }
+      parsed[key] = raw[key];
+    }
+    if (raw.containsKey('supported_efforts')) {
+      parsed['supported_efforts'] = raw['supported_efforts'] == null
+          ? null
+          : _strings(
+              raw['supported_efforts'],
+              '$path.reasoning.supported_efforts',
+            );
+    }
+    if (raw.containsKey('default_effort')) {
+      parsed['default_effort'] = _optionalString(
+        raw['default_effort'],
+        '$path.reasoning.default_effort',
+        max: 100,
+      );
+    }
+    reasoning = Map.unmodifiable(parsed);
+  }
   if (unresolvedPath != null) {
     return ModelParseResult(
       id: id,
@@ -531,6 +573,7 @@ ModelParseResult parseModel(Object? value, String path) {
       topProvider: Map.unmodifiable(safeProvider),
       architectureTokenizer: tokenizer,
       pricingOverrides: List.unmodifiable(overrides),
+      reasoning: reasoning,
     ),
   );
 }

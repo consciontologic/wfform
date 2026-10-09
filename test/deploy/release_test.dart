@@ -4,7 +4,7 @@ import '../../deploy/release.dart';
 
 void main() {
   test(
-    'nginx policy changes release identity, retains old assets and is stable',
+    'nginx policy changes release identity, publishes flat assets and is stable',
     () {
       Directory('work').createSync();
       final scratch = Directory('work').createTempSync('deployment-release-');
@@ -38,12 +38,9 @@ void main() {
         publishDeployment(source: raw, target: target, policy: policy),
         second,
       );
+      expect(Directory('${target.path}/__releases').existsSync(), isFalse);
       expect(
-        File('${target.path}/__releases/$first/index.html').existsSync(),
-        isTrue,
-      );
-      expect(
-        File('${target.path}/__releases/$second/index.html').readAsStringSync(),
+        File('${target.path}/index.html').readAsStringSync(),
         contains(second),
       );
       expect(File('${target.path}/config/local.json').existsSync(), isFalse);

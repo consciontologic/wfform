@@ -128,11 +128,10 @@ class HttpApiTransport implements ApiTransport {
           )
         : AppFailure.from(error);
     try {
-      final request = http.AbortableRequest(
-        method,
-        uri,
-        abortTrigger: abort.future,
-      )..headers.addAll(headers);
+      final request =
+          http.AbortableRequest(method, uri, abortTrigger: abort.future)
+            ..followRedirects = false
+            ..headers.addAll(headers);
       if (body != null) request.body = body is String ? body : jsonEncode(body);
       final response = await client.send(request);
       Stream<List<int>> bytes() async* {

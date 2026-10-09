@@ -48,7 +48,10 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is SelectableText &&
-            (widget.data?.contains(r'$.data[0].pricing.prompt') ?? false),
+            ((widget.data ?? widget.textSpan?.toPlainText())?.contains(
+                  r'$.data[0].pricing.prompt',
+                ) ??
+                false),
       ),
       findsOneWidget,
     );
@@ -86,7 +89,10 @@ void main() {
         find.byWidgetPredicate(
           (widget) =>
               widget is SelectableText &&
-              (widget.data?.contains('fixture-shell-v1') ?? false),
+              ((widget.data ?? widget.textSpan?.toPlainText())?.contains(
+                    'fixture-shell-v1',
+                  ) ??
+                  false),
         ),
         findsOneWidget,
       );

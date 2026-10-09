@@ -26,7 +26,10 @@ Run through this checklist explicitly. Do not trust the "feels done" feeling.
 7. **Did you append the tracking row?** `tail -3 docs/tracking/tracking.csv` to confirm.
 8. **The project's verification checks** green?
 
-Only then: `git add -A` and stop.
+Only then: `git add -A`. The coordinating parent reviews `make git.dry`, uses
+`make git` to publish the validated Gitflow work branch, and opens/updates its
+PR under AGENTS.md §2. Stop at staging only for an explicit local-only handoff.
+Never commit/push directly to `main`/`develop` or bypass their protections.
 
 ## Anti-patterns
 

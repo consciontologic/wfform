@@ -1,0 +1,9 @@
+# A tiny, harmless fixture for the readable data viewer.
+project: wfform tools playground
+tasks:
+  - connect the companion
+  - add two numbers
+  - read the sample sales report
+message: |
+  MCP tools return data to the model.
+  You approve each tool call before it runs.

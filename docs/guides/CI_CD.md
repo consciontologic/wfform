@@ -1,65 +1,113 @@
-# Web CI/CD and wfform.com
+# 🚀 CI/CD, packages and wfform.com
 
-Verified against official GitHub documentation on **2026-10-07**. The source
-repository is `consciontologic/wfform`; the static website repository is
-[`consciontologic/wfform.com`](https://github.com/consciontologic/wfform.com). The destination
-is dedicated to compiled web assets; Flutter sources stay in the source repository.
-The 2026-10-07 account migration uses a fresh source history and the existing
-`WFFORM_DEPLOY_TOKEN` repository secret in the new source repository. The first
-real run and destination publication succeeded; see the
-[migration verification](../reports/account-migration-verification.md).
+The source is **consciontologic/wfform**. The generated website is
+**consciontologic/wfform.com**, served at **https://wfform.com/**.
+Development follows [Gitflow](GITFLOW.md). This guide describes the **1.0.0
+workflow prepared on 2026-10-09**; local checks do not prove a remote release.
 
-## What runs automatically
+## What happens automatically
 
-[`web.yml`](../../.github/workflows/web.yml) checks pull requests, pushes to
-`main`, and manual runs. It installs **Flutter 3.38.10**, resolves the checked-in
-lockfile, runs formatting/analyzer/unit/widget/repository checks, repository
-operation tests and real Chrome IndexedDB tests, then builds and validates a
-public release. Live OpenRouter inference is not part of CI.
+| Workflow | When | What it does |
+|---|---|---|
+| 🌐 [Web quality](../../.github/workflows/web.yml) | PRs, branch pushes, manual run | Format, analyzer, tests, coverage, repository hygiene, real Chrome history storage and public build validation |
+| 🛡️ [Free security and package reports](../../.github/workflows/security.yml) | PRs, main/develop, weekly, manual and release checks | Gitleaks, OSV, license inventory, CycloneDX SBOM and zizmor |
+| 📦 [Packages and release](../../.github/workflows/companion.yml) | PRs, branch pushes, manual run | Test/build Linux and Windows; keep downloadable CI artifacts |
+| 📦 Packages and release | Plain SemVer tag, such as `1.0.0` | After security and both native jobs pass, create the GitHub Release, then publish the verified website |
 
-Only successful runs for the latest source `main` commit publish. They copy
-validated static files into the destination repository's **`main` branch, root
-directory**, create a deployment commit identifying the source repository and
-SHA, and push normally. Unchanged artifacts create no commit. Pull requests
-receive no deployment credential. Main runs are serialized; stale runs check
-the latest source SHA again before committing. A competing destination edit
-causes a normal rejected push, with no force push or automatic retry.
+PRs and ordinary branch pushes **do not publish**. Manual runs build/check only.
+Flutter is pinned to **3.38.10**, lockfiles are enforced, and third-party Actions
+are pinned to reviewed commit SHAs. There is no live OpenRouter inference in CI.
+PRs receive no website deployment token. Job groups, emoji summaries and ANSI
+colors make failures easier to find; full logs and machine-readable reports
+remain available.
 
-Editing files on your computer does not trigger GitHub Actions until you push
-the source change. This repository's usual human command remains `make git`.
-The remote workflow's deployment commits are intentional; agents still do not
-commit or push the local source checkout.
+## One version, three downloads
 
-## One required credential
+Root `pubspec.yaml` is authoritative: **MAJOR.MINOR.PATCH**, with no `v` prefix.
+Release titles and tags are exactly `1.0.0`; package names include platform:
 
-Create a **fine-grained personal access token** owned by `consciontologic`:
+- `wfform-1.0.0-web.tar.gz`
+- `wfformcomp-1.0.0-linux-x64.tar.gz`
+- `wfformcomp-1.0.0-windows-x64.zip`
 
-| Setting | Value |
-|---|---|
-| Resource owner | `consciontologic` |
-| Repository access | Only `wfform.com` |
-| Repository permission | **Contents: Read and write** |
-| Metadata | Read access, automatically included |
-| Secret name | **`WFFORM_DEPLOY_TOKEN`** |
+Archives have SHA-256 files and release metadata. Companion archives include
+the executable, public web UI, setup instructions and the simple `TOOLS.md`
+guide. macOS, graphical installers, signing and automatic upgrades remain
+[planned](../planning/ROADMAP.md#phase-22--companion-platform-downloads-and-easy-installation).
+A Linux test does not establish Windows runtime support; check the native
+**Windows package** job and its extracted-executable tests before claiming it.
 
-Add the token in the **source** `consciontologic/wfform` repository under **Settings →
-Secrets and variables → Actions → Secrets → New repository secret**. Use a
-secret, not a plain Actions variable. No additional custom environment variables
-are required. The built-in `GITHUB_TOKEN` separately reads source metadata; it
-does not grant cross-repository writes. Token expiration, organization approval
-and destination branch rules must permit the requested push. Renew the same
-secret if the token expires. See GitHub's
-[token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+Prepare locally:
 
-The workflow does not declare a GitHub Environment. If you prefer an
-environment-scoped secret, add `environment: production` to the `web` job and
-put `WFFORM_DEPLOY_TOKEN` in that environment instead. Any environment approval
-policy then applies to that job.
+```bash
+make version.sync
+make verify
+make release.package
+```
 
-An **OpenRouter key is not needed for CI** and is never published. Visitors
-provide their own key in Settings. Local `config/local.json` is excluded by
-`--public`; the publisher also refuses configuration directories and recognizable
-credential-bearing output.
+`make version.check` catches inconsistent app, companion and website identities.
+`make release.package` produces current-host artifacts under `build/companion/`
+and `build/release/`. Native Windows instructions do not require Make; see
+[wfformcomp](../wfformcomp.md#build-and-checks).
+
+A maintainer merges the release PR, publishes its matching tag, and back-merges
+into `develop`. Local coordinating agents publish validated work branches through
+`make git.dry` then `make git` and open PRs; direct `main`/`develop` writes are
+forbidden. Tag publication follows the reviewed merge. Copilot's managed PR
+authoring is described in [Gitflow](GITFLOW.md).
+
+## Publication and recovery
+
+Tags must match the root version and point to a commit contained in `main`.
+**Publish release** waits for security, Linux and Windows. It creates the
+GitHub Release from that version's emoji changelog and verified packages.
+**Publish website** is a separate dependent job: use GitHub's **Re-run failed
+jobs** to recover a website failure without trying to recreate the release.
+Do not rerun every successful publication job blindly; inspect existing releases
+and their assets first.
+
+Only the **current `main` commit** can replace the website. The script checks
+this before publication and again before committing. An older tag can publish
+its downloads, but the site step explicitly reports **skipped** to avoid rolling
+back a newer website. If `main` advances before deployment, prepare the next
+release from the current main commit. The job summary records the actual status.
+
+The website publisher commits only generated files to the dedicated website
+repository and pushes normally. It never force-pushes. A competing destination
+edit fails visibly. Publication to that repository and GitHub Pages deployment
+are separate events: inspect both, then test the real installed PWA update path.
+
+## Free security and quality reports
+
+No paid scanner, dashboard or license token is required:
+
+- 🕵️ **Gitleaks CLI** checks source history for secrets and uploads redacted SARIF.
+- 📦 **OSV** checks locked public package names/versions for known vulnerabilities.
+- 📋 A **CycloneDX SBOM**, dependency inventory and cached package license texts
+  accompany the report. Missing license evidence is reported, not invented.
+- 🌈 **zizmor** audits Actions configuration without GitHub Advanced Security.
+- 🧪 Flutter/Dart analyze and test checks produce **LCOV coverage**.
+- 🔄 **Dependabot** proposes weekly Dart and Actions updates into `develop`.
+
+Run `make security.report` to create package reports under `build/reports/`.
+The command contacts the public OSV API with dependency names and versions;
+it never sends prompts, conversations or credentials. Vulnerabilities and scan
+failures fail the job. Empty findings mean no known matches at scan time, not a
+security guarantee. These open-source tools can run locally; GitHub-hosted
+runner usage follows GitHub's account limits. Copilot billing is separate.
+
+## One website credential
+
+Keep **`WFFORM_DEPLOY_TOKEN`** as an Actions secret in the source repository.
+Use a fine-grained token with access to **only `consciontologic/wfform.com`** and
+**Contents: Read and write**. The built-in `GITHUB_TOKEN` handles source release
+assets; it cannot write across repositories. Never put the website token in an
+Actions variable, public build, local committed config or release archive.
+
+The existing domain/Pages setup and token are preserved. Renew the secret if it
+expires. No OpenRouter key is needed for CI; visitors supply their own key.
+Public builds exclude `config/local.json` and reject recognizable key patterns.
+See [GitHub's token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 ## Custom domain on GitHub Pages
 
@@ -91,16 +139,18 @@ CI/Pages runs, HTTPS redirects and actual browser/catalog/cache evidence.
 3. After GitHub provisions its certificate, select **Enforce HTTPS**. GitHub
    redirects `www` to the configured apex domain. DNS/certificate propagation
    can take up to 24 hours. See [GitHub's HTTPS guide](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https).
-4. Push source changes to `consciontologic/wfform` main or manually dispatch
-   **Web checks and publish**. Its verified files are committed to the website
-   repository; the separate **pages build and deployment** run serves them.
+4. Merge the reviewed release into `main`, then publish its plain SemVer tag
+   (for example `1.0.0`). **📦 Packages and release** publishes verified files
+   after native Linux and Windows checks; the destination
+   **pages build and deployment** run serves them.
 
 `make build.public` and CI use **`--base-href=/`**. Flutter bootstrap, manifest,
 service worker, fonts and CanvasKit resolve at the custom-domain root. Public
 builds exclude local configuration; local/Docker builds retain their existing
 configuration policy. The publisher writes `.nojekyll` and a managed `CNAME`
 containing `wfform.com`. A matching file generated by GitHub can be adopted;
-conflicting content is rejected. Prior immutable releases remain for old clients.
+conflicting content is rejected. Version 1.0.0 publishes flat files. Previously cached clients have an explicit
+update path; old physical `__releases` directories are retired.
 See [Pages publishing settings](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 This uses a personal token because destination commits made using the built-in
@@ -111,57 +161,35 @@ Moving to `wfform.com` changes the browser origin. Conversations and Settings
 from the old GitHub URL or localhost do not transfer automatically; export and
 import history. GitHub's old project URL redirects to the configured domain.
 
-## Release ownership and updates
+## Flat assets, ownership and old clients
 
-[`prepare_website.dart`](../../tool/prepare_website.dart) validates the format-2
-release manifest, byte sizes and SHA-256 hashes for both root aliases and their
-immutable counterparts. Only allowlisted release files, worker/manifest files,
-`.nojekyll`, `CNAME` and `.wfform-deployment.json` can be managed. The deployment
-manifest records owned paths and hashes and must stay in the destination repository.
+[`prepare_website.dart`](../../tool/prepare_website.dart) validates format-3
+release manifests, byte sizes and SHA-256 hashes. There is no published
+`__releases`/`__Releases` directory. Files live at the website root and normal
+asset paths; content hashes remain internal cache/integrity identities.
 
-Unrelated files, `.git`, documentation and existing history are preserved.
-Conflicting unowned files or manual edits to managed files stop deployment with
-the path named in the error. Resolve those changes deliberately; do not delete
-the ownership manifest to bypass the check. Only formerly owned, obsolete root
-aliases are deleted. All existing immutable release assets remain available for
-old browser clients and safe PWA updates.
+`.wfform-deployment.json` records exactly which files the publisher owns.
+Unrelated files, `.git`, documentation and history are preserved. Conflicting
+unowned files, symlinks or manual edits to managed files stop publication.
+The migration removes only previously owned legacy assets and empty legacy
+directories; it does not delete unrelated files to make a deployment pass.
 
-Retention grows the published directory and Git history. Monitor destination
-size against [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits).
-No automatic retention cleanup is included because there is no reliable way
-to know which old clients still need their release. A future planned retention
-policy must update the ownership manifest and state its client support window.
+Old assets already cached on a device can still be served during the update.
+An uncached retired asset asks the client to update explicitly instead of mixing
+old code with new files. The app saves drafts/history before applying updates.
+See [PWA behavior](../pwa.md) for integrity, cache retention and update details.
 
-GitHub Pages does not run the project's nginx configuration or custom response
-headers. Use the [Docker deployment](DOCKER.md) when those nginx headers are
-required. Both hosting choices serve static Flutter files directly; neither
-proxies OpenRouter.
-
-## Local checks without publishing
-
-From the project root:
+## Check locally without publishing
 
 ```bash
-flutter pub get --enforce-lockfile
 make verify
 python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v
-dart run tool/build.dart --public --output=build/publish-web --base-href=/
-dart run tool/prepare_website.dart build/publish-web work/website-preview
-flutter test test/deploy/website_publication_test.dart test/deploy/website_workflow_test.dart --reporter expanded
+make build.public
+dart run tool/prepare_website.dart build/publish-web .local/website-preview
+make pwa.verify
 bash -n deploy/scripts/publish-website.sh
 ```
 
-The preparer only validates/copies files; it never calls Git. Its tests use
-temporary files. Git orchestration tests use fake `git`, `gh` and `dart`
-executables and do **not** make real commits or pushes. The publish shell script
-is restricted to the GitHub main-branch workflow. Check its Actions run and
-destination commit for actual remote publication evidence. Pages settings, DNS
-and public serving are separate checks; passing local tests does not verify
-those services.
-
-Action versions are pinned to upstream commit SHAs in the workflow. The
-[checkout](https://github.com/actions/checkout) and
-[Flutter action](https://github.com/subosito/flutter-action) pins were resolved
-from their official repositories on the date above. See GitHub's
-[concurrency guidance](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
-for serialized main runs and PR cancellation.
+The preparer does not call Git. Publication tests use fake executables and
+never commit or push. Browser, native Windows, authenticated live inference and
+remote release evidence must be reported separately from these local gates.

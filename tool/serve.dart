@@ -122,10 +122,7 @@ String mimeType(String path) {
       'application/octet-stream';
 }
 
-String cacheControlFor(String path) =>
-    RegExp(r'^__releases/[a-f0-9]{64}/').hasMatch(path)
-    ? 'public, max-age=31536000, immutable'
-    : 'no-store';
+String cacheControlFor(String path) => 'no-store';
 
 Stream<List<int>> readOpenedFile(
   RandomAccessFile descriptor,

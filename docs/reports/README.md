@@ -4,6 +4,14 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Desktop tools and 1.0.0 delivery](release-100-verification.md): desktop-only tools, concise copy controls, runnable MCP playground, Gitflow and free security reports, flat PWA update and Linux packaging; remote Copilot/Windows/public release gates remain explicit.
+
+- [Open Cradle branding](open-cradle-branding-verification.md): approved open wrapper/AI mark, ten companion glyphs, 40 fully transparent exports and light/dark artwork with no backing plates; 617 Flutter tests, all ten companion suites, public build and actual local PWA update/browser checks passed. Public publication and native builds remain separate.
+
+- [Readable data, tools guide and Windows build](readable-tools-windows-verification.md): shared readable previews, in-app beginner help, 613 passing Flutter tests, final Linux package/browser checks and Windows build/CI support; native Windows execution and graphical installation remain pending.
+
+- [Parameters, MCP and wfformcomp](connected-tools-verification.md): two live free-model routes passed ordinary chat, HTTP MCP and compiled CLI tool loops; actual browser history/approval checks, real CodeGraph reuse and local Linux packaging, with explicit hosted-server and public-release limits.
+
 - [Soft wrapper branding](soft-wrapper-branding-verification.md): approved logo and ten companion icons, transparent light/dark variants, browser-tab/PWA/native launcher sources, 532 passing tests, public build and local browser checks; remote deployment and native builds remain separate.
 
 - [Compact navigation refinement 0.2.4](compact-navigation-verification.md): persistent Models label and smaller drawer version/GitHub/Info row; regression gate, local browser checks, CI, Pages, public asset integrity and actual public PWA update passed.

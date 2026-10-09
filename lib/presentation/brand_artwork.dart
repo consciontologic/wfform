@@ -1,33 +1,50 @@
-/// Canonical soft-wrapper artwork, shared by Flutter and the PNG generator.
-/// Coordinates use a 100-unit square. Each row is a cubic Bezier segment
-/// (control 1, control 2, endpoint), beginning and ending at (20, 19).
-const wrapperCurves = <List<double>>[
-  [12, 19, 7, 24, 7, 32],
-  [7, 36, 7, 42, 7, 46],
-  [7, 59, 13, 64, 24, 75],
-  [32, 83, 38, 82, 47, 76],
-  [49, 74, 51, 74, 54, 76],
-  [63, 82, 69, 83, 77, 75],
-  [80, 72, 84, 68, 87, 65],
-  [92, 59, 94, 53, 94, 46],
-  [94, 42, 94, 36, 94, 32],
-  [94, 24, 88, 19, 81, 19],
-  [80, 19, 80, 19, 79, 19],
-  [72, 19, 67, 25, 67, 32],
-  [67, 35, 67, 39, 67, 42],
-  [67, 51, 64, 55, 59, 53],
-  [52, 49, 47, 49, 41, 53],
-  [35, 56, 31, 50, 31, 42],
-  [31, 39, 31, 35, 31, 32],
-  [31, 24, 26, 19, 20, 19],
+/// Canonical Open Cradle artwork shared by Flutter and the PNG generator.
+/// Coordinates use a 100-unit square. Each closed, filled ribbon contour starts
+/// at (x, y); each curve holds control 1, control 2, and endpoint coordinates.
+/// The two contours leave a transparent fold seam at the lower left.
+const cradleBands = <({double x, double y, List<List<double>> curves})>[
+  (
+    x: 36,
+    y: 14,
+    curves: [
+      [42, 14, 45, 23, 39, 28],
+      [34, 32, 29, 35, 24, 38],
+      [21, 40, 20, 43, 20, 49],
+      [20, 54, 20, 59, 20, 64],
+      [20, 74, 20, 80, 25, 84],
+      [13, 79, 7, 75, 7, 64],
+      [7, 60, 7, 54, 7, 49],
+      [7, 36, 10, 30, 19, 24],
+      [24, 20, 29, 17, 32, 15],
+      [33, 14, 35, 14, 36, 14],
+    ],
+  ),
+  (
+    x: 22,
+    y: 66,
+    curves: [
+      [30, 72, 35, 73, 43, 73],
+      [50, 73, 56, 73, 64, 73],
+      [75, 73, 82, 66, 82, 59],
+      [82, 55, 80, 51, 78, 47],
+      [74, 40, 78, 35, 83, 35],
+      [86, 35, 88, 37, 90, 41],
+      [93, 47, 95, 53, 95, 59],
+      [95, 75, 81, 85, 65, 85],
+      [55, 85, 44, 85, 34, 85],
+      [26, 85, 22, 81, 22, 72],
+      [22, 70, 22, 68, 22, 66],
+    ],
+  ),
 ];
+
+const cradleNodes = <({double x, double y, double radius})>[
+  (x: 40, y: 52, radius: 11),
+  (x: 64, y: 35, radius: 9),
+];
+const cradleLinkWidth = 6.0;
 
 const brandInk = 0xff302d34;
 const brandPaper = 0xfff6f3ec;
 const brandLavender = 0xffb7a8c9;
 const brandDarkLavender = 0xffc8b8dc;
-const brandLightSurface = 0xffdcd3e6;
-const brandDarkSurface = 0xff302b38;
-const wrapperStroke = 4.2;
-const wrapperCore = (left: 41.0, top: 25.0, width: 19.0, height: 18.0);
-const wrapperCoreRadius = 4.5;
