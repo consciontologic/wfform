@@ -209,6 +209,9 @@ GitHub Actions evidence available at this checkpoint:
 - `📦 Packages and release` run `37934432076`: still in progress; `security`
   succeeded and `Linux package` started. `Windows package` has not completed yet.
 - `🌐 Web quality` run `37934431743`: in progress.
+- Preparation PR #2 follow-up runs `37934772462`, `37934772488`, and
+  `37934772949` currently show **action_required** with zero jobs scheduled,
+  so no fresh PR #2 job outcome exists yet.
 
 Remaining gates before promotion from `release/1.0.0` to `main`:
 
