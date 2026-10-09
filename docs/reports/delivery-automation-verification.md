@@ -78,6 +78,13 @@ and a live symbol query confirmed the new publication helper is indexed.
 
 ## Activation and 1.0.0 limits
 
+The validated bootstrap was published through `make git` as commit
+`1da3522f30ada7db4e74ef397e41c5f858968fab` in
+[PR #4](https://github.com/consciontologic/wfform/pull/4), targeting the existing
+`release/1.0.0` branch. The public web, security and package workflows started
+automatically on this PR. Their eventual results must be checked against its
+current head; starting CI does not establish a passing release.
+
 Default-branch workflows become active only after the bootstrap changes reach
 main through passing PR checks. Durable credentials must have the documented
 scopes. Native Copilot workflow auto-run is a separate repository setting; the
