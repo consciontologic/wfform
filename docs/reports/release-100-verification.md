@@ -217,6 +217,10 @@ GitHub Actions evidence at this checkpoint (updated with final run outcomes):
 - `🌐 Web quality` run `37934431743`: **success**.
 - Preparation PR #2 follow-up runs `37934772462`, `37934772488`, and
   `37934772949` currently show **action_required** with zero jobs scheduled.
+- On current PR #2 head `0938d62`, workflow runs `37936244803` (security),
+  `37936244779` (web), and `37936245680` (packages) also show
+  **action_required** with zero jobs scheduled, so there is still no fresh
+  executable Windows verification for this commit.
 
 Remaining gates before promotion from `release/1.0.0` to `main`:
 
