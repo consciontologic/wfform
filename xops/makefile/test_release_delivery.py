@@ -137,6 +137,141 @@ class PromotionAPI(FakeAPI):
         return super().get(path)
 
 
+class MergedAssociationAPI(PromotionAPI):
+    """GitHub drops every run/check/suite PR association after the merge."""
+    def __init__(self):
+        super().__init__()
+        self.source.update(state='closed', created_at='2026-10-09T14:00:00Z',
+                           closed_at='2026-10-09T15:00:00Z')
+        self.history = [copy.deepcopy(self.source)]
+        self.events = [{'event': 'merged', 'created_at': self.source['merged_at']}]
+        self.parents = [{'sha': 'e' * 40}, {'sha': 'c' * 40}]
+        self.reads = []
+        for check in self.checks:
+            check['started_at'] = '2026-10-09T14:10:02Z'
+            check['completed_at'] = '2026-10-09T14:19:00Z'
+        for run in self.check_runs.values():
+            run.update(pull_requests=[], head_branch=self.source['head']['ref'],
+                       created_at='2026-10-09T14:10:00Z',
+                       run_started_at='2026-10-09T14:10:01Z', updated_at='2026-10-09T14:20:00Z')
+
+    def get(self, path):
+        self.reads.append(path)
+        if path.startswith(BASE + '/pulls?state=all&head='):
+            return copy.deepcopy(self.history)
+        if path.startswith(BASE + '/issues/2/events?'):
+            return copy.deepcopy(self.events)
+        if path == BASE + '/git/commits/' + HEAD:
+            return dict(super().get(path), parents=copy.deepcopy(self.parents))
+        return super().get(path)
+
+
+class MergedAssociationEvidenceTest(unittest.TestCase):
+    def test_merged_source_without_run_pr_array_preserves_full_release_proof(self):
+        api = MergedAssociationAPI()
+        self.assertEqual(release.authorize(api, REPO, 3, SHA, '1.0.0')['number'], 3)
+        self.assertEqual(api.writes, [])
+        self.assertEqual(len([path for path in api.reads if '/pulls?state=all&head=' in path]), 1)
+        self.assertEqual(len([path for path in api.reads if '/issues/2/events?' in path]), 1)
+        self.assertFalse(any('/commits/' in path and '/pulls' in path for path in api.reads))
+
+    def test_fallback_refuses_unmerged_or_changed_merged_source(self):
+        for mutation in [dict(state='open'), dict(merged=False), dict(draft=True),
+                         dict(merged_at=None), dict(created_at='invalid'),
+                         dict(created_at='2026-10-09T14:15:00Z')]:
+            api = MergedAssociationAPI(); api.source.update(mutation)
+            with self.subTest(mutation=mutation), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+        for change in ['head', 'base', 'merged', 'number', 'missing']:
+            api = MergedAssociationAPI()
+            if change == 'head': api.history[0]['head']['sha'] = 'f' * 40
+            elif change == 'base': api.history[0]['base']['ref'] = 'main'
+            elif change == 'merged': api.history[0]['merged_at'] = None
+            elif change == 'number': api.history[0]['number'] = 9
+            else: api.history = []
+            with self.subTest(change=change), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+
+    def test_fallback_refuses_reused_branch_and_any_retarget_event(self):
+        for base, closed_at in [('main', '2026-10-09T14:30:00Z'), ('develop', '2026-10-08T01:00:00Z')]:
+            api = MergedAssociationAPI()
+            other = copy.deepcopy(api.source)
+            other.update(number=1, merged_at=None, closed_at=closed_at)
+            other['base']['ref'] = base
+            api.history.append(other)
+            with self.subTest(base=base), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+        for event in ['base_ref_changed', 'automatic_base_change_succeeded']:
+            api = MergedAssociationAPI()
+            api.events.append({'event': event, 'created_at': '2026-10-09T14:01:00Z'})
+            with self.subTest(event=event), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+
+    def test_fork_source_requires_explicit_run_pr_association(self):
+        api = MergedAssociationAPI()
+        api.source['head']['repo']['full_name'] = 'contributor/wfform'
+        api.history = [copy.deepcopy(api.source)]
+        for run in api.check_runs.values():
+            run['head_repository']['full_name'] = 'contributor/wfform'
+        with self.assertRaises(release.DeliveryError): release.quality_evidence(api, api.source)
+
+    def test_fallback_refuses_wrong_run_identity_or_timing(self):
+        for mutation in [dict(event='push'), dict(event='workflow_dispatch'),
+                         dict(path='.github/workflows/delivery.yml'),
+                         dict(head_sha=HEAD), dict(head_branch='feature/other'),
+                         dict(repository={'full_name': 'other/wfform'}),
+                         dict(head_repository={'full_name': 'other/wfform'}),
+                         dict(created_at='2026-10-09T13:59:59Z'),
+                         dict(run_started_at='2026-10-09T14:09:59Z'),
+                         dict(updated_at='2026-10-09T14:09:59Z'),
+                         dict(updated_at='2026-10-09T15:00:01Z'),
+                         dict(run_started_at=None), dict(created_at='invalid'),
+                         dict(pull_requests=None),
+                         dict(pull_requests=[{'number': 99, 'head': {'sha': 'c' * 40}, 'base': {'ref': 'develop'}}]),
+                         dict(pull_requests=[{'number': 2, 'head': {'sha': 'c' * 40}, 'base': {'ref': 'main'}}])]:
+            api = MergedAssociationAPI(); api.check_runs['100'].update(mutation)
+            with self.subTest(mutation=mutation), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+
+    def test_fallback_requires_unchanged_merge_tree_and_exact_second_parent(self):
+        for parents in [[], [{'sha': 'c' * 40}], [{'sha': 'c' * 40}, {'sha': 'e' * 40}],
+                        [{'sha': 'e' * 40}, {'sha': 'c' * 40}, {'sha': 'f' * 40}]]:
+            api = MergedAssociationAPI(); api.parents = parents
+            with self.subTest(parents=parents), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+        api = MergedAssociationAPI(); api.trees[HEAD] = 'e' * 40
+        with self.assertRaises(release.DeliveryError): release.quality_evidence(api, api.source)
+
+    def test_fallback_never_accepts_skipped_stale_failed_or_wrong_producer_checks(self):
+        for mutation in [dict(conclusion='skipped'), dict(conclusion='failure'),
+                         dict(status='in_progress'), dict(head_sha=HEAD), dict(app={'id': 9}),
+                         dict(completed_at=None), dict(completed_at='invalid'),
+                         dict(completed_at='2026-10-09T15:00:01Z'),
+                         dict(completed_at='2026-10-09T14:09:00Z'),
+                         dict(started_at=None), dict(started_at='2026-10-09T14:09:59Z'),
+                         dict(started_at='2026-10-09T14:19:01Z')]:
+            api = MergedAssociationAPI(); api.checks[0].update(mutation)
+            with self.subTest(mutation=mutation), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+        api = MergedAssociationAPI()
+        api.checks.append(dict(api.checks[0], id=999, conclusion='failure'))
+        with self.assertRaises(release.DeliveryError): release.quality_evidence(api, api.source)
+
+    def test_newer_same_source_run_outside_merge_window_never_rescues_old_success(self):
+        for conclusion in ['failure', 'success', 'skipped']:
+            api = MergedAssociationAPI()
+            api.checks.append(dict(api.checks[0], id=999, conclusion=conclusion,
+                details_url=f'https://github.com/{REPO}/actions/runs/999/job/999'))
+            api.check_runs['999'] = dict(api.check_runs['100'], conclusion=conclusion,
+                created_at='2026-10-09T15:01:00Z', run_started_at='2026-10-09T15:01:01Z',
+                updated_at='2026-10-09T15:02:00Z')
+            with self.subTest(conclusion=conclusion), self.assertRaises(release.DeliveryError):
+                release.quality_evidence(api, api.source)
+        # A skipped promotion on another head branch is separate evidence.
+        api.check_runs['999']['head_branch'] = 'develop'
+        release.quality_evidence(api, api.source)
+
+
 class PromotionEvidenceTest(unittest.TestCase):
     def test_skipped_promotion_reuses_exact_tested_develop_tree(self):
         api = PromotionAPI()

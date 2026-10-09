@@ -6,6 +6,7 @@ permission to release it. GitHub production approval/checks and source identity 
 again immediately before writes. API failures are not automatically retried.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -136,20 +137,79 @@ def git_tree(api, sha):
     return tree
 
 
-def run_matches(pr, run, paths):
-    head, base = pr.get('head', {}), pr.get('base', {})
+def run_identity(pr, run, paths):
+    head = pr.get('head', {})
     return (isinstance(run, dict) and run.get('head_sha') == head.get('sha')
             and run.get('event') == 'pull_request'
             and run.get('path', '').split('@')[0] in paths
             and run.get('repository', {}).get('full_name') == REPOSITORY
-            and run.get('head_repository', {}).get('full_name') == head.get('repo', {}).get('full_name')
-            and any(item.get('number') == pr.get('number')
-                    and item.get('base', {}).get('ref') == base.get('ref')
-                    and item.get('head', {}).get('sha') == head.get('sha')
-                    for item in run.get('pull_requests', [])))
+            and run.get('head_repository', {}).get('full_name') == head.get('repo', {}).get('full_name'))
 
 
-def validate_checks(pr, checks, get_run, policy, conclusions=('success',)):
+def run_matches(pr, run, paths, merged_match=None):
+    head, base = pr.get('head', {}), pr.get('base', {})
+    if not run_identity(pr, run, paths):
+        return False
+    associations = run.get('pull_requests')
+    if not isinstance(associations, list):
+        return False
+    if associations:
+        return any(isinstance(item, dict) and item.get('number') == pr.get('number')
+                   and item.get('base', {}).get('ref') == base.get('ref')
+                   and item.get('head', {}).get('sha') == head.get('sha') for item in associations)
+    # GitHub can clear this association after merging. Never use the historical
+    # fallback for missing metadata, a conflicting PR association, or open PRs.
+    return merged_match is not None and merged_match(run)
+
+
+def merged_run_matches(api, pr, run, cache):
+    """Recover only unique, never-retargeted merged PRs from immutable evidence."""
+    head = pr.get('head', {})
+    if (pr.get('merged') is not True or pr.get('state') != 'closed' or pr.get('draft')
+            or any(pr.get(side, {}).get('repo', {}).get('full_name') != REPOSITORY for side in ('head', 'base'))
+            or run.get('head_branch') != head.get('ref')):
+        return False
+    try:
+        times = [datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+                 for value in [pr.get('created_at'), run.get('created_at'), run.get('run_started_at'),
+                               run.get('updated_at'), pr.get('merged_at')]]
+    except (TypeError, ValueError):
+        return False
+    if times != sorted(times):
+        return False
+    if 'proof' not in cache:
+        owner = head.get('repo', {}).get('full_name', '').partition('/')[0]
+        branch = quote(owner + ':' + head['ref'], safe='')
+        history = pages(api, f'/repos/{REPOSITORY}/pulls?state=all&head={branch}')
+        if len(history) != 1:
+            raise DeliveryError('Merged quality evidence requires a branch used by exactly one PR.')
+        source = history[0]
+        if (source.get('number') != pr.get('number') or source.get('state') != 'closed'
+                or source.get('draft') or source.get('merged_at') != pr.get('merged_at')
+                or source.get('merge_commit_sha') != pr.get('merge_commit_sha')
+                or any(source.get(side, {}).get('ref') != pr.get(side, {}).get('ref')
+                       or source.get(side, {}).get('repo', {}).get('full_name') != pr.get(side, {}).get('repo', {}).get('full_name')
+                       for side in ('head', 'base'))
+                or source.get('head', {}).get('sha') != head.get('sha')):
+            raise DeliveryError('Merged PR identity changed during the historical quality audit.')
+        events = pages(api, f'/repos/{REPOSITORY}/issues/{pr["number"]}/events')
+        if any(not isinstance(event, dict) or event.get('event') in {
+                'base_ref_changed', 'automatic_base_change_succeeded'} for event in events):
+            raise DeliveryError('A retargeted PR cannot supply quality evidence without its run association.')
+        merged_sha = pr.get('merge_commit_sha', '')
+        if not SHA.fullmatch(merged_sha) or not SHA.fullmatch(head.get('sha', '')):
+            raise DeliveryError('Merged source revisions must be immutable commits.')
+        commit = api.get(f'/repos/{REPOSITORY}/git/commits/{merged_sha}') or {}
+        parents = commit.get('parents')
+        if (commit.get('sha') != merged_sha or not isinstance(parents, list) or len(parents) != 2
+                or parents[1].get('sha') != head['sha']
+                or commit.get('tree', {}).get('sha') != git_tree(api, head['sha'])):
+            raise DeliveryError('Merged source must retain its tested head as second parent with identical content.')
+        cache['proof'] = True
+    return cache['proof']
+
+
+def validate_checks(pr, checks, get_run, policy, conclusions=('success',), merged_match=None):
     """Use the latest check for this exact PR/lane, never a push or package dispatch.
 
     A promotion may share a SHA with a tested develop PR. Its skipped jobs must
@@ -165,14 +225,28 @@ def validate_checks(pr, checks, get_run, policy, conclusions=('success',)):
             if not match:
                 continue
             run = get_run(int(match[1])) or {}
-            if run_matches(pr, run, paths):
-                eligible.append((check, run))
-        check, run = max(eligible, key=lambda item: item[0].get('id', 0), default=({}, {}))
-        if (check.get('head_sha') != pr['head']['sha']
+            proved = run_matches(pr, run, paths, merged_match)
+            if proved or (merged_match is not None and pr.get('merged') is True
+                          and run_identity(pr, run, paths)
+                          and run.get('head_branch') == pr.get('head', {}).get('ref')):
+                # Keep newer ambiguous runs in selection: a post-merge rerun
+                # or malformed association must not rescue an older success.
+                eligible.append((check, run, proved))
+        check, run, proved = max(eligible, key=lambda item: item[0].get('id', 0), default=({}, {}, False))
+        if (not proved or check.get('head_sha') != pr['head']['sha']
                 or check.get('app', {}).get('id') != policy['checks_app_id']
                 or check.get('status') != 'completed' or check.get('conclusion') not in conclusions
                 or run.get('status') != 'completed' or run.get('conclusion') not in {'success', 'skipped'}):
             raise DeliveryError('Required PR check lacks current successful workflow provenance: ' + name)
+        if merged_match is not None and run.get('pull_requests') == []:
+            try:
+                bounds = [datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+                          for value in [run.get('run_started_at'), check.get('started_at'), check.get('completed_at'),
+                                        run.get('updated_at'), pr.get('merged_at')]]
+            except (TypeError, ValueError):
+                raise DeliveryError('Merged PR check completion time is unavailable: ' + name) from None
+            if bounds != sorted(bounds):
+                raise DeliveryError('Merged PR check did not complete within its pre-merge run: ' + name)
 
 
 def quality_evidence(api, pr):
@@ -186,7 +260,9 @@ def quality_evidence(api, pr):
         if number not in cache:
             cache[number] = api.get(f'/repos/{REPOSITORY}/actions/runs/{number}')
         return cache[number]
-    validate_checks(pr, checks, run, delivery_policy())
+    merged_cache = {}
+    validate_checks(pr, checks, run, delivery_policy(),
+                    merged_match=lambda value: merged_run_matches(api, pr, value, merged_cache))
 
 
 def promotion_evidence(api, pr):

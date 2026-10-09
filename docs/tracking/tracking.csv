@@ -67,3 +67,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-10-09T16:44:14Z,windows-acl-diagnostics-20261009,codex,release-diagnostics,commit,completed,fix(delivery): merge ready PRs and diagnose native Windows gates,PR#5;107 ops tests;11 companion suites;private ACL checks unchanged;zizmor;PowerShell syntax;independent review,pending
 2026-10-09T16:54:12Z,windows-acl-apply-20261009,codex,companion,commit,completed,fix(companion): preserve unset Windows security descriptor sections,PR-5;docs/reports/delivery-automation-verification.md,pending
 2026-10-09T17:06:21Z,windows-module-fix-20261009,codex,companion,commit,completed,fix(companion): isolate Windows PowerShell module dependencies,PR-5;docs/reports/delivery-automation-verification.md,pending
+2026-10-09T17:23:20Z,merged-provenance-20261009,codex,delivery,commit,completed,fix(delivery): verify merged PR checks after association removal,PR-5;docs/reports/delivery-automation-verification.md,pending

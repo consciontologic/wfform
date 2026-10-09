@@ -294,6 +294,31 @@ analysis also green. Native CI additionally exercises real ZIP creation under a
 poisoned module path and the extracted compiled executable. Independent review
 approved both source changes; those native acceptance checks remain mandatory.
 
+All four required checks passed for `2d60953291731254ba36573154a458d834bc7f0d`:
+[Web](https://github.com/consciontologic/wfform/actions/runs/37963912139),
+[security](https://github.com/consciontologic/wfform/actions/runs/37963912255) and
+[Linux/Windows packages](https://github.com/consciontologic/wfform/actions/runs/37963912140).
+The native Windows job passed all companion suites, the incompatible-module ACL
+regression, 12 package tests, two executable/ZIP builds and the extracted compiled
+CLI's credential, authenticated-serving and shutdown checks.
+
+PR #5 then merged through native branch protection into `develop` as
+`926116e3ba3c5476ffbc0bac1609b05f88e90318`. Promotion correctly stopped when GitHub
+removed the completed runs' `pull_requests` associations; the same lists were also
+empty on their check runs and check suites. A dedicated bugfix branch addresses
+this observed API lifecycle. The fallback remains limited to a merged same-repo
+source, an exact tested head and two-parent merge with an identical tree, successful
+PR workflow checks completed before merge, a unique head-branch PR history and no
+base retargeting. Missing links on open PRs, conflicting links, branch reuse,
+unrelated workflows and other ambiguous evidence remain rejected. The original
+feature branch was reused by superseded PR #4, so the new unique bugfix PR must
+supply fresh quality evidence instead of accepting that ambiguous history.
+Independent review approved the fix and all 115 operation tests passed in
+`/tmp/agent-runs/merged-provenance-final--20261009T172217Z-560952.log`. Regressions
+also reject fork sources, missing or conflicting associations, invalid check
+timestamps and newer unverifiable runs that would otherwise hide behind an older
+success. The subsequent unique-branch merge remains the live acceptance test.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

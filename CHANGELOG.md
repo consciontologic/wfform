@@ -58,6 +58,8 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 - 🔐 Windows credential setup applies only the intended owner and access rules,
   without depending on inherited PowerShell module paths, while retaining strict
   validation that other users cannot access the file.
+- 🌿 Release verification retains strict source evidence when GitHub removes
+  workflow-to-PR links after merging, rejecting ambiguous or retargeted histories.
 
 ## [0.3.0] - 2026-10-09
 
