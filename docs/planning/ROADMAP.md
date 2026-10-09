@@ -31,7 +31,7 @@ Updated 2026-10-09. This is the authoritative current user scope, not a scaffold
 | Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
 | Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
 | Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
-| Routine delivery automation with human release approval | 8 | 5 | CI lanes/caches verified locally; consolidating all work into one develop PR and testing the requested cheaper model policy |
+| Routine delivery automation with human release approval | 8 | 6 | MAI verified live; requested alternatives and CI lanes/caches tested; one consolidated develop PR is being published |
 
 ## Phase 26 — Routine delivery automation with human release approval
 
@@ -41,7 +41,7 @@ Scope ID: delivery-automation. Requested 2026-10-09.
 while retaining the owner's final production deployment approval.
 
 **Non-goals:** bypassing GitHub reviews/protection, direct source pushes to
-main/develop, storing the temporary test credential, automatic paid-model
+main/develop, storing the temporary test credential, unapproved model
 fallback, or claiming unattended operation before its credentials and bootstrap
 PR are installed. The user explicitly chose zero routine human PR reviews and
 one final deployment approval; required checks and conversations stay enforced.
@@ -65,7 +65,7 @@ from mocks. Publication remains pending human approval.
 - [x] Review, verify and publish the bootstrap PR; record remaining activation or human approval requirements accurately.
 - [x] Restrict security, quality and native tests to develop PRs and hotfix-to-main PRs; reuse exact-tree validation for promotion and release.
 - [x] Cache pinned SDK/dependencies/scanners safely and remove duplicate scans; verify workflow routing and source-provenance regressions.
-- [ ] Try MAI-Code-1.1-Flash and configure supported, bounded fallback choices in the requested order without silent expensive substitution.
+- [x] Try MAI-Code-1.1-Flash and configure supported, bounded fallback choices in the requested order without silent expensive substitution.
 - [ ] Preserve all earlier PR work and history on the latest feature branch, close superseded PRs, and open one clean PR into develop.
 
 Local verification passed 643 Flutter tests and 78 Python ops tests, companion
@@ -526,10 +526,12 @@ acceptance; authenticated metadata read-back and Copilot capability discovery.
 **Risks:** old service workers need a tested migration from hashed directories;
 mobile saved tool exchanges must not block normal chat; existing staged branding
 and tool work must survive. Copilot availability/prices and native Windows runs
-must be verified separately from local configuration; no automatic paid fallback.
+must be verified separately from local configuration. Phase 26 supersedes the
+original model selection with the owner-authorized MAI policy.
 
 **Evidence:** [1.0.0 verification](../reports/release-100-verification.md). Remaining
 remote gates: publish this reviewed source through guarded `make git`, run native
 Windows CI, require the actual CI check contexts and publish the reviewed SemVer
-tag. GPT-5.3-Codex completed the explicit read-only trial and is selected in the
-model policy; the failed GPT-6 Luna trial is retained as historical evidence. These are not claimed by local completion.
+tag. The earlier GPT-5.3-Codex success and failed GPT-6 Luna trial are historical
+evidence; Phase 26 selects MAI after its successful live trial. These remote
+release gates are not claimed by local completion.

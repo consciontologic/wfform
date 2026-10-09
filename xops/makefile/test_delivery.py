@@ -207,7 +207,106 @@ class DeliverySafetyTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(first['state'], 'submitted')
         self.assertEqual(second['state'], 'submitted')
-        self.assertEqual(calls[0]['model'], 'gpt-5.3-codex')
+        self.assertEqual(calls[0]['model'], 'mai-code-1.1-flash')
+
+    def test_ordered_fallback_reserves_each_attempt_and_persists_selected_model(self):
+        import copilot_task
+        api, calls = FakeAPI(), []
+        order = ['mai-code-1.1-flash', 'claude-haiku-4.5', 'kimi-k3', 'gpt-5.4-mini', 'gemini-3.8-flash']
+        def submit(body, token):
+            saved = delivery.receipt(api, 9, 'task', '9')
+            self.assertEqual(saved['model'], body['model'])
+            self.assertEqual(saved['attempts'][-1], {'model': body['model'], 'state': 'reserved'})
+            self.assertEqual(saved['model_order'], order)
+            calls.append(body['model'])
+            if len(calls) < 3: raise copilot_task.ModelRejected(body['model'])
+            return {'id': 'fallback-task', 'state': 'queued', 'html_url': f'https://github.com/{REPO}/tasks/fallback-task'}
+        issue = {'number': 9, 'title': 'Fix wrapping'}
+        selected = delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+        self.assertEqual(calls, order[:3])
+        self.assertEqual(selected['model'], 'kimi-k3')
+        self.assertEqual([row['state'] for row in selected['attempts']], ['rejected', 'rejected', 'submitted'])
+        delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+        self.assertEqual(calls, order[:3])
+        # Repair is the same selected model, with no fallback after rejection.
+        repaired = []
+        def repair(body, token):
+            repaired.append(body['model'])
+            raise copilot_task.ModelRejected(body['model'])
+        pull = pr('copilot/fix', 'develop')
+        with self.assertRaises(delivery.DeliveryError):
+            delivery.repair_once(api, issue, selected, pull, [{'name': 'Web checks', 'url': 'https://github.com/test'}], 'test', repair)
+        delivery.repair_once(api, issue, selected, pull, [{'name': 'Web checks', 'url': 'https://github.com/test'}], 'test', repair)
+        self.assertEqual(repaired, ['kimi-k3'])
+        tasks = FakeAPI()
+        tasks.reads[f'/agents/repos/{REPO}/tasks/fallback-task'] = {'sessions': [{'model': 'sweagent-capi:kimi-k3', 'base_ref': 'develop'}]}
+        delivery.checked_task(tasks, selected)
+        tasks.reads[f'/agents/repos/{REPO}/tasks/fallback-task']['sessions'][0]['model'] = 'mai-code-1.1-flash'
+        with self.assertRaises(delivery.DeliveryError): delivery.checked_task(tasks, selected)
+
+    def test_exhausted_model_rejections_are_bounded_and_never_replayed(self):
+        import copilot_task
+        api, calls = FakeAPI(), []
+        def submit(body, token):
+            calls.append(body['model'])
+            raise copilot_task.ModelRejected(body['model'])
+        issue = {'number': 9, 'title': 'Fix wrapping'}
+        with self.assertRaises(delivery.DeliveryError): delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+        saved = delivery.receipt(api, 9, 'task', '9')
+        self.assertEqual(saved['state'], 'rejected')
+        self.assertEqual(len(calls), 5)
+        delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+        self.assertEqual(len(calls), 5)
+
+    def test_failed_mid_chain_reservation_never_submits_next_candidate(self):
+        import copilot_task
+        # Failure persisting the rejection OR reserving its successor must stop.
+        for fail_patch in [1, 2]:
+            api, calls, updates = FakeAPI(), [], []
+            original = api.request
+            def request(method, path, body=None):
+                if method == 'PATCH':
+                    updates.append(body)
+                    if len(updates) == fail_patch: raise delivery.DeliveryError('Cannot persist next reservation')
+                return original(method, path, body)
+            api.request = request
+            def submit(body, token):
+                calls.append(body['model'])
+                raise copilot_task.ModelRejected(body['model'])
+            issue = {'number': 9, 'title': 'Fix wrapping'}
+            with self.subTest(fail_patch=fail_patch), self.assertRaises(delivery.DeliveryError):
+                delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+            self.assertEqual(calls, ['mai-code-1.1-flash'])
+            delivery.delegate(api, issue, 'bugfix', None, 'maintainer', 'test', submit)
+            self.assertEqual(len(calls), 1)
+
+
+    def test_historical_disallowed_model_is_not_replaced_for_repair(self):
+        api, calls = FakeAPI(), []
+        saved = {'kind': 'bugfix', 'model': 'gpt-5.3-codex', 'base_ref': 'develop'}
+        with self.assertRaisesRegex(delivery.DeliveryError, 'no longer permitted'):
+            delivery.repair_once(api, {'number': 9}, saved, pr('copilot/fix', 'develop'),
+                [{'name': 'Web checks', 'url': 'https://github.com/test'}], 'test',
+                lambda *args: calls.append(args))
+        self.assertEqual(calls, [])
+        self.assertEqual(api.writes, [])
+
+    def test_accepted_failed_or_uncertain_task_never_advances_model(self):
+        import copilot_task
+        for result in [{'id': 'accepted', 'state': 'failed', 'html_url': f'https://github.com/{REPO}/tasks/accepted'},
+                       SystemExit('Ambiguous POST'), OSError('connection lost')]:
+            api, calls = FakeAPI(), []
+            def submit(body, token):
+                calls.append(body['model'])
+                if isinstance(result, BaseException): raise result
+                return result
+            try:
+                delivery.delegate(api, {'number': 9, 'title': 'Fix wrapping'}, 'bugfix', None, 'maintainer', 'test', submit)
+            except delivery.DeliveryError:
+                pass
+            self.assertEqual(calls, ['mai-code-1.1-flash'])
+            delivery.delegate(api, {'number': 9, 'title': 'Fix wrapping'}, 'bugfix', None, 'maintainer', 'test', submit)
+            self.assertEqual(len(calls), 1)
 
     def test_uncertain_paid_task_never_retries(self):
         api, calls = FakeAPI(), []
@@ -269,7 +368,7 @@ class DeliverySafetyTest(unittest.TestCase):
 
     def test_repair_budget_is_once_per_issue_even_when_head_changes(self):
         api, calls = FakeAPI(), []
-        saved = {'model': 'gpt-5.3-codex', 'kind': 'bugfix', 'version': None,
+        saved = {'model': 'mai-code-1.1-flash', 'kind': 'bugfix', 'version': None,
                  'actor': 'maintainer', 'base_ref': 'develop'}
         pull = pr('copilot/x', 'develop', labels=[{'name': 'work:bugfix'}])
         failures = [{'name': 'Web checks', 'url': f'https://github.com/{REPO}/actions/runs/1/job/1'}]
@@ -283,7 +382,7 @@ class DeliverySafetyTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]['head_ref'], 'copilot/x')
         self.assertEqual(calls[0]['base_ref'], 'develop')
-        self.assertEqual(calls[0]['model'], 'gpt-5.3-codex')
+        self.assertEqual(calls[0]['model'], 'mai-code-1.1-flash')
 
     def test_repair_only_accepts_terminal_trusted_current_head_failure(self):
         checks, runs = evidence()
@@ -307,7 +406,7 @@ class DeliverySafetyTest(unittest.TestCase):
 
     def test_repair_refuses_a_different_base_or_unmanaged_branch(self):
         api = FakeAPI()
-        saved = {'model': 'gpt-5.3-codex', 'kind': 'bugfix', 'version': None,
+        saved = {'model': 'mai-code-1.1-flash', 'kind': 'bugfix', 'version': None,
                  'actor': 'maintainer', 'base_ref': 'develop'}
         for pull in [pr('copilot/x', 'main'), pr('feature/x', 'develop')]:
             with self.assertRaises(delivery.DeliveryError):
@@ -351,7 +450,7 @@ class DeliverySafetyTest(unittest.TestCase):
 
     def test_uncertain_repair_is_not_submitted_again(self):
         api, calls = FakeAPI(), []
-        saved = {'model': 'gpt-5.3-codex', 'kind': 'bugfix', 'version': None,
+        saved = {'model': 'mai-code-1.1-flash', 'kind': 'bugfix', 'version': None,
                  'actor': 'maintainer', 'base_ref': 'develop'}
         pull = pr('copilot/x', 'develop')
         failures = [{'name': 'Web checks', 'url': 'https://github.com/consciontologic/wfform/actions/runs/1/job/1'}]
@@ -393,7 +492,7 @@ class DeliverySafetyTest(unittest.TestCase):
     def test_completed_managed_task_with_real_artifact_shape_becomes_ready(self):
         from urllib.parse import urlencode
         api, tasks = FakeAPI(), FakeAPI()
-        saved = {'state': 'submitted', 'task_id': 'initial-1', 'model': 'gpt-5.3-codex',
+        saved = {'state': 'submitted', 'task_id': 'initial-1', 'model': 'mai-code-1.1-flash',
                  'kind': 'bugfix', 'version': None, 'base_ref': 'develop'}
         delivery.write_receipt(api, 9, 'task', '9', saved)
         pull = pr('copilot/fix', 'develop', id=4800810052, draft=True,
@@ -401,7 +500,7 @@ class DeliverySafetyTest(unittest.TestCase):
         api.reads[f'/repos/{REPO}/issues?state=open&labels=delivery%3Amanaged&per_page=10&sort=updated'] = [{'number': 9}]
         task = {'state': 'completed', 'artifacts': [{'provider': 'github', 'type': 'pull',
                                                   'data': {'id': 4800810052, 'global_id': ''}}],
-                'sessions': [{'head_ref': 'copilot/fix', 'base_ref': 'develop', 'model': 'sweagent-capi:gpt-5.3-codex'}]}
+                'sessions': [{'head_ref': 'copilot/fix', 'base_ref': 'develop', 'model': 'sweagent-capi:mai-code-1.1-flash'}]}
         tasks.reads[f'/agents/repos/{REPO}/tasks/initial-1'] = task
         query = urlencode({'state': 'open', 'head': 'consciontologic:copilot/fix', 'base': 'develop', 'per_page': 100})
         api.reads[f'/repos/{REPO}/pulls?' + query] = [pull]

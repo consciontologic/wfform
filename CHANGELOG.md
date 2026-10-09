@@ -15,7 +15,7 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 - 🧪 Runnable MCP and local CLI playground with safe fixtures and a short walkthrough.
 - 🌿 Gitflow branches, guarded agent publication through `make git`, plain SemVer release packages and free quality/security reports.
-- 🤖 Explicit GPT-5.3-Codex selection for Copilot tasks, verified by a completed live trial; no automatic model fallback.
+- 🤖 MAI-Code-1.1-Flash is the default Copilot task model, verified by a completed live trial; the owner’s ordered alternatives replace costly automatic Codex selection.
 
 - Model-specific parameter controls with official explanations, validation, saved overrides and remote defaults when unset.
 - Optional Streamable HTTP MCP connections, per-conversation tools, approval before every call, streamed tool exchanges and saved tool results.

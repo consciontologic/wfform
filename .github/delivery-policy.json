@@ -38,6 +38,6 @@
   "max_repairs_per_request": 1,
   "max_repair_submissions_per_run": 1,
   "release_workflow": "companion.yml",
-  "note": "Only trusted main orchestration runs with credentials. Native GitHub merge requirements remain authoritative. A production environment approval from the eligible human is mandatory for final release. One initial task and at most one diagnosed CI repair use the same explicit model per authorized issue. Uncertain paid task or release dispatch receipts are never automatically retried.",
+  "note": "Only trusted main orchestration runs with credentials. Native GitHub merge requirements remain authoritative. A production environment approval from the eligible human is mandatory for final release. One accepted initial task and at most one diagnosed CI repair use the same selected model per authorized issue; only definitive model validation rejection may advance through the owner-authorized alternatives. Uncertain paid task or release dispatch receipts are never automatically retried.",
   "quality_policy": "Quality runs only on PRs to develop, or recognized hotfix PRs to main. Promotions require the exact previously tested develop tree, including the candidate and final merge trees."
 }

@@ -223,9 +223,17 @@ Finish in this order:
    a PR with successful checks.
 
 Missing secrets, native platform requirements or checks remain visible gates.
-The cost budget is one initial Copilot task plus at most one managed CI repair,
-per issue, with the same explicit model. The repair requires a completed first
-task and failing CI on its current head, and continues the existing branch.
+The cost budget is one accepted initial Copilot task plus at most one managed CI
+repair per issue, with the same selected model. The primary is MAI-Code-1.1-Flash;
+[model policy](../../.github/copilot-model-policy.json) lists the owner's ordered
+alternatives. Only a definitive HTTP 422 response containing exclusively
+`model`/`invalid` validation errors advances to the next candidate. Each model is
+reserved before POST and tried at most once. Uncertain, authentication,
+rate-limit or asynchronous task failures never advance the chain. The task API
+does not promise this model-specific error shape; the conditional adapter stays
+inactive for opaque errors. The repair
+requires a completed first task and failing CI on its current head, and continues
+the existing branch.
 The controller reserves and records each submission before proceeding; it never
 repeats uncertain submissions or loops through paid repairs. Exhausted attempts
 remain visible for inspection. It marks a managed draft ready only after the

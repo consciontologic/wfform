@@ -111,11 +111,14 @@ one approval and resolved conversations; stale approvals are dismissed and
 force-push/deletion disabled. Administrators retain bootstrap/recovery bypass.
 Website main remains a generated-artifact publication branch.
 
-Required CI contexts remain a **manual merge gate** until these unpushed
-workflows run remotely; then configure their real names as required checks.
-At that configuration checkpoint, no source commit/push, PR, release tag or
-public package had been created. The following release-initiation follow-up
-records subsequent work separately.
+Historical note: this section captured an earlier pre-CI checkpoint. A later
+GitHub API read-back (by the coordinating parent) confirmed required checks are
+now active on both `main` and `develop` with strict/up-to-date mode:
+**Web checks**, **Security checks**, **Linux package**, **Windows package**,
+plus one independent approval.
+At the earlier checkpoint, no source commit/push, PR, release tag or public
+package had been created. The following release-initiation follow-up records
+subsequent work separately.
 The live website's physical legacy assets change only when the new publisher runs.
 
 ## Copilot and remaining release gates
@@ -185,6 +188,54 @@ An eligible independent reviewer and passing checks precede merge/publication.
 Source publication, native Windows CI, required check activation and a published
 1.0.0 tag/download are recorded only once actually observed. macOS and graphical
 installers remain future work; portable archives are not described as installers.
+
+### Independent preparation audit (2026-10-09, Copilot PR #2)
+
+**Historical checkpoint, retained when consolidating PR #2.** The model,
+review, trigger and promotion policies below have since been superseded by the
+[delivery automation verification](delivery-automation-verification.md). The
+corrected Windows implementation is retained; new native CI remains required.
+
+This checkpoint is a fresh release-readiness audit for
+[`copilot/release-100-preparation` → `release/1.0.0`](https://github.com/consciontologic/wfform/pull/2).
+It does not replace the historical local evidence above.
+
+- Checked-out app version remains `1.0.0` in root `pubspec.yaml`.
+- Model policy remains explicit `gpt-5.3-codex` only (`allow_auto: false`,
+  `allow_paid_fallback: false`).
+- Release gating in `.github/workflows/companion.yml` remains strict:
+  `linux` needs `security`, `windows` needs `linux`, and `publish` needs both
+  native jobs and runs only on plain SemVer tag pushes.
+- Fresh local run: `python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v`
+  passed all 33 tests in this session.
+- Fresh local `make version.check` and `make repository.check` could not run in
+  this sandbox because `dart` is unavailable (`make: dart: No such file or directory`).
+
+GitHub Actions evidence at this checkpoint (updated with final run outcomes):
+
+- `🛡️ Free security and package reports` run `37934431905`: **success**.
+- `📦 Packages and release` run `37934432076`: **failure**. `security` and
+  `Linux package` succeeded; `Windows package` job
+  `113834460693` failed in `companion/test/server_test.dart` with a configured
+  child-start failure before package extraction/build steps, so no Windows
+  artifact was produced.
+- `🌐 Web quality` run `37934431743`: **success**.
+- Preparation PR #2 follow-up runs `37934772462`, `37934772488`, and
+  `37934772949` currently show **action_required** with zero jobs scheduled.
+- On current PR #2 head `0938d62`, workflow runs `37936244803` (security),
+  `37936244779` (web), and `37936245680` (packages) also show
+  **action_required** with zero jobs scheduled, so there is still no fresh
+  executable Windows verification for this commit.
+
+Remaining gates before promotion from `release/1.0.0` to `main`:
+
+1. Fix the native Windows runtime failure and rerun PR #2 until **Windows package**
+   is green alongside web/security/Linux on the same release-branch revision.
+2. Merge PR #2 into `release/1.0.0` with an eligible independent approval.
+3. Merge the release promotion PR (`release/1.0.0` → `main`) with required
+   checks and independent approval.
+4. After reviewed main merge, publish plain tag `1.0.0`, then complete the
+   required `develop` back-merge PR.
 
 ## Opinion: a VS Code extension
 

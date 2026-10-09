@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 import sys
 from io import BytesIO
+from urllib.error import HTTPError
 
 
 def load(name):
@@ -19,8 +20,8 @@ class GitflowTest(unittest.TestCase):
     def test_release_preparation_targets_develop_quality_lane(self):
         agent = load("copilot_task")
         with self.assertRaises(ValueError):
-            agent.payload("release", "Prepare release.", "gpt-5.3-codex")
-        data = agent.payload("release", "Prepare release.", "gpt-5.3-codex", "1.0.0")
+            agent.payload("release", "Prepare release.", "mai-code-1.1-flash")
+        data = agent.payload("release", "Prepare release.", "mai-code-1.1-flash", "1.0.0")
         self.assertEqual(data["base_ref"], "develop")
         self.assertIn("separate promotion PR", data["prompt"])
 
@@ -36,8 +37,50 @@ class GitflowTest(unittest.TestCase):
                     return BytesIO(capability if len(self.calls) == 1 else bad)
             fake = Fake()
             with self.subTest(bad=bad), self.assertRaisesRegex(SystemExit, "outcome is unknown"):
-                agent.submit({"model": "gpt-5.3-codex"}, "test-only-token", fake)
+                agent.submit({"model": "mai-code-1.1-flash"}, "test-only-token", fake)
             self.assertEqual(len(fake.calls), 2)
+
+    def test_only_structured_model_validation_rejection_can_select_fallback(self):
+        agent = load('copilot_task')
+        capability = json.dumps({'data': {'repository': {'suggestedActors': {'nodes': [{'login': 'copilot-swe-agent'}]}}}}).encode()
+        rejection = {'message': 'Validation Failed', 'errors': [{'resource': 'AgentTask', 'field': 'model', 'code': 'invalid'}]}
+        cases = [(422, rejection, True)]
+        for status in [400, 401, 403, 404, 429, 500, 502]: cases.append((status, rejection, False))
+        for payload in [dict(message='Model is unavailable'), dict(errors=[]),
+                        dict(message='Validation Failed', errors=[{'code': 'invalid', 'message': 'Unsupported model'}]),
+                        dict(errors=[{'field': 'prompt', 'code': 'invalid'}]),
+                        dict(errors=[{'field': 'model', 'code': 'custom'}]),
+                        dict(rejection, id='task-accepted'), dict(rejection, task={'id': 'task-accepted'}),
+                        dict(rejection, detail={'html_url': 'https://github.com/consciontologic/wfform/tasks/accepted'}),
+                        dict(rejection, errors=rejection['errors'] + [{'field': 'base_ref', 'code': 'invalid'}])]:
+            cases.append((422, payload, False))
+        for status, payload, safe in cases:
+            class Fake:
+                calls = []
+                def open(self, request, timeout):
+                    self.calls.append(request.full_url)
+                    if len(self.calls) == 1: return BytesIO(capability)
+                    raise HTTPError(request.full_url, status, 'Rejected', {}, BytesIO(json.dumps(payload).encode()))
+            fake = Fake()
+            with self.subTest(status=status, payload=payload):
+                with self.assertRaises(agent.ModelRejected if safe else SystemExit):
+                    agent.submit({'model': 'mai-code-1.1-flash'}, 'test-only-token', fake)
+                self.assertEqual(len(fake.calls), 2)
+
+    def test_rejection_with_task_location_cannot_fall_back(self):
+        agent = load('copilot_task')
+        capability = {'data': {'repository': {'suggestedActors': {'nodes': [{'login': 'copilot-swe-agent'}]}}}}
+        class Fake:
+            count = 0
+            def open(self, request, timeout):
+                self.count += 1
+                if self.count == 1: return BytesIO(json.dumps(capability).encode())
+                raise HTTPError(request.full_url, 422, 'Rejected',
+                    {'Location': 'https://api.github.com/agents/repos/consciontologic/wfform/tasks/accepted'},
+                    BytesIO(json.dumps({'errors': [{'field': 'model', 'code': 'invalid'}]}).encode()))
+        fake = Fake()
+        with self.assertRaises(SystemExit): agent.submit({'model': 'mai-code-1.1-flash'}, 'test', fake)
+        self.assertEqual(fake.count, 2)
 
     def test_invalid_capability_never_submits_task(self):
         agent = load("copilot_task")
@@ -80,12 +123,12 @@ class GitflowTest(unittest.TestCase):
 
     def test_copilot_requires_explicit_low_cost_model(self):
         agent = load("copilot_task")
-        for model in ["", "auto", "Auto", "gpt-6-astra", "gpt-6-luna"]:
+        for model in ["", "auto", "Auto", "gpt-6-astra", "gpt-6-luna", "gpt-5.3-codex"]:
             with self.subTest(model=model), self.assertRaises(ValueError):
                 agent.payload("feature", "Add a tested feature.", model)
-        result = agent.payload("hotfix", "Fix startup.", "gpt-5.3-codex")
+        result = agent.payload("hotfix", "Fix startup.", "mai-code-1.1-flash")
         self.assertEqual(result["base_ref"], "main")
-        self.assertEqual(result["model"], "gpt-5.3-codex")
+        self.assertEqual(result["model"], "mai-code-1.1-flash")
         self.assertTrue(result["create_pull_request"])
         self.assertIn("hotfix", result["prompt"])
         self.assertIn("Do not merge", result["prompt"])
@@ -93,9 +136,13 @@ class GitflowTest(unittest.TestCase):
     def test_policy_is_explicit_and_not_auto(self):
         root = Path(__file__).parents[2]
         policy = json.loads((root / ".github/copilot-model-policy.json").read_text())
-        self.assertEqual(policy["preferred_model"], "gpt-5.3-codex")
+        self.assertEqual(policy["preferred_model"], "mai-code-1.1-flash")
         self.assertFalse(policy["allow_auto"])
-        self.assertFalse(policy["allow_paid_fallback"])
+        self.assertTrue(policy["allow_paid_fallback"])
+        self.assertEqual(policy['fallback_models'], ['claude-haiku-4.5', 'kimi-k3', 'gpt-5.4-mini', 'gemini-3.8-flash'])
+        self.assertEqual(policy['allowed_models'], [policy['preferred_model']] + policy['fallback_models'])
+        self.assertFalse(policy['fallback_live_tested'])
+        self.assertFalse(policy['fallback_response_contract_verified'])
 
 
 if __name__ == "__main__":

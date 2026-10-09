@@ -93,10 +93,10 @@ work and choose a suitable existing checkout before creating a worktree.
 GitHub **Copilot cloud agent** is the user's preferred delegated PR author: it may
 use its platform-owned `copilot/*` branch and commit/push changes there for an
 explicitly assigned task. Local coordinating agents publish their own validated
-Gitflow work branches through `make git`; never masquerade as Copilot. Prefer the
-reviewed lowest-cost available model in `.github/copilot-model-policy.json`;
-no Auto or pricier fallback. If Copilot is unavailable, prepare the handoff and
-report that limit honestly.
+Gitflow work branches through `make git`; never masquerade as Copilot. Use the
+explicit MAI primary and owner-authorized ordered alternatives in
+`.github/copilot-model-policy.json`; no Auto or unlisted model fallback. If
+Copilot is unavailable, prepare the handoff and report that limit honestly.
 Copilot prepares changes, tests and PR/release notes. Routine delivery may submit
 authorized tasks, follow checks, open promotion/back-merge PRs and enable GitHub
 auto-merge. The user chose **final deployment approval** on 2026-10-09: routine
@@ -117,8 +117,10 @@ After approval,
 deterministic CI validates the exact source, creates the plain
 `MAJOR.MINOR.PATCH` tag and publishes verified artifacts. Never move an existing
 tag or replace its assets.
-Copilot automation is bounded to one initial task and at most one managed CI
-repair, with the same explicit model; uncertain submissions are never retried.
+Copilot automation is bounded to one accepted initial task and at most one
+managed CI repair, using the same selected model. Only a definitive model-field
+validation rejection may advance through the configured alternatives, each once;
+uncertain submissions and asynchronous task failures are never retried.
 Keep automation/deployment secrets in the `main`-restricted environments
 documented in [CI/CD](docs/guides/CI_CD.md#one-time-automation-setup).
 

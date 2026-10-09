@@ -140,6 +140,41 @@ tests. A separate review found no remaining blockers. Evidence:
 `/tmp/agent-runs/windows-companion-gate--20261009T140134Z-399449.log` and
 `/tmp/agent-runs/windows-deploy-regression--20261009T140157Z-400685.log`.
 
+## MAI selection and PR consolidation
+
+The owner's requested `mai-code-1.1-flash` completed a read-only live task on
+2026-10-09: [task 93a244f2-a853-4898-b485-08b2237e2a44](https://github.com/consciontologic/wfform/tasks/93a244f2-a853-4898-b485-08b2237e2a44).
+Both task and session completed; the actual session model is
+`sweagent-capi:mai-code-1.1-flash`, with no reported error. No PR was created.
+This establishes live availability of the primary, not full autonomous delivery
+or live compatibility of the fallback choices.
+
+The ordered alternatives are Claude Haiku 4.5, Kimi K3, GPT-5.4 mini and
+Gemini 3.8 Flash. REST accepts one model per task. The controller advances only
+on a definitive HTTP 422 model-field validation rejection, never after an
+uncertain submission or a started task. Candidate reservations are durable;
+accepted tasks and their single allowed CI repair keep the same model. Generic
+unavailability responses stop safely rather than infer that no work started.
+The current task endpoint schema does not promise a `model` error field. Thus
+the adapter's narrow rejection handling is covered by synthetic tests, not a
+claim of proven server-side fallback support; unknown response shapes stop.
+
+The model change passed all 100 Python operations tests, including ordered
+selection, durable reservations, exhaustion, no replay after uncertainty,
+selected-model identity and a same-model repair budget. Evidence:
+`/tmp/agent-runs/copilot-fallback-final--20261009T144138Z-438734.log`.
+Repository checks passed; Gitleaks found no leaks in the combined 36-commit
+history or the prospective source snapshot. The full 648-test application gate
+above remains applicable: companion/application code is unchanged by this merge.
+
+Superseded PRs #1, #2 and #4 were closed without deleting their branches.
+The latest feature branch preserves the original 1.0.0 preparation, all delivery
+and CI revisions, and the seven additional Copilot commits through a merge.
+The reviewed companion code remains unchanged: it includes the useful Windows
+fix and corrects two compile errors from that historical branch. The old audit
+is retained with a supersession note; its obsolete review/model policies are
+not reinstated.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

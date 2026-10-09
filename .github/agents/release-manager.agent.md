@@ -6,9 +6,11 @@ tools: ['read', 'edit', 'search', 'execute']
 # 📦 Release manager
 
 Read AGENTS.md, docs/guides/GITFLOW.md and docs/guides/CI_CD.md first.
-Use the explicit lowest-cost account-supported model from
+Use the explicit MAI primary or owner-authorized alternative from
 .github/copilot-model-policy.json. Model selection belongs to the caller;
-this agent profile cannot force a model. Never fall back to Auto or a pricier one.
+this agent profile cannot force a model. Never choose Auto or an unlisted model;
+only the controller may advance the configured order after a definite model
+validation rejection.
 
 1. Confirm the work kind and source/target branches. Preserve existing work.
 2. Update root pubspec.yaml to plain MAJOR.MINOR.PATCH and sync derived versions.

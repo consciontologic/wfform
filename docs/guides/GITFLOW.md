@@ -65,8 +65,8 @@ this task; issue text from a stranger is not authorization.
 
 You can also use **Actions → 🤖 Routine delivery → Run workflow** on `main`:
 choose `delegate`, the issue number, work kind and release version when needed.
-The controller allows one initial task and at most **one managed CI repair**
-per issue, using the same explicit model. A repair starts only after the first
+The controller allows one accepted initial task and at most **one managed CI repair**
+per issue, using the selected model for both. A repair starts only after the first
 task finishes and CI fails on its current PR head; it continues the same branch.
 The controller records receipts and never repeats an uncertain submission.
 After that budget is used, a failure needs
@@ -74,18 +74,28 @@ inspection rather than another automatic purchase. Read the issue/task links
 and workflow summary before requesting a follow-up.
 
 The repository's [model policy](../../.github/copilot-model-policy.json) selects
-**GPT-5.3-Codex** explicitly. On 2026-10-09 it had the lowest published rates
-among active models listed by the [REST task API](https://docs.github.com/en/rest/agent-tasks/agent-tasks):
-$1.75 input, $0.175 cached input and $14 output per million tokens. Check the
-[current pricing](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing)
-before changing the policy; total cost depends on task usage. No Auto or
-automatic pricier fallback is allowed. UI availability and API support can differ.
+**MAI-Code-1.1-Flash**. The owner's fallback order is **Claude Haiku 4.5 →
+Kimi K3 → GPT-5.4 mini → Gemini 3.8 Flash**. GitHub's
+[task API](https://docs.github.com/en/rest/agent-tasks/agent-tasks) accepts one
+model per request, so the controller manages selection. Auto and models outside
+this list are prohibited; availability and total usage costs can change.
+Fallback models are configured alternatives, not separately live-tested claims.
+The next candidate is tried only after a definitive HTTP 422 response whose
+structured validation errors exclusively identify the `model` field as invalid.
+Every candidate is reserved before submission and tried at most once. Generic
+errors, timeouts, authentication/rate limits and a task that started then failed
+stop the controller. An unavailable-model response with a different shape also
+stops safely. CI repairs stay on the accepted model; failed tests do not trigger
+model shopping. This conditional fallback has regression coverage, not a live
+fallback execution claim. The current task endpoint schema does not promise a
+model-specific error field, so automatic fallback stays inactive unless that
+explicit evidence is returned; ordinary rejection responses require inspection.
 
 For a repeatable API handoff, put the task in a local text file and preview:
 
 ```bash
 python3 xops/agent/copilot_task.py feature \
-  --prompt-file .local/my-task.md --model gpt-5.3-codex
+  --prompt-file .local/my-task.md --model mai-code-1.1-flash
 ```
 
 For release preparation add `--release-version 1.0.0`; the helper requires the
@@ -97,14 +107,14 @@ The task helper does not commit local files or upload staged changes: first
 publish validated source through `make git` on a Gitflow work branch.
 Inspect GitHub before retrying an uncertain submission.
 
-**Live verification (2026-10-09):** an explicit `gpt-5.3-codex` read-only task
-[completed successfully](https://github.com/consciontologic/wfform/tasks/72913e53-5a2c-46f9-9239-24744f015df9).
-Its session reports `sweagent-capi:gpt-5.3-codex` with no error. An earlier
-`gpt-6-luna` request failed; that model is no longer allowed by the API policy.
-The [verification report](../reports/release-100-verification.md#copilot-and-remaining-release-gates)
-retains both results. For each new task, check actual session model and outcome;
-a queued receipt alone does not establish execution or cost. Copilot billing
-is separate from the free security and quality tools.
+**Live verification (2026-10-09):** an explicit `mai-code-1.1-flash` read-only
+[task completed successfully](https://github.com/consciontologic/wfform/tasks/93a244f2-a853-4898-b485-08b2237e2a44).
+Its session reports `sweagent-capi:mai-code-1.1-flash` with no error. It changed
+no files and created no PR. Earlier GPT-5.3-Codex success and GPT-6 Luna failure
+remain historical evidence in the [release report](../reports/release-100-verification.md#copilot-and-remaining-release-gates).
+For every task, check its actual model and outcome; a queued receipt alone does
+not establish execution or cost. Copilot billing is separate from the free
+security and quality tools.
 
 ## 3. Review and merge
 
