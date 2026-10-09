@@ -39,7 +39,7 @@ class FakeAPI:
                    'merged_at': '2026-10-09T15:00:00Z', 'merge_commit_sha': SHA,
                    'user': {'login': 'github-actions[bot]', 'type': 'Bot'},
                    'base': {'ref': 'main', 'repo': {'full_name': REPO}},
-                   'head': {'ref': 'release/1.0.0', 'sha': HEAD,
+                   'head': {'ref': 'hotfix/release-1.0.0', 'sha': HEAD,
                             'repo': {'full_name': REPO}}}
         self.reviews = [{'id': 10, 'state': 'APPROVED', 'commit_id': HEAD,
                          'submitted_at': '2026-10-09T14:00:00Z',
@@ -56,10 +56,15 @@ class FakeAPI:
                 'path': ['.github/workflows/web.yml', '.github/workflows/security.yml',
                          '.github/workflows/companion.yml', '.github/workflows/companion.yml'][index],
                 'repository': {'full_name': REPO}, 'head_repository': {'full_name': REPO},
-                'status': 'completed', 'conclusion': 'success'}
+                'status': 'completed', 'conclusion': 'success',
+                'pull_requests': [{'number': 3, 'head': {'sha': HEAD}, 'base': {'ref': 'main'}}]}
+        self.trees = {SHA: 'd' * 40, HEAD: 'd' * 40}
 
     def get(self, path):
         clean = path.split('?')[0]
+        if clean.startswith(BASE + '/git/commits/'):
+            sha = clean.rsplit('/', 1)[1]
+            return {'sha': sha, 'tree': {'sha': self.trees[sha]}}
         if clean == BASE + '/environments/production': return copy.deepcopy(self.environment)
         if clean == BASE + '/environments/production/deployment-branch-policies':
             return {'branch_policies': copy.deepcopy(self.policies)}
@@ -104,6 +109,96 @@ class FakeAPI:
         return entry
 
 
+
+class PromotionAPI(FakeAPI):
+    def __init__(self):
+        super().__init__()
+        self.pr['head']['ref'] = 'develop'
+        self.source = copy.deepcopy(self.pr)
+        self.source.update(number=2, merge_commit_sha=HEAD)
+        self.source['head'] = {'ref': 'feature/release', 'sha': 'c' * 40, 'repo': {'full_name': REPO}}
+        self.source['base']['ref'] = 'develop'
+        self.trees['c' * 40] = 'd' * 40
+        for check in self.checks:
+            check['head_sha'] = 'c' * 40
+        for run in self.check_runs.values():
+            run.update(head_sha='c' * 40, pull_requests=[{'number': 2, 'head': {'sha': 'c' * 40}, 'base': {'ref': 'develop'}}])
+
+    def get(self, path):
+        if path.startswith(BASE + '/pulls?'):
+            return [copy.deepcopy(self.source)]
+        if path == BASE + '/pulls/2':
+            return copy.deepcopy(self.source)
+        if path.startswith(BASE + '/commits/' + 'c' * 40 + '/check-runs'):
+            return {'check_runs': copy.deepcopy(self.checks)}
+        if path.startswith(BASE + '/commits/' + HEAD + '/check-runs'):
+            # Promotion jobs intentionally skip; they are not quality evidence.
+            return {'check_runs': [dict(row, head_sha=HEAD, conclusion='skipped') for row in self.checks]}
+        return super().get(path)
+
+
+class PromotionEvidenceTest(unittest.TestCase):
+    def test_skipped_promotion_reuses_exact_tested_develop_tree(self):
+        api = PromotionAPI()
+        self.assertEqual(release.authorize(api, REPO, 3, SHA, '1.0.0')['number'], 3)
+        self.assertEqual(api.writes, [])
+
+    def test_later_skipped_promotion_checks_do_not_mask_prior_develop_quality(self):
+        api = PromotionAPI()
+        row = dict(api.checks[0], id=900, conclusion='skipped',
+                   details_url=f'https://github.com/{REPO}/actions/runs/900/job/900')
+        api.checks.append(row)
+        api.check_runs['900'] = dict(api.check_runs['100'],
+            pull_requests=[{'number': 3, 'head': {'sha': 'c' * 40}, 'base': {'ref': 'main'}}])
+        release.authorize(api, REPO, 3, SHA, '1.0.0')
+        # A newer failed run for the actual source PR must still invalidate it.
+        api.checks.append(dict(api.checks[0], id=901, conclusion='failure'))
+        with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_main_merge_develop_merge_and_source_head_must_have_identical_trees(self):
+        for sha in [SHA, HEAD, 'c' * 40]:
+            api = PromotionAPI(); api.trees[sha] = 'e' * 40
+            with self.subTest(sha=sha), self.assertRaises(release.DeliveryError):
+                release.authorize(api, REPO, 3, SHA, '1.0.0')
+        api = PromotionAPI(); api.source['merged'] = False
+        with self.assertRaises(release.DeliveryError):
+            release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_synthetic_candidate_merge_is_checked_before_merge(self):
+        api = PromotionAPI()
+        api.pr.update(merged=False, state='open', mergeable=True)
+        self.assertEqual(release.promotion_evidence(api, api.pr)['source_pr'], 2)
+        api.trees[SHA] = 'e' * 40
+        with self.assertRaisesRegex(release.DeliveryError, 'tree'):
+            release.promotion_evidence(api, api.pr)
+        api.trees[SHA] = 'd' * 40; api.pr['mergeable'] = None
+        with self.assertRaises(release.DeliveryError): release.promotion_evidence(api, api.pr)
+
+    def test_prior_evidence_must_be_real_develop_pr_quality_not_push_or_dispatch(self):
+        for mutation in [dict(event='push'), dict(event='workflow_dispatch'),
+                         dict(path='.github/workflows/delivery.yml'), dict(pull_requests=[]),
+                         dict(pull_requests=[{'number': 2, 'head': {'sha': 'c' * 40}, 'base': {'ref': 'main'}}])]:
+            api = PromotionAPI(); api.check_runs['100'].update(mutation)
+            with self.subTest(mutation=mutation), self.assertRaises(release.DeliveryError):
+                release.authorize(api, REPO, 3, SHA, '1.0.0')
+        for mutation in [dict(conclusion='skipped'), dict(conclusion='failure'), dict(head_sha=HEAD), dict(app={'id': 9})]:
+            api = PromotionAPI(); api.checks[0].update(mutation)
+            with self.subTest(mutation=mutation), self.assertRaises(release.DeliveryError):
+                release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_merged_fork_into_develop_can_supply_verified_quality(self):
+        api = PromotionAPI(); api.source['head']['repo']['full_name'] = 'contributor/wfform'
+        for run in api.check_runs.values(): run['head_repository']['full_name'] = 'contributor/wfform'
+        release.authorize(api, REPO, 3, SHA, '1.0.0')
+        api.check_runs['100']['head_repository']['full_name'] = 'unrelated/wfform'
+        with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_direct_hotfix_needs_own_quality_and_no_untested_merge_content(self):
+        api = FakeAPI(); api.trees[SHA] = 'e' * 40
+        with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
+        api = FakeAPI(); api.check_runs['100']['event'] = 'workflow_dispatch'
+        with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
+
 class ReleaseAuthorizationTest(unittest.TestCase):
     def setUp(self): self.api = FakeAPI()
     def authorize(self):
@@ -127,6 +222,10 @@ class ReleaseAuthorizationTest(unittest.TestCase):
         self.api.reviews = []
         self.authorize()
         self.assertEqual(self.api.writes, [])
+
+    def test_hotfix_path_may_contain_release_without_becoming_version_branch(self):
+        self.api.pr['head']['ref'] = 'hotfix/release/startup'
+        self.authorize()
 
     def test_copilot_hotfix_can_use_deployment_approval(self):
         self.api.pr['user'] = {'login': 'Copilot', 'type': 'Bot'}

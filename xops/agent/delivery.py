@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import release_delivery as provenance
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -100,51 +101,55 @@ def pr_lane(pull, repo=REPO):
     head, base = pull['head']['ref'], pull['base']['ref']
     if not SHA.fullmatch(pull['head'].get('sha', '')):
         raise DeliveryError('PR head is not an immutable commit.')
+    if head == 'develop' and base == 'main':
+        return 'promotion'
     if head == 'main' and base == 'develop' and '<!-- wfform-delivery:backmerge -->' in (pull.get('body') or ''):
         return 'backmerge'
     match = re.fullmatch(r'(?:(?:codex|claude)/)?(feature|bugfix|hotfix|release)/([a-zA-Z0-9][a-zA-Z0-9._/-]*)', head)
     if match:
         kind, name = match.groups()
         expected = 'develop' if kind in {'feature', 'bugfix'} else 'main'
-        if base == expected and (kind != 'release' or re.fullmatch(SEMVER, name)):
+        if (base == expected or (kind == 'release' and base == 'develop')) and (kind != 'release' or re.fullmatch(SEMVER, name)):
             return kind
     if head.startswith('copilot/'):
-        if re.fullmatch('release/' + SEMVER, base):
-            return 'preparation'
         kinds = labels(pull) & {'work:feature', 'work:bugfix', 'work:hotfix', 'work:release'}
         if len(kinds) == 1:
             kind = next(iter(kinds)).split(':')[1]
-            if (base == 'develop' and kind in {'feature', 'bugfix'}) or (base == 'main' and kind == 'hotfix'):
+            if (base == 'develop' and kind in {'feature', 'bugfix', 'release'}) or (base == 'main' and kind == 'hotfix'):
                 return kind
     raise DeliveryError('PR does not match an authorized Gitflow lane.')
 
 
-def check_evidence(pull, checks, get_run, policy):
-    """Bind each check to its current commit, Actions app and actual workflow."""
-    head = pull['head']['sha']
-    for name, paths in policy['checks'].items():
-        candidates = [check for check in checks if check.get('name') == name]
-        if not candidates:
-            raise DeliveryError('Required check is missing: ' + name)
-        check = max(candidates, key=lambda item: item.get('id', 0))
-        if (check.get('head_sha') != head or check.get('app', {}).get('id') != policy['checks_app_id']
-                or check.get('status') != 'completed' or check.get('conclusion') != 'success'):
-            raise DeliveryError('Required check is stale, untrusted, pending or failed: ' + name)
-        match = re.fullmatch(r'https://github\.com/' + re.escape(REPO) + r'/actions/runs/([0-9]+)/job/[0-9]+', check.get('details_url') or '')
-        if not match:
-            raise DeliveryError('Check has no trusted workflow-run provenance: ' + name)
-        run = get_run(int(match.group(1)))
-        if not isinstance(run, dict) or (run.get('head_sha') != head
-                or run.get('event') not in {'pull_request', 'push', 'workflow_dispatch'}
-                or run.get('path', '').split('@')[0] not in paths
-                or run.get('repository', {}).get('full_name') != REPO
-                or run.get('head_repository', {}).get('full_name') != REPO
-                or run.get('status') != 'completed' or run.get('conclusion') != 'success'):
-            raise DeliveryError('Workflow evidence does not match this PR: ' + name)
+def check_evidence(pull, checks, get_run, policy, conclusions=('success',)):
+    try:
+        provenance.validate_checks(pull, checks, get_run, policy, conclusions)
+    except provenance.DeliveryError as error:
+        raise DeliveryError(str(error)) from error
+
+
+def promotion_gate(api, number, expected_head):
+    """Read-only metadata command; never writes approvals, refs or status checks."""
+    pull = api.get(f'/repos/{REPO}/pulls/{number}') or {}
+    if not SHA.fullmatch(expected_head) or pull.get('head', {}).get('sha') != expected_head:
+        raise DeliveryError('Promotion head changed; current source needs a fresh eligibility check.')
+    lane = pr_lane(pull)
+    if lane == 'hotfix':
+        return {'lane': 'hotfix'}  # Its four current-head quality checks remain mandatory.
+    try:
+        result = provenance.promotion_evidence(api, pull)
+    except provenance.DeliveryError as error:
+        raise DeliveryError(str(error)) from error
+    latest = api.get(f'/repos/{REPO}/pulls/{number}') or {}
+    if (latest.get('head', {}).get('sha') != expected_head
+            or latest.get('merge_commit_sha') != pull.get('merge_commit_sha')
+            or latest.get('base', {}).get('sha') != pull.get('base', {}).get('sha')):
+        raise DeliveryError('Promotion or target changed during metadata authorization.')
+    return result
 
 
 def protection_gate(rule, policy, production=False):
-    if not rule or not rule.get('requiresStatusChecks') or not set(policy['checks']).issubset(rule.get('requiredStatusCheckContexts') or []):
+    required = set(policy['checks'])
+    if not rule or not rule.get('requiresStatusChecks') or not required.issubset(rule.get('requiredStatusCheckContexts') or []):
         raise DeliveryError('Native branch protection with all required checks is needed for auto-merge.')
     if not rule.get('requiresConversationResolution') or not rule.get('requiresStrictStatusChecks'):
         raise DeliveryError('Native resolved conversations and strict checks are required.')
@@ -155,24 +160,24 @@ def protection_gate(rule, policy, production=False):
 
 
 def failed_check_evidence(pull, checks, get_run, policy):
-    """A failure is repairable only after its real workflow has finished."""
+    """Only a terminal failure in this exact quality PR can spend its repair."""
+    if pull.get('base', {}).get('ref') != 'develop' and not provenance.is_hotfix(pull):
+        return []
     failures = []
     for name, paths in policy['checks'].items():
-        candidates = [row for row in checks if row.get('name') == name]
-        check = max(candidates, key=lambda row: row.get('id', 0), default={})
-        if (check.get('head_sha') != pull['head']['sha'] or check.get('app', {}).get('id') != policy['checks_app_id']
-                or check.get('status') != 'completed' or check.get('conclusion') not in {'failure', 'timed_out'}):
-            continue
-        match = re.fullmatch(r'https://github\.com/' + re.escape(REPO) + r'/actions/runs/([0-9]+)/job/[0-9]+', check.get('details_url') or '')
-        if not match:
-            continue
-        run = get_run(int(match.group(1))) or {}
-        if (run.get('head_sha') == pull['head']['sha'] and run.get('status') == 'completed'
-                and run.get('conclusion') in {'failure', 'timed_out'}
-                and run.get('repository', {}).get('full_name') == REPO
-                and run.get('head_repository', {}).get('full_name') == REPO
-                and run.get('event') in {'pull_request', 'push', 'workflow_dispatch'}
-                and run.get('path', '').split('@')[0] in paths):
+        eligible = []
+        for check in checks:
+            if check.get('name') != name:
+                continue
+            match = re.fullmatch(r'https://github\.com/' + re.escape(REPO) + r'/actions/runs/([0-9]+)/job/[0-9]+', check.get('details_url') or '')
+            if match:
+                run = get_run(int(match.group(1))) or {}
+                if provenance.run_matches(pull, run, paths):
+                    eligible.append((check, run))
+        check, run = max(eligible, key=lambda row: row[0].get('id', 0), default=({}, {}))
+        if (check.get('head_sha') == pull['head']['sha'] and check.get('app', {}).get('id') == policy['checks_app_id']
+                and check.get('status') == 'completed' and check.get('conclusion') in {'failure', 'timed_out'}
+                and run.get('status') == 'completed' and run.get('conclusion') in {'failure', 'timed_out'}):
             failures.append({'name': name, 'url': check['details_url']})
     return failures
 
@@ -185,11 +190,11 @@ def graph(api, query, variables):
 
 
 def update_branch(creator, pull):
-    if pull.get('head', {}).get('ref') in {'main', 'develop'}:
-        raise DeliveryError('Never update a protected head branch directly.')
     pr_lane(pull)
     if pull.get('mergeable_state') != 'behind':
         return False
+    if pull.get('head', {}).get('ref') in {'main', 'develop'}:
+        raise DeliveryError('Never update a protected head branch directly.')
     head = urllib.parse.quote(pull['head']['ref'], safe='')
     branch = creator.get(f'/repos/{REPO}/branches/{head}') or {}
     if branch.get('protected') is not False:
@@ -203,16 +208,11 @@ def update_branch(creator, pull):
 
 def arm_auto_merge(api, pull, policy, creator=None):
     creator = creator or api
-    pr_lane(pull)
-    checks = api.paged(f'/repos/{REPO}/commits/{pull["head"]["sha"]}/check-runs?filter=latest', key='check_runs')
-    cache = {}
-    def run(number):
-        if number not in cache:
-            cache[number] = api.get(f'/repos/{REPO}/actions/runs/{number}')
-        return cache[number]
-    check_evidence(pull, checks, run, policy)
+    if (pull.get('state') != 'open' or pull.get('draft')
+            or any(pull.get(side, {}).get('repo', {}).get('full_name') != REPO for side in ('head', 'base'))):
+        raise DeliveryError('Only ready same-repository PRs enter routine merging.')
     query = '''query($number:Int!){repository(owner:"consciontologic",name:"wfform"){
-      pullRequest(number:$number){id headRefOid isDraft baseRefName autoMergeRequest{enabledAt}
+      pullRequest(number:$number){id headRefOid isDraft baseRefName mergeStateStatus autoMergeRequest{enabledAt}
         baseRef{branchProtectionRule{requiresApprovingReviews requiredApprovingReviewCount
           dismissesStaleReviews requiresConversationResolution requiresStatusChecks
           requiresStrictStatusChecks requiredStatusCheckContexts isAdminEnforced
@@ -220,16 +220,49 @@ def arm_auto_merge(api, pull, policy, creator=None):
     current = graph(api, query, {'number': pull['number']})['repository']['pullRequest']
     if current['headRefOid'] != pull['head']['sha'] or current['isDraft'] or current['baseRefName'] != pull['base']['ref']:
         raise DeliveryError('PR changed during validation; wait for its new checks.')
-    protection_gate((current.get('baseRef') or {}).get('branchProtectionRule'), policy,
-                    production=current['baseRefName'] == 'main')
+    production = current['baseRefName'] == 'main'
+    if production and current.get('autoMergeRequest'):
+        # A previously armed promotion/hotfix must not merge after its head or
+        # mutable lane label changes. Only one-shot guarded merges target main.
+        graph(creator, '''mutation($id:ID!){disablePullRequestAutoMerge(input:{pullRequestId:$id}){
+          pullRequest{number}}}''', {'id': current['id']})
+    pr_lane(pull)
+    protection_gate((current.get('baseRef') or {}).get('branchProtectionRule'), policy, production=production)
+    checks = api.paged(f'/repos/{REPO}/commits/{pull["head"]["sha"]}/check-runs?filter=latest', key='check_runs')
+    cache = {}
+    def run(number):
+        if number not in cache:
+            cache[number] = api.get(f'/repos/{REPO}/actions/runs/{number}')
+        return cache[number]
+    if provenance.is_promotion(pull):
+        promotion_gate(api, pull['number'], pull['head']['sha'])
+        check_evidence(pull, checks, run, policy, ('skipped',))
+    else:
+        check_evidence(pull, checks, run, policy)
     if update_branch(creator, pull):
         return 'updated its work branch from the base; waiting for new checks'
+    if production:
+        if current.get('mergeStateStatus') != 'CLEAN':
+            return 'waiting for native merge requirements; no auto-merge remains armed'
+        if provenance.is_promotion(pull):
+            promotion_gate(api, pull['number'], pull['head']['sha'])
+        else:
+            latest = api.get(f'/repos/{REPO}/pulls/{pull["number"]}') or {}
+            if (latest.get('head', {}).get('sha') != pull['head']['sha']
+                    or pr_lane(latest) != 'hotfix' or latest.get('mergeable') is not True
+                    or provenance.git_tree(api, latest.get('merge_commit_sha')) != provenance.git_tree(api, pull['head']['sha'])):
+                raise DeliveryError('Hotfix source, lane or candidate merge changed during authorization.')
+        result = creator.request('PUT', f'/repos/{REPO}/pulls/{pull["number"]}/merge',
+                                 {'sha': pull['head']['sha'], 'merge_method': 'merge'})
+        if not isinstance(result, dict) or result.get('merged') is not True:
+            raise DeliveryError('Native merge did not complete; inspect its result before proceeding.')
+        return 'merged the validated revision through native PR protection'
     if current.get('autoMergeRequest'):
         return 'already armed'
     graph(creator, '''mutation($input:EnablePullRequestAutoMergeInput!){
       enablePullRequestAutoMerge(input:$input){pullRequest{number}}}''', {
           'input': {'pullRequestId': current['id'], 'expectedHeadOid': pull['head']['sha'], 'mergeMethod': 'MERGE'}})
-    return 'armed; GitHub retains every required approval and check'
+    return 'auto-merge armed; native checks, reviews and conversations remain authoritative'
 
 
 def marker(kind, key):
@@ -298,8 +331,6 @@ def delegate(api, issue, kind, version, actor, token, submitter=None):
               'model': model, 'base_ref': body['base_ref']}
     comment_id = write_receipt(api, number, 'task', key, record)
     try:
-        if kind == 'release':
-            ensure_release_branch(api, version)
         result = (submitter or copilot_task.submit)(body, token)
         if not isinstance(result, dict) or not result.get('id') or not result.get('html_url', '').startswith(f'https://github.com/{REPO}/'):
             raise DeliveryError('Invalid task receipt.')
@@ -360,7 +391,12 @@ def event_gate(name, event, policy):
         raise DeliveryError('Unsupported delivery event.')
     if name == 'workflow_run':
         run = event.get('workflow_run', {})
-        if run.get('name') not in policy['workflow_names'] or run.get('head_repository', {}).get('full_name') != REPO:
+        paths = {path for values in policy['checks'].values() for path in values}
+        if (run.get('path', '').split('@')[0] not in paths
+                or run.get('head_repository', {}).get('full_name') != REPO
+                or run.get('repository', {}).get('full_name') != REPO
+                or run.get('event') not in {'pull_request', 'pull_request_target', 'workflow_dispatch'}
+                or run.get('status') != 'completed'):
             raise DeliveryError('Untrusted or unsupported workflow source.')
 
 
@@ -414,11 +450,17 @@ def ensure_pr(api, creator, head, base, title, body):
         raise DeliveryError('Cannot safely reconcile the existing PR set.')
     if pulls:
         latest = max(pulls, key=lambda item: item['number'])
-        if base == 'main' or latest['state'] == 'open':
+        if latest['state'] == 'open':
             return latest
         # A declined backmerge is human intent. A new release may follow an
         # already merged backmerge, identified by its new release marker.
-        if not latest.get('merged_at') or body.split('\n')[0] in (latest.get('body') or ''):
+        requested_marker = body.split('\n')[0]
+        old_body = latest.get('body') or ''
+        if requested_marker in old_body:
+            return latest
+        previous_promotion = re.search(r'<!-- wfform-delivery:promotion:(' + SEMVER + r') -->', old_body)
+        if not latest.get('merged_at') and not (base == 'main' and previous_promotion
+                and requested_marker.startswith('<!-- wfform-delivery:promotion:')):
             return latest
     return creator.request('POST', f'/repos/{REPO}/pulls', {
         'head': head, 'base': base, 'title': title, 'body': body, 'draft': False,
@@ -446,39 +488,43 @@ def prepare_backmerge(api, creator, version, sha):
 
 
 def prepare_promotion(api, creator, merged):
-    base = merged.get('base', {}).get('ref', '')
-    if not re.fullmatch('release/' + SEMVER, base) or not merged.get('merged_at'):
+    if merged.get('base', {}).get('ref') != 'develop' or not merged.get('merged'):
         return None
-    if any(merged.get(side, {}).get('repo', {}).get('full_name') != REPO for side in ('head', 'base')):
+    current = api.get(f'/repos/{REPO}/git/ref/heads/develop') or {}
+    if current.get('object', {}).get('sha') != merged.get('merge_commit_sha'):
+        return None  # Only the current integrated source can be promoted.
+    version = version_at(api, merged['merge_commit_sha'])
+    if not version or api.get(f'/repos/{REPO}/git/ref/tags/{version}'):
+        return None  # An already released version, including a backmerge, cannot loop.
+    try:
+        tree = provenance.git_tree(api, merged['merge_commit_sha'])
+        if provenance.git_tree(api, merged['head']['sha']) != tree:
+            raise provenance.DeliveryError('Develop merge introduced content absent from its tested head.')
+        provenance.quality_evidence(api, merged)
+    except provenance.DeliveryError as error:
+        raise DeliveryError(str(error)) from error
+    return ensure_pr(api, creator, 'develop', 'main', 'release: ' + version,
+                     f'<!-- wfform-delivery:promotion:{version} -->\n'
+                     f'Promote {version} from the tested develop tree `{tree}` (preparation #{merged["number"]}). '
+                     'Metadata authorization verifies the exact merge tree; no duplicate quality run. '
+                     'A human production deployment approval remains required before publication.')
+
+
+def version_at(api, sha):
+    if not SHA.fullmatch(sha or ''):
         return None
-    query = urllib.parse.urlencode({'state': 'open', 'base': base, 'per_page': 100})
-    if api.get(f'/repos/{REPO}/pulls?' + query):
-        return None  # preparation is still in flight
-    version = base.split('/')[1]
-    return ensure_pr(api, creator, base, 'main', 'release: ' + version,
-                     '<!-- wfform-delivery:promotion -->\n'
-                     f'Promote {version} after all required checks and native merge requirements pass. '
-                     'The trusted delivery workflow builds this exact merged commit; an eligible human approves the production deployment before its tag, release and website are published. It then opens the develop backmerge.\n\n'
-                     f'Preparation: #{merged["number"]}.')
+    value = api.get(f'/repos/{REPO}/contents/pubspec.yaml?ref={sha}') or {}
+    try:
+        source = base64.b64decode(value['content'], validate=False).decode('utf-8')
+    except (KeyError, ValueError, UnicodeError):
+        raise DeliveryError('Cannot verify the immutable source version.') from None
+    match = re.search(r'^version:\s*(' + SEMVER + r')\s*$', source, re.M)
+    return match.group(1) if match else None
 
 
 def release_version(api, pull):
-    head = pull.get('head', {}).get('ref', '')
-    match = re.fullmatch(r'(?:(?:codex|claude)/)?release/(' + SEMVER + ')', head)
-    if match:
-        return match.group(1)
-    if (re.fullmatch(r'(?:(?:codex|claude)/)?hotfix/[A-Za-z0-9][A-Za-z0-9._/-]*', head)
-            or (head.startswith('copilot/') and 'work:hotfix' in labels(pull))):
-        sha = pull.get('merge_commit_sha', '')
-        if not SHA.fullmatch(sha):
-            return None
-        value = api.get(f'/repos/{REPO}/contents/pubspec.yaml?ref={sha}') or {}
-        try:
-            source = base64.b64decode(value['content'], validate=False).decode('utf-8')
-        except (KeyError, ValueError, UnicodeError):
-            raise DeliveryError('Cannot verify the merged hotfix version.') from None
-        match = re.search(r'^version:\s*(' + SEMVER + r')(?:\+[0-9]+)?\s*$', source, re.M)
-        return match.group(1) if match else None
+    if provenance.is_promotion(pull) or provenance.is_hotfix(pull):
+        return version_at(api, pull.get('merge_commit_sha'))
     return None
 
 
@@ -640,7 +686,9 @@ def reconcile(api, creator, task_api, policy):
             raise
         except DeliveryError as error:
             print(f'⏳ PR #{pull["number"]}: {error}')
-    closed = api.get(f'/repos/{REPO}/pulls?state=closed&sort=updated&direction=desc&per_page={limit}')
+    # Paginate the closed queue so pending publication/backmerge work cannot age
+    # out after thirty newer PRs. Exhaustion fails explicitly, never drops work.
+    closed = api.paged(f'/repos/{REPO}/pulls?state=closed&sort=updated&direction=desc', limit=1000)
     for summary in closed or []:
         if not summary.get('merged_at'):
             continue
@@ -675,9 +723,18 @@ def reconcile(api, creator, task_api, policy):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', nargs='?', choices=['promotion-gate'])
+    parser.add_argument('--pr', type=int)
+    parser.add_argument('--expected-head')
     parser.add_argument('--check-policy', action='store_true')
     args = parser.parse_args()
     policy = load_policy()
+    if args.command == 'promotion-gate':
+        if not args.pr or not args.expected_head:
+            parser.error('promotion-gate requires --pr and --expected-head')
+        result = promotion_gate(GitHub(os.environ.get('GH_TOKEN', '')), args.pr, args.expected_head)
+        print(json.dumps(result, sort_keys=True))
+        return
     if args.check_policy:
         print('✅ Delivery policy: explicit repository, bounded scans, one task plus one CI repair per request.')
         return

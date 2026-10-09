@@ -25,6 +25,9 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ### 🔄 Changed
 
+- ⚡ Quality, security and native tests run only on develop PRs and hotfix PRs
+  into main. Promotions reuse verified source evidence; pinned tool and
+  dependency caches reduce repeated setup, and security scans run once.
 - 🖥️ Tools are available on desktop computers; phones/tablets show a faded control with an explanation while ordinary chat and saved settings remain usable.
 - 📋 Copy actions are limited to essential messages, code, files and diagnostic reports.
 - 📦 Web deployment uses flat assets and verified PWA caches instead of __releases folders. Release and tag names use plain MAJOR.MINOR.PATCH.

@@ -26,11 +26,10 @@ def payload(kind, prompt, model, release_version=None):
     followup = "For hotfixes, prepare a develop back-merge follow-up."
     if kind == "release":
         if not release_version or not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", release_version):
-            raise ValueError("Release preparation requires --release-version MAJOR.MINOR.PATCH and its published release branch.")
-        base = "release/" + release_version
-        followup = ("This is the preparation PR into the existing release branch. "
-                    "After it merges, a separate promotion PR from " + base +
-                    " to main is required, followed by a develop back-merge.")
+            raise ValueError("Release preparation requires --release-version MAJOR.MINOR.PATCH.")
+        followup = ("Prepare version " + release_version + " in a PR into develop, where quality runs. "
+                    "After it merges, a separate promotion PR from develop to main reuses its exact tested tree. "
+                    "Publication still requires the human production deployment approval.")
     return {
         "prompt": f"Work kind: {kind}. Read AGENTS.md and docs/guides/GITFLOW.md. "
                   f"Open a pull request targeting {base}; keep your platform-owned branch. "

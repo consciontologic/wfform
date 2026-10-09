@@ -17,14 +17,15 @@ GitHub/Copilot restrictions still apply.
 | ✨ New feature | `develop` | `feature/short-name` | `develop` |
 | 🐛 Normal bug | `develop` | `bugfix/short-name` | `develop` |
 | 🚑 Urgent production fix | `main` | `hotfix/short-name` | `main`, then back to `develop` |
-| 📦 Release | `develop` | `release/1.0.0` | `main`, then back to `develop` |
+| 📦 Release preparation | `develop` | `release/1.0.0` | `develop`, then promote validated `develop` to `main` |
 
 `main` holds production source; `develop` integrates accepted work. Codex and
 Claude use `codex/feature/...` or `claude/bugfix/...` when their client requires
 an agent prefix. GitHub Copilot cloud owns `copilot/*` branches; use the right
 PR base and work-kind label instead of renaming its branch. For releases, first
-publish `release/1.0.0` from `develop`: Copilot prepares a PR into that release
-branch, then a separate promotion PR takes `release/1.0.0` into `main`.
+prepare version/changelog changes in a PR into `develop`. A separate promotion
+PR takes the validated `develop` tree into `main`. Release branches may still be
+used as work branches, but their preparation PR targets `develop`.
 
 Preview an isolated worktree, then create it:
 
@@ -50,9 +51,9 @@ the PR description. Use a separate review pass before merging.
 2. Choose the lowest-cost supported model shown for your account.
 3. Start a task from GitHub's **Agents** tab, or assign an issue to Copilot.
 4. Select `develop` for features/bugs, `main` for hotfixes.
-5. For release preparation, select the already-published `release/1.0.0` branch.
-   Routine delivery opens its promotion PR into `main` after preparation is
-   merged and later opens the back-merge PR. The API uses one `base_ref` for both
+5. For release preparation, select `develop` and state the exact release version.
+   Routine delivery opens the promotion from `develop` into `main` after the
+   preparation PR passes and merges, and later opens the back-merge PR. The API uses one `base_ref` for both
    the agent branch and its PR; a prompt does not override that routing.
 
 For the unattended route, write a GitHub issue with the change, tests and allowed
@@ -88,7 +89,7 @@ python3 xops/agent/copilot_task.py feature \
 ```
 
 For release preparation add `--release-version 1.0.0`; the helper requires the
-explicit version and targets `release/1.0.0`, never `develop` by accident.
+explicit version and targets `develop`, where the requested quality checks run.
 
 Adding `--submit` sends it once, after a Copilot capability check, using
 `WFFORM_GITHUB_TOKEN` from your process environment. It never stores the token.
@@ -109,12 +110,18 @@ is separate from the free security and quality tools.
 
 Every PR needs a clear change description, matching tests and a changelog entry.
 **Web checks**, **Security checks**, **Linux package** and **Windows package**
-are the required checks on `main` and `develop`. No direct push to
+run only on PRs into `develop` and hotfix PRs into `main`. Promotions to `main`
+reuse successful develop validation for the exact same Git tree. Their quality
+jobs are skipped; the delivery controller checks prior validation metadata
+before auto-merge, without a separate promotion PR workflow. No direct push to
 `main`/`develop`, no force push, no silent skip on failure.
 
-**Policy configured on 2026-10-09:** `main`, `develop` and the initial
-`release/1.0.0` branch require a PR, the four
-named checks on up-to-date source and resolved conversations. Required human PR
+**Policy:** `develop` requires the four successful checks on current source.
+`main` retains their contexts, skipped for normal promotions. The controller
+and publisher independently enforce prior exact-tree validation; skipped
+contexts alone do not prove the promoted source was tested. Hotfixes must pass
+all four real quality jobs. Both branches require PRs and resolved conversations;
+no untested merge-conflict resolution may be promoted. Required human PR
 approvals are **zero**. Force-push, deletion and protection bypass are forbidden.
 This moves the user's release decision to one protected deployment approval.
 The generated website repository is exempt from source PR rules so its
@@ -164,10 +171,12 @@ Linux and Windows downloads remain distinguishable.
 
 1. Update the version and synchronize derived values with the release tool.
 2. Curate the emoji changelog under that version and run the gates.
-3. GitHub merges the release PR into `main` after required checks, conversations
-   and native platform constraints are satisfied.
+3. Merge release preparation into `develop` after quality checks. Promote its
+   tested tree into `main`; controller validation rejects changed source or merge
+   resolutions that have not passed develop validation.
 4. Routine delivery requests publication for that merged PR and exact source
-   commit. CI validates it and builds/tests web, Linux and Windows artifacts.
+   commit. CI verifies prior PR evidence and builds web, Linux and Windows artifacts
+   without repeating quality checks.
 5. **consciontologic** approves the waiting `production` deployment. One gated
    job creates the matching tag and GitHub Release, then deploys the same web
    build to `wfform.com`. It rechecks source identity before publication.

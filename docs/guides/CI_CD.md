@@ -10,19 +10,43 @@ do not prove that automation is active or that a remote release has published.
 
 | Workflow | When | What it does |
 |---|---|---|
-| 🌐 [Web quality](../../.github/workflows/web.yml) | PRs, branch pushes, manual run | Format, analyzer, tests, coverage, repository hygiene, real Chrome history storage and public build validation |
-| 🛡️ [Free security and package reports](../../.github/workflows/security.yml) | PRs, main/develop, weekly, manual and release checks | Gitleaks, OSV, license inventory, CycloneDX SBOM and zizmor |
-| 📦 [Packages and release](../../.github/workflows/companion.yml) | PRs, branch/tag pushes, ordinary manual run | Test/build Linux and Windows; keep downloadable CI artifacts |
+| 🌐 [Web quality](../../.github/workflows/web.yml) | PRs into `develop`; hotfix PRs into `main` | Format, analyzer, tests, coverage, repository hygiene, real Chrome history storage and public build validation |
+| 🛡️ [Free security and package reports](../../.github/workflows/security.yml) | The same eligible PRs, once per PR update | Gitleaks, OSV, license inventory, CycloneDX SBOM and zizmor |
+| 📦 [Packages and release](../../.github/workflows/companion.yml) | The same eligible PRs | Test/build Linux and Windows; keep downloadable CI artifacts |
 | 🤖 [Routine delivery](../../.github/workflows/delivery.yml) | Authorized issue labels, completed checks, hourly reconciliation, manual run | Submit bounded Copilot tasks, follow PR gates, open promotion/back-merge PRs and request approved releases |
 | 📦 Packages and release | Publication requested on `main` for a merged PR and exact source commit | Validate source/version/checks, build verified downloads, then wait for the owner's `production` approval before tagging and publishing |
 
-PRs and ordinary branch pushes **do not publish**. Ordinary manual package runs
-build/check only; publication inputs are validated against the merged PR.
+Quality, security and native tests run **only** on PRs into `develop`, plus
+hotfix PRs directly into `main`. Other PR destinations and branch/tag pushes do
+not run them. GitHub filters PR triggers by destination, so non-hotfix PRs into
+`main` show skipped quality jobs without allocating their runners. Routine delivery
+checks prior validation metadata before auto-merge; there is no separate promotion
+PR workflow and no repeated analysis, tests or scans.
+
+Release dispatches on `main` build and package already-validated source; they do
+not repeat quality or security checks. An ordinary manual package run creates
+artifacts only, and publication inputs are validated against the merged PR.
 Flutter is pinned to **3.38.10**, lockfiles are enforced, and third-party Actions
 are pinned to reviewed commit SHAs. There is no live OpenRouter inference in CI.
 PRs receive no website deployment token. Job groups, emoji summaries and ANSI
 colors make failures easier to find; full logs and machine-readable reports
 remain available.
+
+Native branch protection accepts skipped contexts. That alone does **not**
+prove a promotion was tested: the delivery controller enforces prior exact-tree
+validation before automatic merging, and the release authorizer independently
+rejects untested source before publication. A maintainer manually merging an
+untested PR into main cannot use that merge as release authorization.
+
+## Cache policy
+
+Cache the pinned Flutter SDK, downloaded Dart/pub dependencies and pinned scanner
+binaries using the OS, tool version and relevant lockfile hashes. Every restored
+scanner still passes its pinned checksum check. Cache hits avoid downloads; they
+do not skip tests, dependency lock enforcement or fresh vulnerability results.
+PR caches never supply release artifacts or credentials. Release jobs build new
+artifacts from the approved source. Keep local configuration, tokens, reports
+and compiled application outputs out of shared dependency caches.
 
 ## One version, three downloads
 
@@ -62,8 +86,9 @@ managed PR authoring and reviewer eligibility are explained in [Gitflow](GITFLOW
 ## Publication and recovery
 
 Publication runs from trusted `main`, using a merged release/hotfix PR and its
-exact source commit. The publisher validates the PR and its required checks;
-security, Linux and Windows jobs build the artifacts. The combined publication
+exact source commit. The publisher validates the PR and its source tree against successful eligible
+PR checks; Linux and Windows jobs build the artifacts without repeating tests
+or security scans. The combined publication
 job then waits for **consciontologic** to approve the `production` environment.
 A dispatch input, PR comment or agent action cannot replace that approval.
 The controller dispatches
@@ -75,11 +100,11 @@ The dispatch targets **`main`** and supplies `version` (for example `1.0.0`),
 same-repository release or hotfix PR number). Copilot hotfix PRs can target
 `main` directly; their task receipt/work-kind label identifies the hotfix, and
 the merged root `pubspec.yaml` supplies its release version.
-Tag pushes only build/check; they do not publish a release or website.
+Tag pushes trigger no quality or package jobs and cannot publish a release or website.
 
 Tags must match the root version and the validated source commit.
-The single **Approve and publish release** job waits for security, Linux, Windows
-and the human approval. It creates the tag and GitHub Release from that version's
+The single **Approve and publish release** job waits for Linux and Windows
+packages and the human approval. It creates the tag and GitHub Release from that version's
 emoji changelog and verified packages, then deploys the website. Use GitHub's
 **Re-run failed jobs** on the **original dispatched run** after fixing a failure.
 GitHub may require a new environment approval for the retry. Publication
@@ -174,7 +199,11 @@ Finish in this order:
 2. Enable **Settings → General → Pull Requests → Allow auto-merge**. On `main`
    and `develop`, require PRs, the four checks with strict updates and resolved
    conversations; set required human PR approvals to **0**. Apply the same gates
-   to `release/*` for current and future release branches. Keep force-push,
+   to eligible integration/hotfix PRs. Quality jobs are skipped on normal main
+   promotions; the delivery controller verifies prior successful develop evidence
+   for the exact source tree before auto-merge, and publication verifies it again. Release preparation
+   targets `develop`, never a release branch with no validation workflow.
+   Keep force-push,
    deletion and protection bypass disabled. Final human approval is enforced
    by `production`, so PR authorship does not disqualify the owner from release
    approval.
@@ -183,7 +212,7 @@ Finish in this order:
    workflow only creates PRs; it never submits an approval.
 3. Once credentials are isolated and the trusted workflow is merged, open
    **Settings → Copilot → Cloud agent → Actions workflow approval** and turn off
-   **Require approval for workflow runs**. This allows routine Copilot checks;
+   **Require approval for workflow runs**. This allows eligible routine Copilot checks;
    it does not waive any native platform constraint or deployment approval.
    Keep existing validation/review tools enabled.
    [GitHub documents this setting](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings).

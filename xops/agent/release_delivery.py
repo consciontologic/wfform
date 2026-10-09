@@ -112,55 +112,135 @@ def release_notes(root, version):
     return match[0].strip()
 
 
+def is_hotfix(pr):
+    branch = pr.get('head', {}).get('ref', '')
+    names = {item.get('name') for item in pr.get('labels', [])}
+    return (bool(re.fullmatch(r'(?:(?:codex|claude)/)?hotfix/[A-Za-z0-9][A-Za-z0-9._/-]*', branch))
+            or (branch.startswith('copilot/') and 'work:hotfix' in names))
+
+
+def is_promotion(pr):
+    branch = pr.get('head', {}).get('ref', '')
+    return (pr.get('base', {}).get('ref') == 'main' and
+            (branch == 'develop' or bool(re.fullmatch(
+                r'(?:(?:codex|claude)/)?release/' + SEMVER.pattern, branch))))
+
+
+def git_tree(api, sha):
+    if not SHA.fullmatch(sha or ''):
+        raise DeliveryError('Source provenance requires an immutable commit.')
+    commit = api.get(f'/repos/{REPOSITORY}/git/commits/{sha}') or {}
+    tree = commit.get('tree', {}).get('sha', '')
+    if commit.get('sha') != sha or not SHA.fullmatch(tree):
+        raise DeliveryError('Cannot verify the immutable Git tree.')
+    return tree
+
+
+def run_matches(pr, run, paths):
+    head, base = pr.get('head', {}), pr.get('base', {})
+    return (isinstance(run, dict) and run.get('head_sha') == head.get('sha')
+            and run.get('event') == 'pull_request'
+            and run.get('path', '').split('@')[0] in paths
+            and run.get('repository', {}).get('full_name') == REPOSITORY
+            and run.get('head_repository', {}).get('full_name') == head.get('repo', {}).get('full_name')
+            and any(item.get('number') == pr.get('number')
+                    and item.get('base', {}).get('ref') == base.get('ref')
+                    and item.get('head', {}).get('sha') == head.get('sha')
+                    for item in run.get('pull_requests', [])))
+
+
+def validate_checks(pr, checks, get_run, policy, conclusions=('success',)):
+    """Use the latest check for this exact PR/lane, never a push or package dispatch.
+
+    A promotion may share a SHA with a tested develop PR. Its skipped jobs must
+    not hide the develop PR's successful evidence (nor rescue a later failure).
+    """
+    for name, paths in policy['checks'].items():
+        eligible = []
+        for check in checks:
+            if check.get('name') != name:
+                continue
+            match = re.fullmatch(r'https://github\.com/' + re.escape(REPOSITORY)
+                                 + r'/actions/runs/([0-9]+)/job/[0-9]+', check.get('details_url') or '')
+            if not match:
+                continue
+            run = get_run(int(match[1])) or {}
+            if run_matches(pr, run, paths):
+                eligible.append((check, run))
+        check, run = max(eligible, key=lambda item: item[0].get('id', 0), default=({}, {}))
+        if (check.get('head_sha') != pr['head']['sha']
+                or check.get('app', {}).get('id') != policy['checks_app_id']
+                or check.get('status') != 'completed' or check.get('conclusion') not in conclusions
+                or run.get('status') != 'completed' or run.get('conclusion') not in {'success', 'skipped'}):
+            raise DeliveryError('Required PR check lacks current successful workflow provenance: ' + name)
+
+
+def quality_evidence(api, pr):
+    base = pr.get('base', {})
+    if (base.get('repo', {}).get('full_name') != REPOSITORY
+            or not (base.get('ref') == 'develop' or (base.get('ref') == 'main' and is_hotfix(pr)))):
+        raise DeliveryError('Quality evidence must come from a develop PR or recognized main hotfix.')
+    checks = pages(api, f'/repos/{REPOSITORY}/commits/{pr["head"]["sha"]}/check-runs?filter=all', 'check_runs')
+    cache = {}
+    def run(number):
+        if number not in cache:
+            cache[number] = api.get(f'/repos/{REPOSITORY}/actions/runs/{number}')
+        return cache[number]
+    validate_checks(pr, checks, run, delivery_policy())
+
+
+def promotion_evidence(api, pr):
+    """Read only: candidate/final merge and prior tested develop source must match."""
+    if (not is_promotion(pr) or pr.get('draft')
+            or any(pr.get(side, {}).get('repo', {}).get('full_name') != REPOSITORY for side in ('head', 'base'))):
+        raise DeliveryError('Expected a same-repository develop or release promotion into main.')
+    if not pr.get('merged') and (pr.get('state') != 'open' or pr.get('mergeable') is not True):
+        raise DeliveryError('Promotion mergeability is not confirmed; wait for GitHub to calculate it.')
+    tree = git_tree(api, pr['head']['sha'])
+    if git_tree(api, pr.get('merge_commit_sha')) != tree:
+        raise DeliveryError('Promotion merge tree differs from its source tree; untested content is refused.')
+    # Bounded history is explicit. A stale unprovable candidate is never released.
+    candidates = pages(api, f'/repos/{REPOSITORY}/pulls?state=closed&base=develop&sort=updated&direction=desc')
+    for candidate in candidates:
+        if not candidate.get('merged_at'):
+            continue
+        source = api.get(f'/repos/{REPOSITORY}/pulls/{candidate["number"]}') or {}
+        if (not source.get('merged') or source.get('base', {}).get('ref') != 'develop'
+                or source.get('base', {}).get('repo', {}).get('full_name') != REPOSITORY):
+            continue
+        if (git_tree(api, source.get('head', {}).get('sha')) != tree
+                or git_tree(api, source.get('merge_commit_sha')) != tree):
+            continue
+        quality_evidence(api, source)
+        return {'source_pr': source['number'], 'tree': tree,
+                'source_head': source['head']['sha'], 'source_merge': source['merge_commit_sha']}
+    raise DeliveryError('No merged develop PR proves successful quality for this exact source tree.')
+
+
 def authorize(api, repo, pr_number, sha, version, root=None):
     if repo != REPOSITORY or not SHA.fullmatch(sha) or not SEMVER.fullmatch(version):
         raise DeliveryError('Expected this repository, a full SHA and plain MAJOR.MINOR.PATCH.')
     if not isinstance(pr_number, int) or pr_number <= 0:
         raise DeliveryError('Expected a release promotion PR number.')
-    base = f'/repos/{repo}'
-    pr = api.get(f'{base}/pulls/{pr_number}') or {}
+    pr = api.get(f'/repos/{repo}/pulls/{pr_number}') or {}
     head, target = pr.get('head', {}), pr.get('base', {})
-    branch = head.get('ref', '')
-    labels = {label.get('name') for label in pr.get('labels', [])}
-    permitted_branch = ((branch.startswith('copilot/') and 'work:hotfix' in labels)
-                        or branch == 'release/' + version or bool(
-        re.fullmatch(r'(?:(?:codex|claude)/)?hotfix/[a-z0-9][a-z0-9._/-]*', branch)))
     if (not pr.get('merged') or pr.get('draft') or pr.get('merge_commit_sha') != sha
-            or target.get('ref') != 'main' or not permitted_branch
-            or target.get('repo', {}).get('full_name') != repo
-            or head.get('repo', {}).get('full_name') != repo
+            or target.get('ref') != 'main' or not (is_promotion(pr) or is_hotfix(pr))
+            or any(pr.get(side, {}).get('repo', {}).get('full_name') != repo for side in ('head', 'base'))
             or not SHA.fullmatch(head.get('sha', ''))):
         raise DeliveryError('Expected a merged, same-repository release or hotfix promotion into main.')
+    if re.fullmatch(r'(?:(?:codex|claude)/)?release/' + SEMVER.pattern, head.get('ref', '')) and head['ref'].rsplit('/', 1)[-1] != version:
+        raise DeliveryError('Release branch version does not match the requested publication.')
     current_main(api, repo, sha)
     production_environment(api, repo)
     if root is not None:
         release_notes(root, version)
-
-    checks = pages(api, f'{base}/commits/{head["sha"]}/check-runs?filter=latest', 'check_runs')
-    policy = delivery_policy()
-    runs = {}
-    for name, paths in policy['checks'].items():
-        matches = [check for check in checks if check.get('name') == name]
-        check = max(matches, key=lambda c: c.get('id', 0), default={})
-        if (check.get('app', {}).get('id') != policy['checks_app_id']
-                or check.get('status') != 'completed' or check.get('conclusion') != 'success'
-                or check.get('head_sha') != head['sha']):
-            raise DeliveryError(f'Required GitHub Actions check is not successful on the merged PR head: {name}.')
-        match = re.fullmatch(r'https://github\.com/' + re.escape(repo)
-                             + r'/actions/runs/([0-9]+)/job/[0-9]+', check.get('details_url') or '')
-        if not match:
-            raise DeliveryError(f'Required check has no trusted workflow provenance: {name}.')
-        run_id = match[1]
-        if run_id not in runs:
-            runs[run_id] = api.get(f'{base}/actions/runs/{run_id}') or {}
-        run = runs[run_id]
-        if (run.get('head_sha') != head['sha']
-                or run.get('event') not in {'pull_request', 'push', 'workflow_dispatch'}
-                or run.get('path', '').split('@')[0] not in paths
-                or run.get('repository', {}).get('full_name') != repo
-                or run.get('head_repository', {}).get('full_name') != repo
-                or run.get('status') != 'completed' or run.get('conclusion') != 'success'):
-            raise DeliveryError(f'Required check came from an unexpected workflow, repository or revision: {name}.')
+    if is_hotfix(pr):
+        quality_evidence(api, pr)
+        if git_tree(api, sha) != git_tree(api, head['sha']):
+            raise DeliveryError('Hotfix merge tree contains content not represented by its tested head.')
+    else:
+        promotion_evidence(api, pr)
     return pr
 
 

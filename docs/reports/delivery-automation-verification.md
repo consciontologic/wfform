@@ -16,7 +16,8 @@ submission is recorded and never blindly repeated. Release preparation and
 develop back-merges use work branches and PRs.
 
 After promotion to main, the package workflow validates the exact merged source
-and builds/tests both native packages. Its combined publication job waits for
+against prior eligible PR evidence and builds both native packages without
+repeating tests or security scans. Its combined publication job waits for
 the owner's **Approve deployment** action. Before any publication it also reads
 GitHub's approval audit for this run, source SHA and production environment.
 Agents never submit this approval. A bypassed environment job without a genuine
@@ -32,9 +33,12 @@ outcomes if website publication fails after package publication.
 Authenticated API writes and read-backs confirmed:
 
 - Repository auto-merge enabled.
-- `main`, `develop`, `release/1.0.0`, and future `release/*` require the four
-  named checks from GitHub Actions app 15368, an up-to-date branch, resolved
-  conversations, and PR integration. Human PR approval count is zero by the
+- `main` and `develop` retain the four named contexts from GitHub Actions app
+  15368, up-to-date branches, resolved conversations and PR integration. Under
+  the later CI policy, normal main promotions skip quality and must satisfy
+  controller/publisher source-provenance validation. Release-target rules now
+  retain PR, conversation and administrator protections without impossible
+  check requirements; new release preparation targets `develop`. Human PR approval count is zero by the
   user's explicit choice. Administrator enforcement is enabled; force pushes
   and deletions are disabled.
 - `automation` permits only the main branch and contains
@@ -84,6 +88,29 @@ The validated bootstrap was published through `make git` as commit
 `release/1.0.0` branch. The public web, security and package workflows started
 automatically on this PR. Their eventual results must be checked against its
 current head; starting CI does not establish a passing release.
+
+The user's later CI instruction superseded that initial routing. PR #4 was
+retargeted to `develop`; the still-running package run on its previous target
+was cancelled. Security and web checks on head `43b307b` passed before this
+change, but no Windows success was claimed. Revised workflows restrict quality
+to develop PRs and hotfix-to-main PRs, reuse exact-tree evidence for promotions,
+and cache pinned tooling/dependencies. Verification of this revision is separate
+from the earlier 78-test evidence above.
+
+The revised implementation passed all 93 Python ops tests, 24 deployment
+contracts, 507 parsed routing cases and the workflow security audit. Full
+`make verify` passed 648 Flutter tests (four existing opt-in skips), companion
+suites, analyzers, PWA tests and repository/version checks. Evidence:
+`/tmp/agent-runs/delivery-policy-final--20261009T142746Z-430355.log`,
+`/tmp/agent-runs/ci-head-proof-contracts--20261009T142600Z-426245.log`, and
+`/tmp/agent-runs/ci-policy-full-verify--20261009T142702Z-427148.log`.
+
+Main-target PRs merge only through an immediate native merge with the expected
+head SHA after revalidating source evidence; they never retain an armed
+auto-merge that could accept a later untested head. Develop PRs retain native
+auto-merge because their quality jobs always run. Read-only CI checks out the
+exact PR head, allowing source-tree comparisons independent of mutable PR base
+metadata. The publisher independently rechecks the final merged source.
 
 Default-branch workflows become active only after the bootstrap changes reach
 main through passing PR checks. Durable credentials must have the documented

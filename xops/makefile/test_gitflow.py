@@ -16,12 +16,12 @@ def load(name):
 
 
 class GitflowTest(unittest.TestCase):
-    def test_release_preparation_uses_a_real_release_branch(self):
+    def test_release_preparation_targets_develop_quality_lane(self):
         agent = load("copilot_task")
         with self.assertRaises(ValueError):
             agent.payload("release", "Prepare release.", "gpt-5.3-codex")
         data = agent.payload("release", "Prepare release.", "gpt-5.3-codex", "1.0.0")
-        self.assertEqual(data["base_ref"], "release/1.0.0")
+        self.assertEqual(data["base_ref"], "develop")
         self.assertIn("separate promotion PR", data["prompt"])
 
     def test_malformed_submission_is_uncertain_never_retried(self):

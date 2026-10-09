@@ -100,8 +100,13 @@ report that limit honestly.
 Copilot prepares changes, tests and PR/release notes. Routine delivery may submit
 authorized tasks, follow checks, open promotion/back-merge PRs and enable GitHub
 auto-merge. The user chose **final deployment approval** on 2026-10-09: routine
-PRs require the four CI checks and resolved conversations, with zero configured
-human PR approvals. Respect any additional native GitHub/Copilot constraint.
+PRs into `develop` and hotfix PRs into `main` run the four quality checks.
+Other promotions into `main` reuse prior successful develop validation for the
+exact source tree inside the trusted delivery controller; never repeat quality or
+security pipelines on those promotions or ordinary pushes. Release preparation
+PRs target `develop`. Keep dependency/tool caches scoped by OS, version and
+lockfiles, excluding secrets and release artifacts. Resolved conversations and
+zero configured human PR approvals apply throughout. Respect any additional native GitHub/Copilot constraint.
 The `production` environment requires **consciontologic** to approve deployment
 before the combined tag/release/website job runs. This is the human release
 decision; no agent may call the approval API, approve through the UI or bypass it.

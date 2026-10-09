@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'xops/agent'))
@@ -37,7 +38,8 @@ def evidence():
                      'details_url': f'https://github.com/{REPO}/actions/runs/{index}/job/{index}'})
         runs[index] = {'head_sha': SHA, 'event': 'pull_request', 'path': paths[0],
                        'repository': {'full_name': REPO}, 'head_repository': {'full_name': REPO},
-                       'status': 'completed', 'conclusion': 'success'}
+                       'status': 'completed', 'conclusion': 'success',
+                       'pull_requests': [{'number': 7, 'head': {'sha': SHA}, 'base': {'ref': 'develop'}}]}
     return rows, runs
 
 
@@ -79,7 +81,8 @@ class DeliverySafetyTest(unittest.TestCase):
                  ('codex/bugfix/x', 'develop', 'bugfix'),
                  ('hotfix/startup', 'main', 'hotfix'),
                  ('release/1.0.0', 'main', 'release'),
-                 ('copilot/prep', 'release/1.0.0', 'preparation')]
+                 ('develop', 'main', 'promotion'),
+                 ('release/1.0.0', 'develop', 'release')]
         for head, base, lane in cases:
             with self.subTest(head=head):
                 self.assertEqual(delivery.pr_lane(pr(head, base), REPO), lane)
@@ -162,6 +165,24 @@ class DeliverySafetyTest(unittest.TestCase):
                 'requiredStatusCheckContexts': list(policy()['checks']), 'isAdminEnforced': True,
                 'bypassPullRequestAllowances': {'totalCount': 0}}
         delivery.protection_gate(rule, policy(), production=True)
+
+    def test_custom_run_name_uses_workflow_path(self):
+        event = {'repository': {'full_name': REPO, 'default_branch': 'main'},
+                 'workflow_run': {'name': 'Packages 4/merge 6d18', 'path': '.github/workflows/companion.yml',
+                                  'head_repository': {'full_name': REPO}, 'repository': {'full_name': REPO},
+                                  'event': 'pull_request', 'status': 'completed'}}
+        delivery.event_gate('workflow_run', event, policy())
+        event['workflow_run']['path'] = '.github/workflows/unknown.yml'
+        with self.assertRaises(delivery.DeliveryError): delivery.event_gate('workflow_run', event, policy())
+
+    def test_release_task_reserves_once_and_targets_develop_without_branch_write(self):
+        api, calls = FakeAPI(), []
+        def submit(body, token):
+            calls.append(body)
+            return {'id': 'release-1', 'html_url': f'https://github.com/{REPO}/tasks/release-1'}
+        delivery.delegate(api, {'number': 9, 'title': 'Release 1.0.0'}, 'release', '1.0.0', 'maintainer', 'test', submit)
+        self.assertEqual(calls[0]['base_ref'], 'develop')
+        self.assertFalse(any('/git/refs' in row[1] for row in api.writes))
 
     def test_unknown_event_and_fork_workflow_are_rejected(self):
         event = {'repository': {'full_name': REPO, 'default_branch': 'main'}}
@@ -454,6 +475,114 @@ class DeliverySafetyTest(unittest.TestCase):
         with self.assertRaises(delivery.DeliveryError):
             delivery.prepare_backmerge(api, creator, '1.0.0', SHA)
         self.assertEqual(len(creator.writes), 2)
+
+    def test_promotion_merges_exact_revision_without_leaving_auto_merge_armed(self):
+        api, creator = FakeAPI(), FakeAPI()
+        pull = pr('develop', 'main', mergeable_state='clean')
+        checks, runs = evidence()
+        for row in checks: row['conclusion'] = 'skipped'
+        for run in runs.values(): run['pull_requests'][0]['base']['ref'] = 'main'
+        api.reads[f'/repos/{REPO}/commits/{SHA}/check-runs?filter=latest'] = checks
+        for number, run in runs.items(): api.reads[f'/repos/{REPO}/actions/runs/{number}'] = run
+        native = {'id': 'PR_7', 'headRefOid': SHA, 'isDraft': False, 'mergeStateStatus': 'CLEAN',
+                  'baseRefName': 'main', 'autoMergeRequest': None,
+                  'baseRef': {'branchProtectionRule': {
+                      'requiresStatusChecks': True, 'requiresStrictStatusChecks': True,
+                      'requiresConversationResolution': True, 'isAdminEnforced': True,
+                      'bypassPullRequestAllowances': {'totalCount': 0},
+                      'requiredStatusCheckContexts': list(policy()['checks'])}}}
+        api.request = lambda *args: {'data': {'repository': {'pullRequest': native}}}
+        creator.request = lambda method, path, body: (creator.writes.append((method, path, body)) or {'merged': True, 'sha': 'b' * 40})
+        with patch.object(delivery, 'promotion_gate', return_value={'tree': 'd' * 40}) as guard:
+            result = delivery.arm_auto_merge(api, pull, policy(), creator)
+            self.assertIn('merged', result)
+            guard.assert_called_with(api, 7, SHA)
+        self.assertEqual(creator.writes, [('PUT', f'/repos/{REPO}/pulls/7/merge', {'sha': SHA, 'merge_method': 'merge'})])
+        native['mergeStateStatus'] = 'BLOCKED'
+        creator.writes.clear()
+        with patch.object(delivery, 'promotion_gate', return_value={}):
+            self.assertIn('waiting', delivery.arm_auto_merge(api, pull, policy(), creator))
+        self.assertEqual(creator.writes, [])
+        native['mergeStateStatus'] = 'CLEAN'
+        with patch.object(delivery, 'promotion_gate', side_effect=delivery.DeliveryError('tree changed')):
+            with self.assertRaises(delivery.DeliveryError): delivery.arm_auto_merge(api, pull, policy(), creator)
+        self.assertEqual(creator.writes, [])
+        # Hotfixes also merge once after genuine success, never persistently
+        # arm an authorization that could outlive their mutable lane label.
+        hotfix = pr('copilot/hotfix', 'main', mergeable=True, mergeable_state='clean',
+                    merge_commit_sha='b' * 40, labels=[{'name': 'work:hotfix'}])
+        api.reads[f'/repos/{REPO}/pulls/7'] = hotfix
+        for row in checks: row['conclusion'] = 'success'
+        with patch.object(delivery.provenance, 'git_tree', return_value='d' * 40):
+            self.assertIn('merged', delivery.arm_auto_merge(api, hotfix, policy(), creator))
+        self.assertEqual(creator.writes[0][0:2], ('PUT', f'/repos/{REPO}/pulls/7/merge'))
+        creator.writes.clear()
+        native['autoMergeRequest'] = {'enabledAt': '2026-10-09'}
+        def disable(method, path, body):
+            creator.writes.append((method, path, body))
+            return {'data': {'disablePullRequestAutoMerge': {'pullRequest': {'number': 7}}}}
+        creator.request = disable
+        hotfix['labels'] = []
+        with self.assertRaises(delivery.DeliveryError): delivery.arm_auto_merge(api, hotfix, policy(), creator)
+        self.assertEqual(len(creator.writes), 1)
+        self.assertIn('disablePullRequestAutoMerge', creator.writes[0][2]['query'])
+
+    def test_backmerge_of_published_version_never_creates_promotion_loop(self):
+        api, creator = FakeAPI(), FakeAPI()
+        pull = pr('bugfix/backmerge-1.0.0', 'develop', merged=True, merge_commit_sha=SHA)
+        api.reads[f'/repos/{REPO}/git/ref/heads/develop'] = {'object': {'sha': SHA}}
+        api.reads[f'/repos/{REPO}/git/ref/tags/1.0.0'] = {'object': {'sha': 'b' * 40}}
+        with patch.object(delivery, 'version_at', return_value='1.0.0'):
+            self.assertIsNone(delivery.prepare_promotion(api, creator, pull))
+        self.assertEqual(creator.writes, [])
+
+    def test_declined_promotion_blocks_only_the_same_version(self):
+        from urllib.parse import urlencode
+        api, creator = FakeAPI(), FakeAPI()
+        query = urlencode({'state': 'all', 'head': 'consciontologic:develop', 'base': 'main', 'per_page': 100})
+        old = pr('develop', 'main', state='closed', body='<!-- wfform-delivery:promotion:1.0.0 -->', merged_at=None)
+        api.reads[f'/repos/{REPO}/pulls?' + query] = [old]
+        delivery.ensure_pr(api, creator, 'develop', 'main', 'release: 1.0.0', old['body'])
+        self.assertEqual(creator.writes, [])
+        delivery.ensure_pr(api, creator, 'develop', 'main', 'release: 1.0.1', '<!-- wfform-delivery:promotion:1.0.1 -->')
+        self.assertEqual(len(creator.writes), 1)
+        self.assertEqual(creator.writes[0][2]['title'], 'release: 1.0.1')
+
+    def test_ready_develop_release_preparation_opens_promotion_once(self):
+        from urllib.parse import urlencode
+        api, creator = FakeAPI(), FakeAPI()
+        source = pr('copilot/release', 'develop', merged=True, merge_commit_sha=SHA,
+                    labels=[{'name': 'work:release'}])
+        api.reads[f'/repos/{REPO}/git/ref/heads/develop'] = {'object': {'sha': SHA}}
+        api.reads[f'/repos/{REPO}/git/ref/tags/1.0.0'] = None
+        query = urlencode({'state': 'all', 'head': 'consciontologic:develop', 'base': 'main', 'per_page': 100})
+        api.reads[f'/repos/{REPO}/pulls?' + query] = []
+        with patch.object(delivery, 'version_at', return_value='1.0.0'), patch.object(
+                delivery.provenance, 'git_tree', return_value='d' * 40), patch.object(
+                delivery.provenance, 'quality_evidence') as quality:
+            delivery.prepare_promotion(api, creator, source)
+            self.assertEqual(creator.writes[0][2]['head'], 'develop')
+            self.assertEqual(creator.writes[0][2]['base'], 'main')
+            quality.assert_called_once_with(api, source)
+            api.reads[f'/repos/{REPO}/pulls?' + query] = [pr('develop', 'main')]
+            delivery.prepare_promotion(api, creator, source)
+            self.assertEqual(len(creator.writes), 1)
+            quality.side_effect = delivery.provenance.DeliveryError('failed quality')
+            with self.assertRaises(delivery.DeliveryError): delivery.prepare_promotion(api, creator, source)
+            self.assertEqual(len(creator.writes), 1)
+
+    def test_pending_release_is_reconciled_beyond_first_thirty_closed_prs(self):
+        api, creator = FakeAPI(), FakeAPI()
+        api.reads[f'/repos/{REPO}/pulls?state=open&sort=updated&direction=desc&per_page=30'] = []
+        summaries = [{'number': n, 'merged_at': None} for n in range(40, 10, -1)]
+        summaries.append({'number': 7, 'merged_at': '2026-10-09'})
+        api.reads[f'/repos/{REPO}/pulls?state=closed&sort=updated&direction=desc'] = summaries
+        api.reads[f'/repos/{REPO}/pulls/7'] = pr('develop', 'main', merged=True, merge_commit_sha=SHA)
+        api.reads[f'/repos/{REPO}/releases/tags/1.0.0'] = None
+        with patch.object(delivery, 'release_version', return_value='1.0.0'), patch.object(
+                delivery, 'dispatch_release', return_value={'state': 'dispatched'}) as dispatch:
+            delivery.reconcile(api, creator, None, policy())
+            dispatch.assert_called_once()
 
     def test_release_branch_never_overwrites_or_targets_protected_refs(self):
         api = FakeAPI()

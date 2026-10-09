@@ -371,3 +371,10 @@ Source main/develop still change only through protected PRs, and administrators
 are now subject to the required checks. See [delivery verification](../reports/delivery-automation-verification.md)
 for actual live settings, test results and bootstrap status. A completed AI task
 or green mocked test must not be reported as a live release.
+
+The subsequent CI policy narrows expensive validation to PRs into `develop` and
+hotfix PRs directly into `main`. Release preparation now targets `develop`;
+promotions into main use controller metadata validation linking the exact source
+tree to successful develop validation. Release dispatch builds packages without
+repeating tests/scans. Cache pinned SDKs, locked dependencies and scanner binaries;
+keep credentials, application artifacts and fresh vulnerability results uncached.

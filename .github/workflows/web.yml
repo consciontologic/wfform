@@ -1,11 +1,9 @@
 name: 🌐 Web quality
 
 on:
-  push:
-    branches: [main, develop, 'feature/**', 'bugfix/**', 'hotfix/**', 'release/**']
   pull_request:
-    branches: [main, develop, 'feature/**', 'bugfix/**', 'hotfix/**', 'release/**']
-  workflow_dispatch:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, ready_for_review, edited, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -18,6 +16,17 @@ concurrency:
 
 jobs:
   web:
+    # Other main PRs are skipped without allocating a quality runner.
+    if: >-
+      github.event_name == 'pull_request' && (
+        github.base_ref == 'develop' || (github.base_ref == 'main' && (
+          startsWith(github.head_ref, 'hotfix/') ||
+          startsWith(github.head_ref, 'codex/hotfix/') ||
+          startsWith(github.head_ref, 'claude/hotfix/') ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           startsWith(github.head_ref, 'copilot/') &&
+           contains(github.event.pull_request.labels.*.name, 'work:hotfix'))
+        )))
     name: Web checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -25,6 +34,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The run's head SHA must identify the exact source checked here.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Flutter
@@ -33,6 +44,9 @@ jobs:
           flutter-version: '3.38.10'
           channel: stable
           cache: true
+          pub-cache: true
+          # Covers both packages; the action also appends all pubspec.lock hashes.
+          pub-cache-key: wfform-pub-:os:-:channel:-:version:-:arch:-${{ hashFiles('pubspec.lock', 'companion/pubspec.lock') }}
 
       - name: Resolve dependencies
         run: flutter pub get --enforce-lockfile

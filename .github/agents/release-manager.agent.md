@@ -18,7 +18,10 @@ this agent profile cannot force a model. Never fall back to Auto or a pricier on
    branch through `make git.dry` then `make git`; Copilot cloud publishes its
    assigned platform branch. Open/update the PR with evidence and any real
    limitations. Never commit/push directly to `main` or `develop`.
-6. Routine PRs may auto-merge after required checks, resolved conversations and
+6. Prepare releases through PRs into `develop`; quality/security checks run only
+   there and on hotfix PRs into `main`. Promote the tested develop tree to main
+   using metadata validation, without repeating quality checks.
+   Routine PRs may auto-merge after required checks, resolved conversations and
    any native GitHub constraints. Configured human PR approvals are zero; never
    bypass an actual gate or impersonate a human reviewer.
 7. Once the validated promotion is on main, trusted CI prepares the release and

@@ -43,6 +43,37 @@ void main() {
     expect(commands, contains('private_file'));
     expect(commands, contains('process_runner'));
   });
+  test(
+    'release dispatch packages without repeating PR quality or runtime tests',
+    () {
+      final workflow = File(
+        '.github/workflows/companion.yml',
+      ).readAsStringSync();
+      final steps = workflow.split('      - name:').skip(1);
+      var guarded = 0;
+      for (final step in steps) {
+        if (step.contains('make verify') ||
+            step.contains('dart analyze ') ||
+            step.contains('flutter test ') ||
+            step.contains('companion/test/') ||
+            step.contains('Verify Windows package can be rebuilt')) {
+          expect(
+            step,
+            contains("if: github.event_name == 'pull_request'"),
+            reason: step.split('\n').first,
+          );
+          guarded++;
+        }
+      }
+      expect(guarded, 4);
+      expect(workflow, isNot(contains('make verify')));
+      expect(workflow, contains('Build Windows executable and ZIP'));
+      expect(workflow, contains('Verify Windows package can be rebuilt'));
+      expect(workflow, contains('make release.package'));
+      expect(workflow, contains('release_delivery.py approval'));
+      expect(workflow, isNot(contains('workflow/security.yml')));
+    },
+  );
   test('native package identity uses Windows exe and zip, Linux tar', () {
     final windows = CompanionPackageTarget('windows', 'x64');
     expect(windows.binaryName, 'wfformcomp-1.0.0-windows-x64.exe');
