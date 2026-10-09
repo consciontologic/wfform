@@ -103,7 +103,7 @@ jobs:
           export WFFORMCOMP_TEST_WEB_ROOT="$PWD/.local/companion-package/web"
           dart run companion/test/cli_test.dart
       - name: Retain Linux package and metadata
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: companion-linux-x64
           path: |
@@ -112,13 +112,13 @@ jobs:
             build/companion/wfformcomp-*-linux-x64.json
           if-no-files-found: error
       - name: Retain versioned web release
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: web-release
           path: build/release/*
           if-no-files-found: error
       - name: Share verified public web assets with Windows
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: public-web
           path: build/publish-web
@@ -173,7 +173,7 @@ jobs:
             throw "Windows verification failed: $($failedSuites -join ', ')"
           }
       - name: Download verified public web build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: public-web
           path: build/publish-web
@@ -199,7 +199,7 @@ jobs:
           dart run companion/test/cli_test.dart
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain Windows package and metadata
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: companion-windows-x64
           path: |
@@ -233,13 +233,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 xops/agent/release_delivery.py approval
       - name: Download freshly built packages from this run
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: companion-*
           merge-multiple: true
           path: build/companion
       - name: Download this run's verified web package
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: web-release
           path: build/release
@@ -259,7 +259,7 @@ jobs:
         run: |
           printf '## 🎉 Released %s\n\n📦 Web · 🐧 Linux x64 · 🪟 Windows x64\n\nHuman-approved source: `%s` · PR #%s. SHA-256 checksums accompany every download. macOS remains planned.\n' "$WFFORM_RELEASE_VERSION" "$WFFORM_RELEASE_SHA" "$WFFORM_RELEASE_PR" >> "$GITHUB_STEP_SUMMARY"
       - name: Download this run's verified static website
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: public-web
           path: build/publish-web
