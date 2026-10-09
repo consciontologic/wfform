@@ -1,0 +1,30 @@
+{
+  "checked_on": "2026-10-09",
+  "preferred_model": "mai-code-1.1-flash",
+  "fallback_models": [
+    "claude-haiku-4.5",
+    "kimi-k3",
+    "gpt-5.4-mini",
+    "gemini-3.8-flash"
+  ],
+  "allowed_models": [
+    "mai-code-1.1-flash",
+    "claude-haiku-4.5",
+    "kimi-k3",
+    "gpt-5.4-mini",
+    "gemini-3.8-flash"
+  ],
+  "allow_auto": false,
+  "allow_paid_fallback": true,
+  "allow_unlisted_fallback": false,
+  "fallback_trigger": "http_422_model_field_invalid",
+  "max_model_attempts": 5,
+  "fallback_live_tested": false,
+  "availability_source": "https://docs.github.com/en/rest/agent-tasks/agent-tasks",
+  "validation_source": "https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api#validation-failed",
+  "model_catalog_source": "https://github.com/github/gh-aw/blob/main/actions/setup/js/models.json",
+  "verification_task": "https://github.com/consciontologic/wfform/tasks/93a244f2-a853-4898-b485-08b2237e2a44",
+  "note": "The primary completed a live read-only task with exact session model sweagent-capi:mai-code-1.1-flash and no error. Fallbacks are user-requested IDs, not live-tested REST compatibility or price guarantees. Try them in this exact order only when HTTP422 rejects solely the model field with code invalid before a task exists. Other unavailable-model responses may differ and stop safely. No fallback for an accepted asynchronous failure, uncertainty, auth/rate-limit error, cancellation, code/test failure, Auto or unlisted model. Persist each selection before submission. At most one accepted initial task and one repair using that same selected model; repair never changes model. The task endpoint OpenAPI does not document errors.field; the field=model adapter is conditional and covered by synthetic tests, not observed API behavior. Ordered preferences do not guarantee automatic fallback will trigger.",
+  "rejection_schema_source": "https://github.com/github/rest-api-description/blob/main/descriptions/api.github.com/api.github.com.2026-03-10.json",
+  "fallback_response_contract_verified": false
+}

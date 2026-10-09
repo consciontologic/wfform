@@ -1,0 +1,8 @@
+{
+  "fruit": [
+    {"name": "apple", "color": "red"},
+    {"name": "banana", "color": "yellow"},
+    {"name": "pear", "color": "green"}
+  ],
+  "note": "Bundled example data. No personal files are read."
+}

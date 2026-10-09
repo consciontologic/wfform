@@ -1,28 +1,41 @@
-name: Web checks and publish
+name: 🌐 Web quality
 
 on:
-  push:
-    branches: [main]
   pull_request:
-  workflow_dispatch:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, ready_for_review, edited, labeled, unlabeled]
 
 permissions:
   contents: read
 
-# Serialize main publications without interrupting a commit/push. PR checks can
-# cancel an older run on the same PR. The publication step also rejects old SHAs.
+# PR checks can cancel an older run on the same PR. Release publication lives
+# in companion.yml and does not run from an ordinary main push.
 concurrency:
   group: wfform-web-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   web:
+    # Other main PRs are skipped without allocating a quality runner.
+    if: >-
+      github.event_name == 'pull_request' && (
+        github.base_ref == 'develop' || (github.base_ref == 'main' && (
+          startsWith(github.head_ref, 'hotfix/') ||
+          startsWith(github.head_ref, 'codex/hotfix/') ||
+          startsWith(github.head_ref, 'claude/hotfix/') ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           startsWith(github.head_ref, 'copilot/') &&
+           contains(github.event.pull_request.labels.*.name, 'work:hotfix'))
+        )))
+    name: Web checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The run's head SHA must identify the exact source checked here.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Flutter
@@ -31,12 +44,15 @@ jobs:
           flutter-version: '3.38.10'
           channel: stable
           cache: true
+          pub-cache: true
+          # Covers both packages; the action also appends all pubspec.lock hashes.
+          pub-cache-key: wfform-pub-:os:-:channel:-:version:-:arch:-${{ hashFiles('pubspec.lock', 'companion/pubspec.lock') }}
 
       - name: Resolve dependencies
         run: flutter pub get --enforce-lockfile
 
       - name: Analyze, test and check repository
-        run: make verify
+        run: bash tool/ci-step.sh "🧪 Analyze, test and inspect" make verify TEST_ARGS=--coverage
 
       - name: Test repository operations
         run: python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v
@@ -52,9 +68,16 @@ jobs:
       - name: Validate website artifact
         run: dart run tool/prepare_website.dart build/publish-web "$RUNNER_TEMP/website-validation"
 
-      - name: Publish to consciontologic/wfform.com
-        if: github.repository == 'consciontologic/wfform' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: 📊 Retain coverage and verified web artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-quality-reports
+          path: coverage/lcov.info
+          if-no-files-found: warn
+      - name: 📝 Job summary
+        if: always()
         env:
-          WFFORM_DEPLOY_TOKEN: ${{ secrets.WFFORM_DEPLOY_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        run: bash deploy/scripts/publish-website.sh build/publish-web
+          CHECK_STATUS: ${{ job.status }}
+        run: |
+          printf '## 🌐 Web quality\n\nStatus: **%s**\n\n🔎 Analyzer · 🧪 tests · 💾 browser storage · 🛡️ repository hygiene\n\nCoverage is attached as LCOV.\n' "$CHECK_STATUS" >> "$GITHUB_STEP_SUMMARY"

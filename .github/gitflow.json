@@ -1,0 +1,73 @@
+{
+  "production": "main",
+  "integration": "develop",
+  "branches": {
+    "feature": {
+      "from": "develop",
+      "pull_request_into": "develop"
+    },
+    "bugfix": {
+      "from": "develop",
+      "pull_request_into": "develop"
+    },
+    "hotfix": {
+      "from": "main",
+      "pull_request_into": "main",
+      "back_merge_into": "develop"
+    },
+    "release": {
+      "from": "develop",
+      "pull_request_into": "develop",
+      "back_merge_into": "develop",
+      "promote_from": "develop",
+      "promote_into": "main"
+    }
+  },
+  "agent_prefixes": [
+    "codex",
+    "claude",
+    "copilot"
+  ],
+  "semver": "MAJOR.MINOR.PATCH",
+  "tag_prefix": "",
+  "required_checks": [
+    "Web checks",
+    "Security checks",
+    "Linux package",
+    "Windows package"
+  ],
+  "require_pull_request": true,
+  "require_review": false,
+  "required_approving_review_count": 0,
+  "require_conversation_resolution": true,
+  "force_push": false,
+  "automation": {
+    "workflow": "delivery.yml",
+    "trusted_branch": "main",
+    "environment": "automation",
+    "issue_labels": [
+      "ai:feature",
+      "ai:bugfix",
+      "ai:hotfix",
+      "ai:release"
+    ],
+    "model_policy": ".github/copilot-model-policy.json",
+    "max_initial_tasks_per_issue": 1,
+    "max_managed_ci_repairs_per_issue": 1,
+    "respect_native_platform_constraints": true,
+    "final_release_approval": "production_environment_required_reviewer",
+    "publication_environment": "production",
+    "publication_reviewer": "consciontologic",
+    "prevent_self_review": false,
+    "administrator_bypass": false,
+    "publication_trigger": "validated_workflow_dispatch_on_main",
+    "back_merge": "pull_request",
+    "overwrite_existing_release_assets": false
+  },
+  "note": "Quality/security/native tests run only on develop PRs and hotfix PRs to main. Other main promotions reuse successful develop validation for the exact source tree inside the trusted delivery controller and publication authorizer. Human PR reviews remain zero; final production deployment requires consciontologic approval. This file describes policy, not live GitHub settings.",
+  "quality_lanes": [
+    "any -> develop",
+    "hotfix -> main"
+  ],
+  "promotion_validation": "controller_and_publisher_require_successful_develop_pr_with_exact_git_tree"
+}

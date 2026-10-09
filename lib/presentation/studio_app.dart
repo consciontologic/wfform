@@ -8,6 +8,7 @@ import '../app/theme.dart';
 import '../features/chat/chat_controller.dart';
 import '../features/chat/attachment.dart';
 import '../features/documents/document_view.dart';
+import '../features/documents/readable_data.dart';
 import 'attachment_widgets.dart';
 import 'brand_mark.dart';
 import 'edit_message_dialog.dart';
@@ -19,6 +20,8 @@ import 'context_dialog.dart';
 import 'sidebar_resize_handle.dart';
 import 'app_footer.dart';
 import 'sidebar_reveal_edge.dart';
+import 'parameters_dialog.dart';
+import 'connections_dialog.dart';
 
 class StudioApp extends StatelessWidget {
   const StudioApp({super.key, required this.state});
@@ -1113,6 +1116,7 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = message.role == 'user';
+    final toolResult = message.role == 'tool';
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: PaperPanel(
@@ -1127,7 +1131,11 @@ class _Message extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    user ? 'YOU' : message.modelId ?? 'MODEL',
+                    user
+                        ? 'YOU'
+                        : toolResult
+                        ? 'TOOL RESULT'
+                        : message.modelId ?? 'MODEL',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -1175,25 +1183,54 @@ class _Message extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Semantics(
                       container: true,
-                      child: SelectableText(
-                        message.reasoning,
-                        semanticsLabel: message.reasoning,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: StudioPalette.of(context).muted,
-                        ),
-                      ),
+                      child: detectDataLanguage(message.reasoning) == 'json'
+                          ? ReadableDataView(source: message.reasoning)
+                          : SelectableText(
+                              message.reasoning,
+                              semanticsLabel: message.reasoning,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: StudioPalette.of(context).muted,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
               ),
-            if (!user && message.content.isNotEmpty)
+            if (message.toolCalls.isNotEmpty)
+              for (final call in message.toolCalls)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text('Tool request · ${call.name}'),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ReadableDataView(source: call.arguments),
+                    ),
+                  ],
+                ),
+            if (toolResult)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('View tool result'),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ReadableDataView(source: message.content),
+                  ),
+                ],
+              )
+            else if (!user && message.content.isNotEmpty)
               DocumentView(
+                showCopy: false,
                 source: message.content,
                 streaming: !message.complete,
               )
-            else if (!user || message.content.isNotEmpty)
+            else if (user && detectDataLanguage(message.content) == 'json')
+              ReadableDataView(source: message.content)
+            else if (message.toolCalls.isEmpty &&
+                (!user || message.content.isNotEmpty))
               SelectableText(
                 message.content.isEmpty
                     ? (message.failure != null
@@ -1261,6 +1298,8 @@ class _Composer extends StatelessWidget {
     listenable: state.chat.statusChanges,
     builder: (context, _) {
       final chat = state.chat;
+      chat.approveTool = (tool, arguments) =>
+          approveTool(context, tool, arguments, chat: chat);
       final model = state.catalog.selected;
       final mimeTypes = model?.allowedAttachmentMimeTypes ?? <String>{};
       final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
@@ -1455,6 +1494,58 @@ class _Composer extends StatelessWidget {
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    TextButton.icon(
+                      onPressed:
+                          chat.busy ||
+                              state.historyBusy ||
+                              state.activeConversationArchived ||
+                              model == null
+                          ? null
+                          : () => openParameters(
+                              context,
+                              model: model,
+                              overrides: chat.requestParameters,
+                              toolsAvailable: state.platform.toolsAvailable,
+                              toolNames: chat.enabledTools.intersection(
+                                state.toolConnections.registry.tools
+                                    .map((tool) => tool.name)
+                                    .toSet(),
+                              ),
+                              onApply: chat.setRequestParameters,
+                              onOpenDocumentation: state.platform.openUrl,
+                            ),
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: Text(
+                        chat.requestParameters.isEmpty
+                            ? 'Parameters'
+                            : 'Parameters (${chat.requestParameters.length})',
+                      ),
+                    ),
+                    Semantics(
+                      label: state.platform.toolsAvailable
+                          ? null
+                          : 'Tools unavailable on this device. Learn why.',
+                      child: Opacity(
+                        opacity: state.platform.toolsAvailable ? 1 : .45,
+                        child: TextButton.icon(
+                          onPressed: chat.busy || state.historyBusy
+                              ? null
+                              : () => openTools(context, state),
+                          icon: Icon(
+                            state.platform.toolsAvailable
+                                ? Icons.extension_outlined
+                                : Icons.desktop_windows_outlined,
+                            size: 18,
+                          ),
+                          label: Text(
+                            !state.platform.toolsAvailable ||
+                                    chat.enabledTools.isEmpty
+                                ? 'Tools'
+                                : 'Tools (${chat.enabledTools.length})',
+                          ),
+                        ),
+                      ),
+                    ),
                     TextButton.icon(
                       onPressed: chat.busy || state.historyBusy
                           ? null

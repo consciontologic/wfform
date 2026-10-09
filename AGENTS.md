@@ -48,7 +48,8 @@ session before doing real work.
   Browser/container checks must be reported separately from mocked tests.
 - Public releases use `make build.public` and the GitHub workflow documented in
   `docs/guides/CI_CD.md`. That user-authorized workflow commits web artifacts to
-  `consciontologic/wfform.com`; agents still do not commit or push source changes.
+  `consciontologic/wfform.com`; source changes follow the Gitflow publishing rules
+  in §2 and reach `main`/`develop` only through reviewed PRs.
   Preserve canonical SEO metadata, public asset integrity and destination ownership.
 - CodeGraph is enabled for Dart and repository code, via the pinned project
   launcher. Run `make codeg` to initialize or sync the ignored index; see
@@ -79,10 +80,58 @@ recurring failure mode and is forbidden.
 
 ---
 
-## 2. 📝 Mandatory tracking + staging — humans push via `make git`
+## 2. 🌿 Gitflow, Copilot delivery and guarded publishing
 
-**Agents NEVER call `git commit` or `git push`.** After completing a slice
-of work, the agent:
+**Delivery policy requested 2026-10-09:** read
+[`docs/guides/GITFLOW.md`](docs/guides/GITFLOW.md) before starting work.
+Use isolated feature/bugfix branches from `develop`, hotfix branches from `main`,
+and `release/MAJOR.MINOR.PATCH` branches from `develop`. Codex/Claude may prefix
+the work kind with their agent name. Never implement directly on `main` or
+`develop`; never create a new repository just to start a feature. Preserve dirty
+work and choose a suitable existing checkout before creating a worktree.
+
+GitHub **Copilot cloud agent** is the user's preferred delegated PR author: it may
+use its platform-owned `copilot/*` branch and commit/push changes there for an
+explicitly assigned task. Local coordinating agents publish their own validated
+Gitflow work branches through `make git`; never masquerade as Copilot. Use the
+explicit MAI primary and owner-authorized ordered alternatives in
+`.github/copilot-model-policy.json`; no Auto or unlisted model fallback. If
+Copilot is unavailable, prepare the handoff and report that limit honestly.
+Copilot prepares changes, tests and PR/release notes. Routine delivery may submit
+authorized tasks, follow checks, open promotion/back-merge PRs and enable GitHub
+auto-merge. The user chose **final deployment approval** on 2026-10-09: routine
+PRs into `develop` and hotfix PRs into `main` run the four quality checks.
+Other promotions into `main` reuse prior successful develop validation for the
+exact source tree inside the trusted delivery controller; never repeat quality or
+security pipelines on those promotions or ordinary pushes. Release preparation
+PRs target `develop`. Keep dependency/tool caches scoped by OS, version and
+lockfiles, excluding secrets and release artifacts. Resolved conversations and
+zero configured human PR approvals apply throughout. Respect any additional native GitHub/Copilot constraint.
+The `production` environment requires **consciontologic** to approve deployment
+before the combined tag/release/website job runs. This is the human release
+decision; no agent may call the approval API, approve through the UI or bypass it.
+Self-review prevention is deliberately off so the sole maintainer can approve
+their own dispatched release. Never use administrator bypass: publication checks
+the actual human approval receipt even if GitHub still offers a bypass button.
+After approval,
+deterministic CI validates the exact source, creates the plain
+`MAJOR.MINOR.PATCH` tag and publishes verified artifacts. Never move an existing
+tag or replace its assets.
+Copilot automation is bounded to one accepted initial task and at most one
+managed CI repair, using the same selected model. Only a definitive model-field
+validation rejection may advance through the configured alternatives, each once;
+uncertain submissions and asynchronous task failures are never retried.
+Keep automation/deployment secrets in the `main`-restricted environments
+documented in [CI/CD](docs/guides/CI_CD.md#one-time-automation-setup).
+
+### Local coordinating agents
+
+**Local coordinating agents use `make git` to commit and push validated work
+branches. Never write directly to `main` or `develop`.** Use `feature/*`,
+`bugfix/*`, `hotfix/*` or `release/MAJOR.MINOR.PATCH`, optionally prefixed by the
+agent name as documented in the Gitflow guide. Direct source `git commit` /
+`git push` commands are not substitutes for the guarded wrapper. After completing
+an authorized slice of work, the coordinating agent:
 
 1. Appends one row to [`docs/tracking/tracking.csv`](docs/tracking/tracking.csv) via
    [`xops/agent/tracking_append.sh`](xops/agent/tracking_append.sh) with
@@ -90,35 +139,49 @@ of work, the agent:
    `summary` that follows [Conventional Commits](https://www.conventionalcommits.org/)
    (e.g. `feat(scope): add X`, `fix(scope): correct Y`).
 2. Runs `git add -A` to stage all changed files.
-3. Stops. The human commits and pushes whenever they're ready:
+3. Runs `make git.dry`, reviews the branch, commit contents and remote destination,
+   then runs `make git` to publish the work branch. Do not publish while checks
+   are failing or ownership of included changes is unresolved.
+4. Opens or updates the appropriate PR and reports its URL, published commit,
+   tracking `run_id` and verification evidence. Required CI and platform rules
+   govern merging; never bypass protection or write to `main`/`develop` directly.
 
 ```bash
-make git       # commit all staged changes (one commit per staging window; all pending run_ids ride its message) then push
 make git.dry   # preview what would be committed (read-only)
+make git       # guarded work-branch commit/push; includes all pending run_ids
 ```
 
 Every task must terminate in **exactly one** of these states:
 
 | State | When | What you do |
 |---|---|---|
-| `staged` | Gates green AND working tree has real changes | Append tracking row with `commit_sha=pending`, then `git add -A`. Report files staged + `run_id`. |
+| `published` | Gates green AND the authorized work is ready | Append tracking, stage, inspect `make git.dry`, run `make git` on the work branch and open/update its PR. Report commit, PR and `run_id`. |
+| `staged` | The user explicitly requested a local-only/staged handoff | Append tracking row with `commit_sha=pending`, then `git add -A`. Report files staged + `run_id`. |
 | `reverted` | A gate cannot be repaired within scope and this task's edits can be safely isolated | Undo only this task's edits, preserving pre-existing and concurrent work. Append `action=revert`, `status=failed`. No staging. |
 | `no-op` | `git status -s` was already clean and no edits were needed | Say so in one line. |
 | `blocked` | A real blocker (rebase needed, decision required, scope outside allow-list) | Write `docs/tracking/state/checkpoint.json`, append `action=block`/`status=blocked` row, report. |
 
-You are **forbidden** from inventing a fifth state ("I'll let you review and
-commit"). If gates are green and the diff is real, **you stage**.
+Do not stop at "I'll let you review and commit" when publishing is authorized.
+If gates are green and the diff is real, complete the guarded work-branch
+publication unless the user explicitly requested a staged handoff. Missing
+credentials, rejected pushes or unavailable required review are real blockers,
+not permission to bypass protections; preserve the work and report the exact
+remaining gate. A published PR awaiting review is not a merged release.
 
 A failed gate first enters the recovery loop in §5a; it does not authorize
 discarding work. Never use blanket restore/reset commands to recover from a
 test failure. If ownership is ambiguous, preserve the diff and report `blocked`.
 Inspect the complete staging set for unrelated work and secrets before `git add -A`.
-Delegated agents return evidence; only the coordinating parent tracks and stages.
+Delegated agents return evidence; only the coordinating parent tracks, stages
+and runs `make git` for the combined work.
 Read-only reviews need no artificial edits or completion commit row.
 
-**Forbidden git operations under all circumstances:** `git commit`,
-`git push`, `git push --force`, `git push --force-with-lease`,
-`git reset --hard` on already-pushed commits, `--no-verify`, rewriting
+**Forbidden for local agents:** direct source `git commit` and `git push` outside
+`make git`.
+**Forbidden for all agents:** direct commits/pushes to `main` or `develop`,
+bypassing required PR review/checks or branch protection, `git push --force`,
+`git push --force-with-lease`, `git reset --hard` on already-pushed commits,
+`--no-verify`, rewriting
 published history, deleting `main` / the default branch, `git config --global`.
 
 **Conventional Commits format** for every `summary` on a `commit` row:
@@ -287,6 +350,8 @@ skill and [`ROADMAP_DISCIPLINE.md`](.agents/instructions/ROADMAP_DISCIPLINE.md).
   what is next. No additional sections, recap lists, or "I also did..." tails.
 - After staging: report `run_id`, files staged, tests run / passed / failed.
   Four lines, max.
+- After publishing: report `run_id`, commit/PR, verification and any remaining
+  review or release gate. Do not describe a published branch as a merged release.
 - After a revert: report `run_id`, which gate failed, the corrective action.
 
 ---

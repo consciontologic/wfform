@@ -1,21 +1,22 @@
 {{flutter_js}}
 {{flutter_build_config}}
-// The builder stamps this path; development keeps ordinary local paths.
+// Package files stay flat. Only the verified cache identity is content-addressed.
 const releasePath = '__RELEASE_BASE__';
-const releaseBase = releasePath.startsWith('__RELEASE_') ? '' : releasePath;
+const buildId = /^[a-f0-9]{64}$/.test(releasePath) ? releasePath : '';
 const flutterConfiguration = {
-  entrypointBaseUrl: releaseBase,
-  assetBase: new URL(releaseBase || './', document.baseURI).href,
-  canvasKitBaseUrl: new URL(releaseBase + 'canvaskit/', document.baseURI).href,
+  entrypointBaseUrl: '',
+  assetBase: new URL('./', document.baseURI).href,
+  canvasKitBaseUrl: new URL('canvaskit/', document.baseURI).href,
 };
-if (releaseBase) {
-  document.documentElement.dataset.release = releaseBase.split('/')[1];
+if (buildId) {
+  document.documentElement.dataset.release = buildId;
   const reportRelease = () => navigator.serviceWorker?.controller?.postMessage({
-    type: 'CLIENT_RELEASE', release: document.documentElement.dataset.release,
+    type: 'CLIENT_RELEASE', release: buildId,
   });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(reportRelease);
     navigator.serviceWorker.addEventListener('controllerchange', reportRelease);
+    reportRelease();
   }
 }
 function showStartupError(error) {

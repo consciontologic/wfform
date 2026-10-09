@@ -15,6 +15,8 @@ The row's `summary` column is used VERBATIM as the commit subject. A
 
 Refuses to commit if the working tree is dirty AND no pending row exists
 (catches the "agent forgot to track.add" footgun).
+An explicit later invocation can resume a failed push of an existing tracked
+HEAD commit, after inspecting the same-name remote branch and its ancestry.
 """
 
 from __future__ import annotations
@@ -44,6 +46,16 @@ _CC_RE = re.compile(
 def is_conventional_commit(subject: str) -> bool:
     """True iff `subject` is a valid Conventional Commits subject line."""
     return bool(_CC_RE.match(subject))
+
+
+def is_work_branch(branch: str) -> bool:
+    """Gitflow work branches only; never publish directly from main/develop."""
+    slug = r"[a-z0-9]+(?:-[a-z0-9]+)*"
+    semver = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    prefix = r"(?:(?:codex|claude|copilot)/)?"
+    return bool(re.fullmatch(prefix + r"(?:(?:feature|bugfix|hotfix)/" + slug +
+                             r"|release/" + semver + r")", branch) or
+                re.fullmatch(r"copilot/" + slug, branch))
 
 
 def _read_pending_rows() -> List[dict]:
@@ -151,7 +163,62 @@ def _build_batch_commit_message(groups: List[List[dict]]) -> str:
 
 
 def _working_tree_dirty() -> bool:
-    return bool(out(["git", "status", "--porcelain"], check=False).strip())
+    return bool(out(["git", "status", "--porcelain"]).strip())
+
+
+def _require_single_origin_destination() -> None:
+    """Ensure the read-only inspection and push address the same one remote."""
+    fetch_urls = out(["git", "remote", "get-url", "--all", "origin"]).splitlines()
+    push_urls = out(["git", "remote", "get-url", "--push", "--all", "origin"]).splitlines()
+    if len(fetch_urls) != 1 or not fetch_urls[0] or push_urls != fetch_urls:
+        # Do not print URLs: a legacy remote may contain embedded credentials.
+        err("origin must have one matching fetch/push destination; inspect its local configuration before publishing.")
+        sys.exit(65)
+
+
+def _push_work_branch(branch: str) -> None:
+    step("🚀 pushing the validated work branch to origin")
+    # Ignore upstream/default refspecs: a work branch may track main. Explicit
+    # refs also override remote.origin.push; command-local settings prevent
+    # mirror/followTags from expanding the publication beyond this one branch.
+    run(["git", "-c", "remote.origin.mirror=false", "-c", "push.followTags=false",
+         "push", "--set-upstream", "origin",
+         f"refs/heads/{branch}:refs/heads/{branch}"])
+    ok("pushed")
+
+
+def _resume_publication(branch: str, rows: List[dict]) -> None:
+    """Inspect a clean, already-committed work branch before resuming its push."""
+    if _working_tree_dirty():
+        err("working tree has changes but no new pending tracking run_id.")
+        err("Append a tracking row for the new work before publishing (AGENTS.md §2).")
+        sys.exit(2)
+    _require_single_origin_destination()
+    local_sha = out(["git", "rev-parse", "HEAD"]).strip()
+    remote_ref = f"refs/heads/{branch}"
+    remote_result = out(["git", "ls-remote", "--heads", "origin", remote_ref]).strip()
+    remote_sha = None
+    if remote_result:
+        fields = remote_result.split()
+        if (len(fields) != 2 or fields[1] != remote_ref
+                or not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", fields[0])):
+            err("origin returned an unexpected branch reference; refusing to resume publication.")
+            sys.exit(65)
+        remote_sha = fields[0]
+    if remote_sha == local_sha:
+        ok("origin already contains this work-branch commit — nothing to publish")
+        return
+    message_lines = out(["git", "show", "-s", "--format=%B", "HEAD"]).splitlines()
+    if not any(f"[{row['run_id']}]" in message_lines for row in rows):
+        err("HEAD has no completed tracking run_id; refusing to publish an untracked commit.")
+        sys.exit(2)
+    if remote_sha is not None:
+        ancestry = run(["git", "merge-base", "--is-ancestor", remote_sha, local_sha], check=False)
+        if ancestry != 0:
+            err("origin's work-branch tip is diverged or unavailable locally; fetch and inspect it before publishing.")
+            sys.exit(65)
+    info("resuming publication of the existing tracked commit; no new commit will be created")
+    _push_work_branch(branch)
 
 
 # ── subcommands ───────────────────────────────────────────────────────────
@@ -187,12 +254,19 @@ def cmd_dry(_args: List[str]) -> None:
     if _working_tree_dirty():
         info("staged + unstaged changes (git status --short):")
         run(["git", "status", "--short"])
-    else:
+    elif new_groups:
         warn("working tree clean — nothing to commit; pending rows fold into the next real commit")
+    else:
+        info("no new commit: make git will inspect the same-name origin branch and resume any unpublished tracked HEAD")
 
 
 def cmd_push(_args: List[str]) -> None:
     step("🔧 make git — commit pending tracking rows + push")
+    branch = out(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
+    if not is_work_branch(branch):
+        err("Gitflow requires a feature/bugfix/hotfix/release work branch; refusing integration-branch publication.")
+        err("Read docs/guides/GITFLOW.md. Existing staged files were not changed.")
+        sys.exit(65)
     rows = _read_pending_rows()
     if not rows:
         if _working_tree_dirty():
@@ -206,7 +280,7 @@ def cmd_push(_args: List[str]) -> None:
     groups = _group_by_run_id(rows)
     new_groups = [g for g in groups if g[0]["run_id"] not in committed]
     if not new_groups:
-        ok("all pending rows already correspond to existing commits — nothing to do")
+        _resume_publication(branch, rows)
         return
 
     # Final Conventional-Commits gate before anything is committed. Validate
@@ -230,6 +304,8 @@ def cmd_push(_args: List[str]) -> None:
         warn("working tree clean — nothing to commit; pending rows will fold into the next real commit")
         return
 
+    _require_single_origin_destination()
+
     # Stage everything first (humans may have left things unstaged).
     run(["git", "add", "-A"])
 
@@ -241,15 +317,7 @@ def cmd_push(_args: List[str]) -> None:
     run(["git", "commit", "-m", msg])
     ok(f"committed [{rids}]")
 
-    step("🚀 pushing to upstream")
-    branch = out(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
-    # --set-upstream-on-first-push, otherwise plain push.
-    upstream_check = out(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], check=False).strip()
-    if not upstream_check:
-        run(["git", "push", "--set-upstream", "origin", branch])
-    else:
-        run(["git", "push"])
-    ok("pushed")
+    _push_work_branch(branch)
 
 
 TABLE = {

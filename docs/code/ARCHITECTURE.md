@@ -1,12 +1,12 @@
 # wfform architecture
 
-Updated 2026-10-07. This describes the implemented Flutter application; active additions and their acceptance gates are tracked in the [roadmap](../planning/ROADMAP.md).
+Updated 2026-10-09. This describes the implemented Flutter application; active additions and their acceptance gates are tracked in the [roadmap](../planning/ROADMAP.md).
 
 ## System boundary
 
 wfform is a browser-first Flutter/Dart client for discovering explicitly free OpenRouter models and maintaining local conversations. The browser calls OpenRouter directly. The Dart development host and the nginx container serve static release files; neither is an application backend or API proxy. The container workflow is documented in the [Docker guide](../guides/DOCKER.md).
 
-Application logic and UI remain in Dart. The small HTML/manifest/bootstrap/service-worker files in [web](../../web/) integrate Flutter with browser installation and offline shell caching. Python and shell scripts under [xops](../../xops/) are repository/build operations, not deployed application logic. See [ADR-0001](../design/ADR-0001-flutter-browser-boundary.md) and [ADR-0004](../design/ADR-0004-agent-workspace-boundary.md).
+Application logic and UI remain in Dart. The optional **wfformcomp** Dart executable runs on the user's computer and hosts configured local tools or stdio MCP processes. It can also serve the credential-free Flutter web build; OpenRouter traffic remains direct from the browser. The small HTML/manifest/bootstrap/service-worker files in [web](../../web/) integrate Flutter with browser installation and offline shell caching. Python and shell scripts under [xops](../../xops/) are repository/build operations, not deployed application logic. See [ADR-0001](../design/ADR-0001-flutter-browser-boundary.md) and [ADR-0004](../design/ADR-0004-agent-workspace-boundary.md).
 
 ## Components and ownership
 
@@ -18,16 +18,25 @@ Application logic and UI remain in Dart. The small HTML/manifest/bootstrap/servi
 | Catalog | API DTO validation, exact zero-price eligibility, pagination, cache and explicit selection | [models](../../lib/features/models/) |
 | Health | Recent observations, selected-model probes, endpoint metadata, cooldowns and optional allowance lookup | [health.dart](../../lib/features/models/health.dart) |
 | Chat | Turn admission, context boundary, retry/edit/continue semantics, request adaptation and SSE decoding | [chat](../../lib/features/chat/) |
+| Parameters | Advertised parameter registry, omission semantics, validation and official references | [request_parameters.dart](../../lib/features/parameters/request_parameters.dart) |
+| Connected tools | Streamable HTTP discovery, isolated connections, validation and approved dispatch | [tools](../../lib/features/tools/) |
+| Optional companion | Loopback authenticated MCP, fixed argv commands, stdio bridge and optional static web hosting | [wfformcomp](../wfformcomp.md) |
 | Documents | Strict UTF-8 format handling, bounded Markdown/source rendering and syntax highlighting | [documents](../../lib/features/documents/) |
 | History | IndexedDB records, message rows, immutable media, revision conflict recovery | [history](../../lib/features/history/) |
 | Presentation | Adaptive layout, controls, dialogs, accessible selectable content and local previews | [presentation](../../lib/presentation/) |
 | Shared ports | HTTP, cancellation, diagnostics, connectivity, file selection and browser storage | [shared](../../lib/shared/) |
-| Release tools | Compile, hash and publish complete immutable PWA releases; serve and measure artifacts | [tool](../../tool/) |
+| Release tools | Compile and verify flat PWA files; package SemVer releases; serve and measure artifacts | [tool](../../tool/) |
 | Public discovery | Search/sharing metadata and a small static product document; no application logic | [SEO](../seo.md) |
 | Website publishing | Verify releases and commit only managed static assets to the website repository in CI | [CI/CD](../guides/CI_CD.md) |
 | Native hosts | Android/iOS launch projects with `com.wfform` application identity; native adapter parity is pending | [Native setup](../native-platforms.md) |
 
 Widgets consume controllers and domain values. HTTP requests and response parsing belong to adapters, not widgets. Small injectable interfaces support deterministic tests and eventual platform ports without imposing another framework.
+
+Structured data displays reuse `ReadableDataView`/`DocumentView` across dialogs,
+diagnostics, tool exchanges, parameter previews and documents. Formatting is a
+bounded presentation operation: exact input survives copying, transport and
+history. The tools quick start and companion setup guide are bundled Markdown
+assets so users can read them without another connection.
 
 ## Data and request flow
 
@@ -36,17 +45,20 @@ Widgets consume controllers and domain values. HTTP requests and response parsin
 3. The user explicitly selects a compatible free model. Model changes retain unsent composer text and files: an empty-history workspace changes model in place, while message-bearing histories stay separate and the composer is carried to a new workspace. An empty composer can resume a saved target-model draft. If selection disappears or relevant metadata changes, the application requires a valid selection instead of switching models.
 4. Send validates the current model, context estimate, attachment compatibility and cooldown before accepting a turn. Stale selected-model health triggers a small bounded probe; there is no mass inference probing at startup.
 5. Accepted draft text and attachments become a user message and the composer clears. The adapter sends the chosen ID with zero-price provider guards and no provider fallback. Its dispatch callback promotes a draft to chat history; accepting input or probing health alone does not. Incremental response text and optional returned reasoning are batched into the active assistant message.
-6. Terminal success or failure preserves received output, usage and timing where supplied. Retrying, continuing or editing/resending is explicit. History checkpoints persist changes without rewriting unchanged attachment bytes.
+6. When the model requests tools, streamed fragments are assembled into complete calls. Each enabled tool is validated and approved before dispatch. The assistant call, opaque reasoning details and matching tool result remain together in context and durable history. The loop stops after four tool rounds and never replays an uncertain action.
+7. Terminal success or failure preserves received output, usage and timing where supplied. Retrying, continuing or editing/resending is explicit. History checkpoints persist changes without rewriting unchanged attachment bytes.
 
 ## Persistence boundaries
 
 | Store | Data | Important property |
 |---|---|---|
-| Memory | Active conversation, runtime key, current catalog/controllers | Reload recovery requires the stores below |
-| localStorage | Saved browser key, catalog, appearance/preferences, bounded scoped health/endpoint/allowance observations | Synchronous small metadata only; an explicitly saved browser key overrides runtime configuration |
+| Memory | Active conversation, runtime key, MCP bearer tokens, current catalog/controllers | MCP connections require explicit reconnect after reload |
+| localStorage | Saved browser key, catalog, MCP endpoint names/URLs, appearance/preferences, bounded scoped health/endpoint/allowance observations | Synchronous small metadata only; MCP credentials are excluded; an explicitly saved browser key overrides runtime configuration |
 | sessionStorage | Tab-local active conversation and immediate unsent-text recovery marker | Draft attachments are not copied into this marker |
 | IndexedDB | Conversation summaries/documents, individual message rows and binary attachment records | Browser-local durability, transactional writes and revision checks |
 | Cache Storage | Content-verified release shell and release/client metadata | No API, configuration, conversation or attachment response caching |
+
+Starting with `1.0.0`, public release/tag names use SemVer and the website contains flat static files, without a `__releases` directory. The worker still uses a separate content-derived hash for verified cache generations, represented by internal `?build=<sha256>` cache keys and per-tab build metadata. It recognizes existing legacy cached URLs during migration. An old build whose needed bytes are no longer cached requires an explicit reload/update; current bytes are never silently substituted for changed old assets.
 
 History belongs to an origin, including its port. Moving the source directory does not migrate browser data; opening the same origin preserves access to that origin's existing history. Export/import supplies a portable backup. See [history](../history.md) and [PWA behavior](../pwa.md).
 

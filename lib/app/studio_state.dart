@@ -16,6 +16,7 @@ import '../shared/diagnostics.dart';
 import '../shared/platform.dart';
 import '../shared/transport.dart';
 import '../shared/attachment_picker.dart';
+import 'tool_connections.dart';
 
 class StudioState extends ChangeNotifier {
   StudioState({
@@ -40,6 +41,11 @@ class StudioState extends ChangeNotifier {
     );
     _keyOverride = credentialPreference.overrideValue != null;
     diagnostics.updateConfig(config);
+    toolConnections = ToolConnections(
+      transport: transport,
+      store: this.store,
+      available: platform.toolsAvailable,
+    );
     _createControllers();
     workOffline = this.store.read('freeform.workOffline') == 'true';
     draft = this.store.read('freeform.draft.v1') ?? '';
@@ -109,6 +115,7 @@ class StudioState extends ChangeNotifier {
   late CatalogController catalog;
   late HealthController health;
   late ChatController chat;
+  late final ToolConnections toolConnections;
   String draft = '';
   List<ChatAttachment> _draftAttachments = const [];
   List<ChatAttachment> get draftAttachments => _draftAttachments;
@@ -178,6 +185,7 @@ class StudioState extends ChangeNotifier {
       transport: transport,
       diagnostics: diagnostics,
       health: health,
+      toolsAvailable: platform.toolsAvailable,
       validateModel: (model) {
         if (configurationLoading) {
           return 'Connection settings are still loading. Your draft is saved.';
@@ -199,6 +207,7 @@ class StudioState extends ChangeNotifier {
         return null;
       },
     );
+    chat.tools = toolConnections.registry;
     catalog.addListener(_catalogChanged);
     chat.addListener(_chatChanged);
   }
@@ -721,6 +730,9 @@ class StudioState extends ChangeNotifier {
       record.draft.isEmpty &&
       record.draftAttachments.isEmpty &&
       (record.sessionData['messages'] as List).isEmpty &&
+      // Explicit configuration is draft work even before any text is entered.
+      ((record.sessionData['requestParameters'] as Map?) ?? const {}).isEmpty &&
+      ((record.sessionData['enabledTools'] as List?) ?? const []).isEmpty &&
       !_history.any((entry) => entry.id == record.id);
 
   Future<void> _activateWorkspace(ConversationRecord record) async {
@@ -1508,6 +1520,7 @@ class StudioState extends ChangeNotifier {
 
   @override
   void dispose() {
+    toolConnections.dispose();
     _attachmentCancel?.cancel();
     attachmentPicker.dispose();
     _disposed = true;

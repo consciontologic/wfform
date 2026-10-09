@@ -20,7 +20,9 @@ permission to perform operations forbidden by AGENTS.md.
 3. **Destructive operation without authorization** — deleting user data or
    dropping a database table. Forbidden Git operations remain forbidden.
 4. **External-visible side effect without authorization** — commenting on a PR,
-   sending a message or paying money. Agents never commit or push in this repo.
+   sending a message or paying money. Publishing validated Gitflow work branches
+   through `make git` is already authorized by AGENTS.md §2; direct writes to
+   `main`/`develop` and protection bypasses remain forbidden.
 5. **Consequential ambiguity** that available context cannot resolve and where
    a wrong choice would be expensive to undo.
 
@@ -29,7 +31,9 @@ permission to perform operations forbidden by AGENTS.md.
 - Mid-phase, between bullets, because "you'd feel better if the user
   confirmed". → [`phase-persistence`](../phase-persistence/SKILL.md).
 - Before running tests, lints, type-checks — they're cheap and reversible.
-- Before staging — staging is the agent's job. Pushing is the human's.
+- Before staging or guarded publication of authorized work — the coordinating
+  agent uses `make git` on its validated work branch. Required PR review/merge
+  boundaries still apply.
 - After every tool call to summarise — the human reads the final message.
 
 ## Procedure (when you do stop)

@@ -65,15 +65,7 @@ void main() {
       );
       expect(File('${output.path}/site/.env').existsSync(), isFalse);
       expect(File('${output.path}/site/debug.txt').existsSync(), isFalse);
-      final manifest =
-          jsonDecode(File('${source.path}/release.json').readAsStringSync())
-              as Map;
-      expect(
-        File(
-          '${output.path}/site/__releases/${manifest['version']}/main.dart.js',
-        ).existsSync(),
-        isTrue,
-      );
+      expect(Directory('${output.path}/site/__releases').existsSync(), isFalse);
     },
   );
 

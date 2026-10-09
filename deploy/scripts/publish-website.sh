@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Remote commit/push is intentionally confined to the requested GitHub workflow.
 set -euo pipefail
+report_status() {
+  if [[ -n ${GITHUB_OUTPUT:-} ]]; then printf 'status=%s\n' "$1" >> "$GITHUB_OUTPUT"; fi
+}
 
-if [[ ${GITHUB_ACTIONS:-} != true || ${GITHUB_REF:-} != refs/heads/main || ${GITHUB_EVENT_NAME:-} == pull_request ]]; then
-  echo 'Website publication is only supported by the main-branch GitHub workflow.' >&2
+if [[ ${GITHUB_ACTIONS:-} != true || ${GITHUB_REF:-} != refs/heads/main || ${GITHUB_EVENT_NAME:-} != workflow_dispatch ]]; then
+  echo 'Website publication requires the approved release dispatch on main.' >&2
   exit 1
 fi
-: "${WFFORM_DEPLOY_TOKEN:?Add the WFFORM_DEPLOY_TOKEN Actions secret to the source repository.}"
+if [[ ! ${WFFORM_RELEASE_SHA:-} =~ ^[0-9a-f]{40}$ || ${WFFORM_RELEASE_SHA:-} != "${GITHUB_SHA:-}" || ! ${WFFORM_RELEASE_VERSION:-} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || ! ${WFFORM_RELEASE_PR:-} =~ ^[1-9][0-9]*$ ]]; then
+  echo 'Website publication identity differs from the approved workflow source.' >&2
+  exit 1
+fi
+: "${WFFORM_DEPLOY_TOKEN:?Add WFFORM_DEPLOY_TOKEN to the production environment.}"
 : "${GH_TOKEN:?The source repository read token is required.}"
 : "${GITHUB_SHA:?Missing source revision.}"
 : "${GITHUB_REPOSITORY:?Missing source repository.}"
@@ -22,6 +29,7 @@ fi
 latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
 if [[ $latest != "$GITHUB_SHA" ]]; then
   echo 'Skipping publication: source main has a newer commit.'
+  report_status skipped-newer-main
   exit 0
 fi
 
@@ -60,6 +68,7 @@ if [[ -s $changes ]]; then
 fi
 if git -C "$checkout" diff --cached --quiet; then
   echo 'Website artifacts are unchanged; no commit or push is needed.'
+  report_status unchanged
   exit 0
 fi
 
@@ -67,6 +76,7 @@ fi
 latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
 if [[ $latest != "$GITHUB_SHA" ]]; then
   echo 'Skipping publication: source main changed during artifact preparation.'
+  report_status skipped-newer-main
   exit 0
 fi
 git -C "$checkout" -c user.name='github-actions[bot]' \
@@ -74,4 +84,5 @@ git -C "$checkout" -c user.name='github-actions[bot]' \
   commit -m "deploy(web): publish $GITHUB_REPOSITORY@$GITHUB_SHA"
 # A concurrent destination edit fails normally. No force push or hidden retry.
 git -C "$checkout" push origin HEAD:main
+report_status published
 echo 'Published static files to consciontologic/wfform.com main.'

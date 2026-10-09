@@ -33,15 +33,22 @@ description: "Release Checklist. You are about to tag a version, publish a packa
 ```bash
 # 1. Append a tracking row for the release commit.
 make track.add ACTION=commit STATUS=completed \
-  SUMMARY="chore(release): bump to v<version>"
+  SUMMARY="chore(release): bump to <version>"
 
-# 2. Stage + commit via make git (the human runs this).
+# 2. Coordinating agent stages, reviews, then publishes the validated work branch.
+git add -A
+make git.dry
 make git
 
-# 3. Tag after commit (human step).
-git tag -a "v<version>" -m "release v<version>"
-git push --tags
+# 3. Open the release PR; wait for required checks, review and merge into main.
+# 4. The authorized release publisher tags the reviewed main commit only.
+git tag -a "<version>" "<reviewed-main-sha>" -m "release <version>"
+git push origin "refs/tags/<version>"
 ```
+
+Never commit/push source directly to `main` or `develop`, tag an unmerged work
+branch, or bypass protection. Tagging is a separate authorized release action;
+work-branch publishing alone does not authorize a production release.
 
 ### Post-release
 

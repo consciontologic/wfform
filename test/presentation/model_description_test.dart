@@ -106,6 +106,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(model.description), findsOneWidget);
         expect(find.text('Ellipsis supplied by OpenRouter.'), findsOneWidget);
+        expect(find.byTooltip('Copy model page link'), findsNothing);
+        await tester.ensureVisible(find.text('Model page'));
+        await tester.tap(find.text('Model page'));
+        await tester.pump();
         final linkCopy = find.byTooltip('Copy model page link');
         await tester.ensureVisible(linkCopy);
         await tester.pumpAndSettle();

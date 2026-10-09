@@ -14,11 +14,12 @@ The app is Flutter/Dart; start with `make help`, `make verify`, and
 
 ## ⚡ Critical conventions (mirrored from AGENTS.md)
 
-1. **Agents never `git commit` / `git push`.** Append a row to
+1. **Coordinating agents publish validated work branches through `make git`.** Append a row to
    [`docs/tracking/tracking.csv`](docs/tracking/tracking.csv) via
    [`xops/agent/tracking_append.sh`](xops/agent/tracking_append.sh) with
    `action=commit, status=completed, commit_sha=pending`, then `git add -A`,
-   then stop. The human runs `make git`.
+   inspect `make git.dry`, then run `make git`. Never commit or push directly to
+   `main`/`develop`; those branches change only through reviewed PRs.
 
 2. **Conventional Commits** in every tracking-row `summary`:
    `type(scope): description`. Valid types: `feat, fix, docs, style,
@@ -43,3 +44,12 @@ The app is Flutter/Dart; start with `make help`, `make verify`, and
 
 For the full ruleset (security, communication, model-specific notes), read
 [`AGENTS.md`](AGENTS.md).
+
+## 🌿 Gitflow delivery
+
+Read [the delivery workflow](docs/guides/GITFLOW.md) before starting a feature, bugfix,
+hotfix or release. Use the appropriate isolated work branch; keep main/develop
+free of direct implementation. Local coordinating agents publish validated work
+branches through `make git`; delegated agents return evidence without publishing.
+GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
+low-cost model; human review/merge and CI release gates still apply.

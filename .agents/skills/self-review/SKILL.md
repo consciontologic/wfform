@@ -27,6 +27,9 @@ After implementation, before staging. Always.
 4. **Confirm the relevant gates passed** against the final changes in a fresh
    process. Re-run only when later edits or unresolved concerns justify it.
 5. **Stage** (`git add -A`).
+6. **Coordinating parent only:** inspect `make git.dry` and run `make git` on
+   the validated Gitflow work branch, then open/update its PR under AGENTS.md §2.
+   Respect a user-requested staged handoff and every review/protection gate.
 
 ## Anti-patterns
 

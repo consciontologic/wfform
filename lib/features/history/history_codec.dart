@@ -26,11 +26,7 @@ class PackedHistoryRecord {
   }) {
     ConversationSummary.fromJson(record.summary.toJson());
     final source = record.sessionData;
-    if (source['version'] != 1 || source['messages'] is! List) {
-      throw historyFailure(
-        'The conversation session has an unsupported format.',
-      );
-    }
+    final validatedMessages = validateHistorySession(source);
     final files = <String, ChatAttachment>{};
     ChatAttachment retain(Object? raw) {
       if (raw is! Map || raw['id'] is! String) {
@@ -53,17 +49,7 @@ class PackedHistoryRecord {
     var payloadChars = 0;
     final sizedMessages = <Map<String, dynamic>>[];
     final messages = <String>[];
-    for (final raw in source['messages'] as List) {
-      if (raw is! Map ||
-          !{'user', 'assistant'}.contains(raw['role']) ||
-          raw['content'] is! String ||
-          raw['reasoning'] is! String ||
-          raw['complete'] is! bool ||
-          (raw['modelId'] != null && raw['modelId'] is! String)) {
-        throw historyFailure(
-          'A conversation message has an unsupported format.',
-        );
-      }
+    for (final raw in validatedMessages) {
       final message = Map<String, dynamic>.from(raw);
       final sizedMessage = Map<String, dynamic>.from(raw);
       final media = message.remove('attachments');

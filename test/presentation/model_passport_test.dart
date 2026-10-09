@@ -100,8 +100,13 @@ void main() {
         'Files': 'UTF-8 text and source files:',
         'Availability details': h.state.health.forModel('test/chat').message,
       }.entries) {
-        await tester.ensureVisible(find.text(entry.key));
-        await tester.tap(find.text(entry.key));
+        final title = find.descendant(
+          of: find.byType(ModelDetails),
+          matching: find.text(entry.key),
+        );
+        expect(title, findsOneWidget);
+        await tester.ensureVisible(title);
+        await tester.tap(title);
         await tester.pumpAndSettle();
         expect(find.textContaining(entry.value), findsWidgets);
       }
@@ -166,8 +171,12 @@ void main() {
       'Files': 'UTF-8 text and source files:',
       'Provider & context': '8192 tokens',
     }.entries) {
-      final title = find.text(entry.key);
+      final title = find.descendant(
+        of: find.byType(ModelDetails),
+        matching: find.text(entry.key),
+      );
       final content = find.textContaining(entry.value);
+      expect(title, findsOneWidget);
       expect(content, findsNothing);
       await tester.ensureVisible(title);
       await tester.pumpAndSettle();

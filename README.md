@@ -2,15 +2,23 @@
 
 **Wrapper for Free Open Router Models** — a Flutter web app for discovering and chatting with OpenRouter’s free models.
 
-**[Open wfform](https://wfform.com/)** · [Documentation](docs/README.md) · [Release notes](CHANGELOG.md)
+**[Open wfform](https://wfform.com/)** · [Tools quick start](docs/tools.md) · [Documentation](docs/README.md) · [Release notes](CHANGELOG.md)
 
 - Search the live free-model catalog and inspect pricing, capabilities and recent availability.
 - Stream responses, edit and resend messages, and attach supported text, source files or media.
+- Set supported model parameters, with remote defaults when unset, and connect optional MCP tools with approval for each call.
+- Use the optional [wfformcomp](docs/wfformcomp.md) to connect configured local programs and stdio MCP servers.
 - Resume unsent drafts and saved chats; archive, restore, export and import conversations.
 - Use responsive layouts, a resizable desktop sidebar, light/dark themes and text sizes up to 200%.
 - Install the PWA for an offline app shell and cached history/catalog. Chat requires a connection.
 
 The browser calls OpenRouter directly. There is no application backend or API proxy. Free-model availability and account limits depend on OpenRouter; the app does not silently switch models or use paid fallbacks.
+
+## Start chatting
+
+1. [Open wfform](https://wfform.com/), open **Settings**, and add your OpenRouter API key.
+2. Choose a free model in **Models**, type a message, and send it.
+3. Want the model to use your tools? Follow the [simple tools, MCP and wfformcomp guide](docs/tools.md). Ordinary chat needs no companion. Compatible web MCP services connect through **Tools**; local programs and stdio MCP servers use **wfformcomp**.
 
 ## Run locally
 
@@ -35,7 +43,11 @@ make verify        # format, analysis, deterministic tests, repository checks
 make build.public  # credential-free release in build/publish-web
 ```
 
-`make help` lists all targets. GitHub Actions publishes web assets after source `main` pushes; setup is documented in the [CI/CD guide](docs/guides/CI_CD.md). Docker/nginx hosting is covered in the [Docker guide](docs/guides/DOCKER.md).
+`make help` lists all targets. [Routine delivery](docs/guides/GITFLOW.md) handles
+authorized Copilot tasks, PR checks and release preparation. The owner approves
+the final **production deployment**; CI then publishes verified packages and
+the website. Follow the [one-time setup](docs/guides/CI_CD.md#one-time-automation-setup)
+to enable it. Docker/nginx hosting is covered in the [Docker guide](docs/guides/DOCKER.md).
 
 ## Learn more
 
@@ -48,3 +60,13 @@ make build.public  # credential-free release in build/publish-web
 During 0.x development, minor releases may change application interfaces; review the release notes before upgrading.
 
 Web is the verified release target. Android/iOS host identifiers are configured; [native platform support remains limited](docs/native-platforms.md).
+
+## 🌿 Contribute and experiment
+
+- [Gitflow and Copilot delivery](docs/guides/GITFLOW.md): feature, bugfix, hotfix, PR and plain SemVer release workflow.
+- [Tools playground](examples/tools_playground/README.md): start a real example MCP server and local program, then try the sample prompts.
+- [Changelog](CHANGELOG.md): user-facing release notes.
+
+Version **1.0.0** is prepared in source; a download is available only after its
+GitHub release workflow succeeds. Tools require a desktop computer; normal
+chat remains available on phones and tablets.

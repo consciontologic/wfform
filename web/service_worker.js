@@ -5,7 +5,15 @@ const MANIFEST = __PRECACHE_MANIFEST__;
 const PREFIX = 'free-model-studio-';
 const CLIENTS = PREFIX + 'clients-v2';
 const SCOPE = new URL(self.registration.scope);
-const releaseUrl = (version, path) => new URL('__releases/' + version + '/' + path, SCOPE).href;
+const legacyUrl = (version, path) => new URL('__releases/' + version + '/' + path, SCOPE).href;
+const releaseUrl = (version, path) => {
+  const url = new URL(path, SCOPE);
+  url.searchParams.set('build', version);
+  return url.href;
+};
+const cachedAsset = async (cache, version, path) =>
+  await cache.match(releaseUrl(version, path)) || await cache.match(legacyUrl(version, path));
+const cachedMarker = (cache, version) => cachedAsset(cache, version, 'release.json');
 const markerUrl = version => releaseUrl(version, 'release.json');
 const isVersion = value => /^[a-f0-9]{64}$/.test(value);
 const isGeneration = key => key.startsWith('free-model-studio-') && key !== CLIENTS;
@@ -34,10 +42,10 @@ async function reusable(path, expected, generations) {
   for (const name of generations) {
     const oldVersion = name.slice(PREFIX.length);
     const oldCache = await caches.open(name);
-    // Legacy shells use root URLs. New releases are immutable and versioned.
-    if (isVersion(oldVersion) && !(await oldCache.match(markerUrl(oldVersion)))) continue;
+    // Reuse either legacy cached URLs or flat build-keyed entries after verification.
+    if (isVersion(oldVersion) && !(await cachedMarker(oldCache, oldVersion))) continue;
     const url = isVersion(oldVersion) ? releaseUrl(oldVersion, path) : new URL(path, SCOPE).href;
-    const response = await oldCache.match(url);
+    const response = isVersion(oldVersion) ? await cachedAsset(oldCache, oldVersion, path) : await oldCache.match(url);
     if (!response) continue;
     const copy = await verified(response, expected);
     if (copy) return copy;
@@ -63,7 +71,7 @@ self.addEventListener('install', event => {
               response = await verified(await fetch(new Request(releaseUrl(VERSION, path), {
                 cache: 'force-cache', credentials: 'omit', signal: abort.signal,
               })), expected);
-              // An HTTP cache can hold a corrupt immutable response. One bounded
+              // An HTTP cache can hold a stale or corrupt response. One bounded
               // cache-bypass fetch lets an explicit later check recover a repair.
               if (!response) response = await verified(await fetch(new Request(releaseUrl(VERSION, path), {
                 cache: 'reload', credentials: 'omit', signal: abort.signal,
@@ -78,7 +86,7 @@ self.addEventListener('install', event => {
       await Promise.all(workers);
       // Completion marker is last. Incomplete generations are never served/reused.
       await cache.put(markerUrl(VERSION), new Response(JSON.stringify({
-        format: 2, version: VERSION, assets: MANIFEST,
+        format: 3, version: VERSION, assets: MANIFEST,
         install: {reusedAssets, reusedBytes, fetchedAssets, fetchedBytes},
       }), {headers: {'Content-Type': 'application/json'}}));
       // Wait for the application's explicit APPLY_UPDATE; never force activation.
@@ -140,22 +148,30 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== SCOPE.origin ||
-      request.headers.has('authorization') || url.search ||
+      request.headers.has('authorization') ||
       url.pathname.includes('/config/')) return;
   if (!url.pathname.startsWith(SCOPE.pathname)) return;
   let relative;
   try { relative = decodeURI(url.pathname.slice(SCOPE.pathname.length)); }
   catch (_) { return; }
   const versioned = /^__releases\/([a-f0-9]{64})\/(.+)$/.exec(relative);
+  const requestedBuild = url.searchParams.get('build');
+  if (url.search && (url.searchParams.size !== 1 || !isVersion(requestedBuild))) return;
   const navigation = request.mode === 'navigate' && (relative === '' || relative === 'index.html');
   if (!versioned && !navigation && !Object.hasOwn(MANIFEST, relative)) return;
   event.respondWith((async () => {
     try {
-      const version = versioned ? versioned[1] : VERSION;
+      let version = versioned ? versioned[1] : requestedBuild || VERSION;
+      if (!versioned && !requestedBuild && !navigation && event.clientId) {
+        const metadata = await caches.open(CLIENTS);
+        const record = await metadata.match(new URL('__pwa__/clients/' + event.clientId, SCOPE).href);
+        const clientVersion = record ? await record.text() : '';
+        if (isVersion(clientVersion)) version = clientVersion;
+      }
       const path = navigation ? 'index.html' : versioned ? versioned[2] : relative;
       const name = PREFIX + version;
       // Migration only: older pages ask for unversioned lazy assets. Keep their
-      // latest legacy shell available; new pages request immutable release URLs.
+      // latest legacy shell available; current pages identify their cache build.
       if (!versioned && !navigation && event.clientId) {
         const metadata = await caches.open(CLIENTS);
         const record = await metadata.match(new URL('__pwa__/clients/' + event.clientId, SCOPE).href);
@@ -167,12 +183,15 @@ self.addEventListener('fetch', event => {
           }
         }
       }
-      if (!(await caches.has(name))) return fetch(request);
+      if (!(await caches.has(name))) {
+        if (version !== VERSION) throw new Error('This older app build is no longer cached. Save your work and reload to update.');
+        return fetch(request);
+      }
       const cache = await caches.open(name);
-      const marker = await cache.match(markerUrl(version));
+      const marker = await cachedMarker(cache, version);
       const manifest = marker ? (await marker.json()).assets : version === VERSION ? MANIFEST : null;
       if (!manifest || !Object.hasOwn(manifest, path)) return fetch(request);
-      const cached = marker && await cache.match(releaseUrl(version, path));
+      const cached = marker && await cachedAsset(cache, version, path);
       if (cached) return cached;
       // Eviction recovery is network-only and integrity checked. No runtime put.
       const recovered = await verified(await fetch(releaseUrl(version, path), {cache: 'no-store'}), manifest[path]);

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../shared/diagnostics.dart';
 import '../chat/attachment.dart';
+import '../tools/tools.dart';
 
 class ConversationSummary {
   const ConversationSummary({
@@ -177,21 +178,7 @@ class ConversationRecord extends ConversationSummary {
         validateAttachments(draftAttachments);
       }
       final parsed = jsonDecode(map['session'] as String);
-      if (parsed is! Map ||
-          parsed['version'] != 1 ||
-          parsed['messages'] is! List) {
-        throw const FormatException();
-      }
-      for (final message in parsed['messages'] as List) {
-        if (message is! Map ||
-            !{'user', 'assistant'}.contains(message['role']) ||
-            message['content'] is! String ||
-            message['reasoning'] is! String ||
-            message['complete'] is! bool ||
-            (message['modelId'] != null && message['modelId'] is! String)) {
-          throw const FormatException();
-        }
-      }
+      validateHistorySession(parsed);
     } catch (_) {
       throw historyFailure(
         'The saved conversation session is damaged or unsupported. It was retained unchanged.',
@@ -210,6 +197,77 @@ class ConversationRecord extends ConversationSummary {
       draft: map['draft'] as String,
       session: map['session'] as String,
       draftAttachments: draftAttachments,
+    );
+  }
+}
+
+/// Shared by legacy imports and packed checkpoints. Incomplete trailing tool
+/// groups are retained as evidence; restoration decides how to close them
+/// without resuming external actions.
+List<Map<String, dynamic>> validateHistorySession(Object? value) {
+  try {
+    if (value is! Map || value['version'] != 1 || value['messages'] is! List) {
+      throw const FormatException('Unsupported session format.');
+    }
+    final parameters = value['requestParameters'];
+    if (parameters != null &&
+        (parameters is! Map ||
+            parameters.keys.any((key) => key is! String) ||
+            jsonEncode(parameters).length > 65536)) {
+      throw const FormatException('Invalid stored parameters.');
+    }
+    final tools = value['enabledTools'];
+    if (tools != null &&
+        (tools is! List ||
+            tools.length > 64 ||
+            tools.any(
+              (name) =>
+                  name is! String ||
+                  !RegExp(r'^[A-Za-z0-9_-]{1,64}$').hasMatch(name),
+            ))) {
+      throw const FormatException('Invalid stored tool selection.');
+    }
+    if (value.containsKey('toolAttempted') && value['toolAttempted'] is! bool) {
+      throw const FormatException('Invalid stored tool execution state.');
+    }
+    final messages = <Map<String, dynamic>>[];
+    for (final raw in value['messages'] as List) {
+      if (raw is! Map ||
+          !{'user', 'assistant', 'tool'}.contains(raw['role']) ||
+          raw['content'] is! String ||
+          raw['reasoning'] is! String ||
+          raw['complete'] is! bool ||
+          (raw['modelId'] != null && raw['modelId'] is! String) ||
+          (raw.containsKey('toolCalls') && raw['toolCalls'] is! List) ||
+          (raw['toolCallId'] != null && raw['toolCallId'] is! String) ||
+          (raw['role'] == 'tool' && raw['complete'] != true)) {
+        throw const FormatException('Invalid stored message.');
+      }
+      // The saved format uses camelCase. Accepting API aliases here would let
+      // a later local restore silently discard the associated call evidence.
+      if (raw.containsKey('tool_calls') ||
+          raw.containsKey('tool_call_id') ||
+          raw.containsKey('reasoning_details')) {
+        throw const FormatException(
+          'API message fields are not local history fields.',
+        );
+      }
+      final details = raw['reasoningDetails'];
+      if (details != null &&
+          (details is! List ||
+              details.any(
+                (item) =>
+                    item is! Map || item.keys.any((key) => key is! String),
+              ))) {
+        throw const FormatException('Invalid stored reasoning details.');
+      }
+      messages.add(Map<String, dynamic>.from(raw));
+    }
+    validateToolTranscript(messages, allowPending: true);
+    return messages;
+  } catch (_) {
+    throw historyFailure(
+      'The saved conversation session is damaged or unsupported. It was retained unchanged.',
     );
   }
 }

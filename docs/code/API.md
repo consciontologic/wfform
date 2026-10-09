@@ -1,6 +1,6 @@
 # API and local contracts
 
-wfform does not expose a backend API. Its external contract is a direct browser connection to OpenRouter plus local browser adapters. API facts below were checked against official documentation on 2026-10-06; detailed source links and edge cases remain in [catalog](../catalog.md), [chat](../chat.md) and [multimodal](../multimodal.md).
+The hosted wfform website has no application backend. Its external contracts are direct browser connections to OpenRouter and optional compatible MCP servers. The optional wfformcomp local process exposes authenticated MCP and can serve the same static web build. API facts below were checked against official documentation on 2026-10-06; detailed source links and edge cases remain in [catalog](../catalog.md), [chat](../chat.md) and [multimodal](../multimodal.md).
 
 ## OpenRouter operations
 
@@ -20,7 +20,7 @@ Catalog pagination is optional upstream; without offset/limit the API currently 
 
 The adapter sends the actual selected model ID and relevant conversation messages, with streaming enabled. Provider fallback is disabled and documented prompt/completion/request/image/audio price limits are zero. There is no paid fallback, default substitute model or automatic content resend.
 
-Reasoning is requested only when advertised. Output token limits are sent when supported and respect the configured/per-conversation reserve and known provider cap. The user explicitly chooses any earlier context exclusion; estimates never silently delete or summarize saved turns. Native PDF processing is requested explicitly when applicable, preventing an automatic paid parser fallback.
+Generation and reasoning parameters are omitted unless explicitly supplied. Supported overrides are validated against model metadata; output token limits respect the known provider cap. The default context reserve is a local estimate, not an implicit remote limit. The user explicitly chooses any earlier context exclusion; estimates never silently delete or summarize saved turns. Native PDF processing is requested explicitly when applicable, preventing an automatic paid parser fallback.
 
 User content may be a string or documented multimodal parts. The media adapter owns image data URLs, audio data, video URLs and native-file representation. Local Markdown/code preview is a presentation feature, not an authorization to upload arbitrary files. Consult the [rendering guide](../file-rendering.md) for text-file conversion and supported previews.
 

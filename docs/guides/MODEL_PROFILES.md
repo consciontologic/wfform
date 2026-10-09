@@ -37,7 +37,9 @@ once it's in context.
 **Strengths.** Tight feedback loops with the editor.
 **Watch for.**
 - Plugin discovery: ensure `AGENTS.md` is in the read-on-start set.
-- Auto-commit settings: **disable them all** — humans push via `make git`.
+- Disable uncontrolled auto-commit settings; coordinating agents use the
+  reviewed `make git` path on validated Gitflow work branches. Never write
+  directly to `main`/`develop` or bypass PR protection.
 
 ## Local models (Ollama / LM Studio)
 

@@ -32,6 +32,209 @@ void main() {
     copied = null;
   });
 
+  Future<void> mount(
+    WidgetTester tester,
+    Widget child, {
+    double width = 800,
+    double scale = 1,
+  }) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = Size(width, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, navigator) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(scale)),
+          child: navigator!,
+        ),
+        home: Scaffold(
+          body: SelectionArea(child: SingleChildScrollView(child: child)),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('file source has one copy action and data previews have none', (
+    tester,
+  ) async {
+    await mount(tester, const DocumentView(source: '{"ok":true}'));
+    expect(find.byTooltip('Copy source'), findsOneWidget);
+    expect(find.byTooltip('Copy code'), findsNothing);
+    await mount(tester, const ReadableDataView(source: '{"ok":true}'));
+    expect(find.byTooltip('Copy source'), findsNothing);
+    expect(find.byTooltip('Copy code'), findsNothing);
+  });
+
+  testWidgets(
+    'highlighted and decoded data expose their complete displayed text in semantics',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        const source =
+            r'{"id":"semantics-fixture","code":"print(\"hello\")\nprint(2)"}';
+        await mount(tester, const ReadableDataView(source: source));
+        final envelope = find.bySemanticsLabel(RegExp('semantics-fixture'));
+        expect(envelope, findsWidgets);
+        final label = tester
+            .getSemantics(envelope.first)
+            .getSemanticsData()
+            .label;
+        expect(label, contains('"id": "semantics-fixture"'));
+        expect(label, contains(r'"code": "print(\"hello\")\nprint(2)"'));
+        final decoded = find.bySemanticsLabel(
+          RegExp(RegExp.escape('print("hello")\nprint(2)')),
+        );
+        expect(decoded, findsWidgets);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets(
+    'compact JSON is readable while its single source copy stays exact',
+    (tester) async {
+      const source = '{"ok":true,"items":[1,2]}';
+      await mount(tester, const DocumentView(source: source));
+      final rendered = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
+      expect(rendered.textSpan!.toPlainText(), contains('\n  "ok": true,'));
+      await tester.tap(find.byTooltip('Copy source'));
+      expect(copied, source);
+      await tester.tap(find.text('Source'));
+      await tester.pump();
+      expect(
+        tester
+            .widget<SelectableText>(find.byType(SelectableText))
+            .textSpan!
+            .toPlainText(),
+        source,
+      );
+      await tester.tap(find.byTooltip('Copy source'));
+      expect(copied, source);
+    },
+  );
+
+  testWidgets(
+    'nested MCP output and code show real lines without repeated copy actions',
+    (tester) async {
+      const source =
+          r'{"code":"print(\"hello\")\nprint(2)\n","content":[{"text":"{\"stdout\":\"done\\n\",\"exitCode\":0}"}]}';
+      await mount(
+        tester,
+        const ReadableDataView(source: source),
+        width: 320,
+        scale: 2,
+      );
+      final blocks = tester
+          .widgetList<CodeBlock>(find.byType(CodeBlock))
+          .toList();
+      expect(
+        blocks.any((block) => block.source == 'print("hello")\nprint(2)\n'),
+        true,
+      );
+      expect(blocks.any((block) => block.source == 'done\n'), true);
+      expect(find.text(r'$.code · decoded text'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Copy source'), findsNothing);
+      expect(find.byTooltip('Copy code'), findsNothing);
+      await tester.ensureVisible(find.text('Source'));
+      await tester.tap(find.text('Source'));
+      await tester.pump();
+      expect(
+        tester
+            .widget<SelectableText>(find.byType(SelectableText))
+            .textSpan!
+            .toPlainText(),
+        source,
+      );
+      expect(find.text(r'$.code · decoded text'), findsNothing);
+    },
+  );
+
+  testWidgets('YAML and unknown extension previews preserve source safely', (
+    tester,
+  ) async {
+    const source = '# comment\nscript: |\n  <script>no execution</script>\n';
+    for (final filename in ['config.yaml', 'data.unknown']) {
+      await mount(tester, ReadableDataView(source: source, filename: filename));
+      expect(
+        tester
+            .widget<SelectableText>(find.byType(SelectableText))
+            .textSpan!
+            .toPlainText(),
+        source,
+      );
+      expect(find.byTooltip('Copy code'), findsNothing);
+      expect(find.byTooltip('Copy source'), findsNothing);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'large nested tool text pages independently and retains the full value',
+    (tester) async {
+      final value = '${'line\n' * 3500}THE END';
+      final source = jsonEncode({'stdout': value});
+      await mount(tester, ReadableDataView(source: source));
+      final nested = find.byWidgetPredicate(
+        (widget) => widget is DocumentView && widget.source == value,
+      );
+      expect(nested, findsOneWidget);
+      final code = find.descendant(
+        of: nested,
+        matching: find.byType(CodeBlock),
+      );
+      expect(
+        tester.widget<CodeBlock>(code).source.length,
+        lessThanOrEqualTo(sourcePageCharacters),
+      );
+      expect(tester.widget<DocumentView>(nested).source, value);
+      expect(find.byTooltip('Copy source'), findsNothing);
+      expect(find.byTooltip('Copy code'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'structured user messages and reasoning share readable data presentation',
+    (tester) async {
+      final h = fixture.Harness();
+      await h.mount(tester, const Size(1000, 1000));
+      h.state.chat.restoreSession(
+        jsonEncode({
+          'version': 1,
+          'messages': [
+            const ChatMessage(
+              role: 'user',
+              content: '{"input":[1,2]}',
+            ).toJson(),
+            const ChatMessage(
+              role: 'assistant',
+              content: 'Done.',
+              reasoning: '{"steps":["checked"]}',
+            ).toJson(),
+          ],
+        }),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Model reasoning'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<ReadableDataView>(find.byType(ReadableDataView))
+            .map((view) => view.source),
+        containsAll(['{"input":[1,2]}', '{"steps":["checked"]}']),
+      );
+      await tester.tap(find.byTooltip('Copy message 1'));
+      expect(copied, '{"input":[1,2]}');
+      await h.dispose(tester);
+    },
+  );
+
   testWidgets(
     'assistant Markdown exposes a heading and an independent code copy action',
     (tester) async {
@@ -57,31 +260,6 @@ void main() {
       await h.dispose(tester);
     },
   );
-
-  Future<void> mount(
-    WidgetTester tester,
-    Widget child, {
-    double width = 800,
-    double scale = 1,
-  }) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = Size(width, 900);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      MaterialApp(
-        builder: (context, navigator) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(scale)),
-          child: navigator!,
-        ),
-        home: Scaffold(
-          body: SelectionArea(child: SingleChildScrollView(child: child)),
-        ),
-      ),
-    );
-  }
 
   testWidgets(
     'Markdown keeps tables lists and Unicode code selectable without loading images',
@@ -120,7 +298,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('config.yml\nYAML'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('Copy code'));
+      await tester.tap(find.byTooltip('Copy source'));
       expect(copied, file.textContent);
       await tester.tap(find.byTooltip('Close file preview'));
       await tester.pumpAndSettle();
@@ -194,7 +372,7 @@ void main() {
       expect(find.text('Large document · paged source view'), findsOneWidget);
       final first = tester.widget<CodeBlock>(find.byType(CodeBlock)).source;
       expect(first.endsWith('a'), true);
-      await tester.tap(find.byTooltip('Copy code'));
+      await tester.tap(find.byTooltip('Copy source'));
       expect(copied, source);
       await tester.ensureVisible(find.text('Next page'));
       await tester.tap(find.text('Next page'));
@@ -262,7 +440,7 @@ void main() {
             'the unchanged source must reuse its highlighted spans.',
       );
       // Copy uses the newest complete input even before the preview catches up.
-      await tester.tap(find.byTooltip('Copy code'));
+      await tester.tap(find.byTooltip('Copy source'));
       expect(copied, source(20));
       await mount(tester, DocumentView(source: source(20), format: format));
       expect(renderedSpan().toPlainText(), source(20));

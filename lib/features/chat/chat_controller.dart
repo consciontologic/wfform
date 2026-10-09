@@ -9,6 +9,8 @@ import '../../shared/diagnostics.dart';
 import '../../shared/transport.dart';
 import '../models/health.dart';
 import '../models/model.dart';
+import '../parameters/request_parameters.dart';
+import '../tools/tools.dart';
 import 'attachment.dart';
 import 'chat_api.dart';
 import 'chat_metadata.dart';
@@ -27,6 +29,9 @@ class ChatMessage {
     this.finishReason,
     this.usage,
     this.metrics,
+    this.toolCalls = const [],
+    this.toolCallId,
+    this.reasoningDetails = const [],
   });
   final String role;
   final String content;
@@ -41,11 +46,29 @@ class ChatMessage {
   final String? finishReason;
   final ChatUsage? usage;
   final ChatMetrics? metrics;
+  final List<ToolCall> toolCalls;
+  final String? toolCallId;
+  final List<Map<String, dynamic>> reasoningDetails;
   String get terminationLabel => switch (finishReason) {
     'length' => 'Stopped at the response token limit',
+    'tool_calls' => 'Requested tools',
     'content_filter' => 'Stopped by the provider’s content filter',
     'stop' || null => complete ? 'Complete' : 'Incomplete',
     _ => 'Provider stopped the response ($finishReason)',
+  };
+
+  Map<String, dynamic> toApi() => {
+    'role': role,
+    'content': attachments.isEmpty
+        ? content
+        : [
+            if (content.isNotEmpty) {'type': 'text', 'text': content},
+            ...attachments.map((attachment) => attachment.toContentPart()),
+          ],
+    if (toolCalls.isNotEmpty)
+      'tool_calls': toolCalls.map((call) => call.toJson()).toList(),
+    if (toolCallId != null) 'tool_call_id': toolCallId,
+    if (reasoningDetails.isNotEmpty) 'reasoning_details': reasoningDetails,
   };
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +77,10 @@ class ChatMessage {
     'reasoning': reasoning,
     'modelId': modelId,
     'complete': complete,
+    if (toolCalls.isNotEmpty)
+      'toolCalls': toolCalls.map((call) => call.toJson()).toList(),
+    if (toolCallId != null) 'toolCallId': toolCallId,
+    if (reasoningDetails.isNotEmpty) 'reasoningDetails': reasoningDetails,
     if (attachments.isNotEmpty)
       'attachments': attachments
           .map((attachment) => attachment.toJson())
@@ -79,12 +106,53 @@ class ChatController extends ChangeNotifier {
     required this.diagnostics,
     required this.health,
     this.validateModel,
+    this.toolsAvailable = true,
   });
   final AppConfig config;
   final ApiTransport transport;
   final Diagnostics diagnostics;
   final HealthController health;
   final String? Function(FreeModel model)? validateModel;
+  final bool toolsAvailable;
+  Set<String> get _activeTools =>
+      toolsAvailable ? _enabledTools : const <String>{};
+  ToolRegistry? tools;
+  ToolApproval? approveTool;
+  Set<String> _enabledTools = {};
+  Set<String> get enabledTools => Set.unmodifiable(_enabledTools);
+  Map<String, dynamic> _requestParameters = {};
+  Map<String, dynamic> get requestParameters =>
+      Map.unmodifiable(_requestParameters);
+  bool setEnabledTools(Set<String> names) {
+    if (!toolsAvailable ||
+        busy ||
+        names.length > 64 ||
+        names.any((name) => !RegExp(r'^[A-Za-z0-9_-]{1,64}$').hasMatch(name))) {
+      return false;
+    }
+    _enabledTools = Set.of(names);
+    _notify();
+    return true;
+  }
+
+  bool setRequestParameters(Map<String, dynamic> values) {
+    if (busy || jsonEncode(values).length > 65536) return false;
+    _requestParameters = Map<String, dynamic>.from(
+      jsonDecode(jsonEncode(values)) as Map,
+    );
+    if (values.containsKey('max_tokens') && values['max_tokens'] is int) {
+      _outputTokenLimit = values['max_tokens'] as int;
+    } else if (values.containsKey('max_completion_tokens') &&
+        values['max_completion_tokens'] is int) {
+      _outputTokenLimit = values['max_completion_tokens'] as int;
+    } else {
+      _outputTokenLimit = null;
+    }
+    _notify();
+    return true;
+  }
+
+  bool _toolAttempted = false;
   final _messages = <ChatMessage>[];
   List<ChatMessage> get messages => List.unmodifiable(_messages);
   bool busy = false;
@@ -92,7 +160,7 @@ class ChatController extends ChangeNotifier {
   bool get hasDispatchedUserContent => _hasDispatchedUserContent;
   String progress = '';
   AppFailure? error;
-  bool get canRetry => !busy && _retryUserIndex != null;
+  bool get canRetry => !busy && !_toolAttempted && _retryUserIndex != null;
   String? get retryModelId => _retryModelId;
   String? get activeModelId => busy ? _retryModelId : null;
   int? _retryUserIndex;
@@ -110,6 +178,9 @@ class ChatController extends ChangeNotifier {
   bool setOutputTokenLimit(int value) {
     if (busy || value < 16 || value > 32768) return false;
     _outputTokenLimit = value;
+    _requestParameters = {..._requestParameters}
+      ..remove('max_completion_tokens');
+    _requestParameters['max_tokens'] = value;
     _notify();
     return true;
   }
@@ -173,10 +244,38 @@ class ChatController extends ChangeNotifier {
       if (message.role == 'user' ||
           (message.complete && message.failure == null)) {
         add(message.content, message.attachments, message);
+        if (message.toolCalls.isNotEmpty ||
+            message.reasoningDetails.isNotEmpty) {
+          tokens +=
+              (utf8
+                          .encode(
+                            jsonEncode({
+                              'calls': message.toolCalls
+                                  .map((call) => call.toJson())
+                                  .toList(),
+                              'reasoning': message.reasoningDetails,
+                            }),
+                          )
+                          .length /
+                      3)
+                  .ceil();
+        }
       }
     }
     if (draft.trim().isNotEmpty || attachments.isNotEmpty) {
       add(draft, attachments);
+    }
+    if (_activeTools.isNotEmpty) {
+      tokens +=
+          (utf8
+                      .encode(
+                        jsonEncode(
+                          tools?.definitions(_activeTools) ?? const [],
+                        ),
+                      )
+                      .length /
+                  3)
+              .ceil();
     }
     final limit = model.contextLength;
     var reserve =
@@ -236,7 +335,8 @@ class ChatController extends ChangeNotifier {
       _localFailure(refusal);
       return;
     }
-    if (_messages.length + 2 > config.maxMessages) {
+    if (_messages.length + (_activeTools.isEmpty ? 2 : 19) >
+        config.maxMessages) {
       _localFailure(
         'This conversation reached its ${config.maxMessages}-message limit. Start a new conversation.',
       );
@@ -271,6 +371,7 @@ class ChatController extends ChangeNotifier {
         editedFrom: editedFrom,
       ),
     );
+    _toolAttempted = false;
     _retryUserIndex = _messages.length - 1;
     _retryModelId = model.id;
     await _run(model, _retryUserIndex!, onAccepted: onAccepted);
@@ -289,7 +390,8 @@ class ChatController extends ChangeNotifier {
       );
       return;
     }
-    if (_messages.length + 1 > config.maxMessages) {
+    if (_messages.length + (_activeTools.isEmpty ? 1 : 18) >
+        config.maxMessages) {
       _localFailure(
         'This conversation reached its message limit. Start a new conversation.',
       );
@@ -321,7 +423,7 @@ class ChatController extends ChangeNotifier {
     final generation = ++_generation;
     final token = CancelToken();
     _token = token;
-    final assistantIndex = _messages.length;
+    var assistantIndex = _messages.length;
     _messages.add(
       ChatMessage(
         role: 'assistant',
@@ -343,6 +445,8 @@ class ChatController extends ChangeNotifier {
     final contentBuffer = StringBuffer(), reasoningBuffer = StringBuffer();
     Timer? publishTimer;
     var completed = false;
+    var roundToolCalls = <ToolCall>[];
+    var roundReasoningDetails = <Map<String, dynamic>>[];
     void publish() {
       publishTimer?.cancel();
       publishTimer = null;
@@ -354,6 +458,8 @@ class ChatController extends ChangeNotifier {
         reasoning: previous.reasoning + reasoningBuffer.toString(),
         modelId: model.id,
         complete: completed,
+        toolCalls: roundToolCalls,
+        reasoningDetails: roundReasoningDetails,
         finishReason: finishReason,
         usage: usage,
         metrics: ChatMetrics(
@@ -398,21 +504,35 @@ class ChatController extends ChangeNotifier {
         final message = _messages[index];
         if (message.role == 'user' ||
             (message.complete && message.failure == null)) {
-          history.add({
-            'role': message.role,
-            'content': message.attachments.isEmpty
-                ? message.content
-                : [
-                    if (message.content.isNotEmpty)
-                      {'type': 'text', 'text': message.content},
-                    ...message.attachments.map(
-                      (attachment) => attachment.toContentPart(),
-                    ),
-                  ],
-          });
+          history.add(message.toApi());
           requestModalities.addAll(message.attachments.map((a) => a.kind.name));
         }
       }
+      validateToolTranscript(history);
+      final definitions =
+          tools?.definitions(_activeTools) ?? <Map<String, dynamic>>[];
+      if (_activeTools.isNotEmpty &&
+          definitions.length != _activeTools.length) {
+        throw const AppFailure(
+          FailureKind.configuration,
+          'Reconnect the selected tool servers or disable unavailable tools before sending.',
+        );
+      }
+      if (definitions.isNotEmpty &&
+          !model.supportedParameters.contains('tools')) {
+        throw const AppFailure(
+          FailureKind.configuration,
+          'This model does not advertise tools. Disable tools or select a compatible model.',
+        );
+      }
+      // Preserve saved desktop settings, but ordinary mobile chat never advertises
+      // tools or inherits a forced tool choice from that conversation.
+      final parameters = Map<String, dynamic>.from(_requestParameters);
+      if (!toolsAvailable) {
+        parameters.remove('tool_choice');
+        parameters.remove('parallel_tool_calls');
+      }
+      RequestParameters.toRequest(model, parameters, toolNames: _activeTools);
       final budget = contextBudget(model, throughIndex: userIndex);
       if (!budget.fits) {
         throw AppFailure(FailureKind.configuration, budget.warning!);
@@ -420,55 +540,202 @@ class ChatController extends ChangeNotifier {
       preflightMs = watch.elapsedMilliseconds;
       generationWatch.start();
       inferenceStarted = true;
-      await for (final delta in ChatApi(config, transport).stream(
-        model,
-        history,
-        cancel: token,
-        outputTokens: budget.outputTokens,
-        onDispatch: () {
-          if (_hasDispatchedUserContent) return;
-          _hasDispatchedUserContent = true;
-          _notify();
-        },
-        onResponse: (code, id) {
-          status = code;
-          requestId = id;
-        },
-        onHeaders: (headers) => health.recordResponseHeaders(model.id, headers),
-      )) {
-        if (_disposed || generation != _generation) return;
+      var toolRounds = 0;
+      while (true) {
+        if (toolRounds > 0 && !contextBudget(model).fits) {
+          throw const AppFailure(
+            FailureKind.configuration,
+            'Tool results exceed the estimated context limit. Start a new conversation or exclude older turns before continuing.',
+          );
+        }
+        await for (final delta in ChatApi(config, transport).stream(
+          model,
+          history,
+          cancel: token,
+          outputTokens: _outputTokenLimit,
+          parameters: parameters,
+          tools: definitions,
+          onDispatch: () {
+            if (_hasDispatchedUserContent) return;
+            _hasDispatchedUserContent = true;
+            _notify();
+          },
+          onResponse: (code, id) {
+            status = code;
+            requestId = id;
+          },
+          onHeaders: (headers) =>
+              health.recordResponseHeaders(model.id, headers),
+        )) {
+          if (_disposed || generation != _generation) return;
+          token.throwIfCancelled();
+          provider = delta.provider ?? provider;
+          requestId = delta.requestId ?? requestId;
+          if (delta.content.isNotEmpty || delta.reasoning.isNotEmpty) {
+            firstTokenMs ??= generationWatch.elapsedMilliseconds;
+          }
+          contentBuffer.write(delta.content);
+          reasoningBuffer.write(delta.reasoning);
+          finishReason = delta.finishReason ?? finishReason;
+          usage = delta.usage ?? usage;
+          completed |= delta.done;
+          if (delta.done) {
+            if (delta.toolCalls.isNotEmpty &&
+                (definitions.isEmpty ||
+                    parameters['tool_choice'] == 'none' ||
+                    _messages.length + delta.toolCalls.length + 1 >
+                        config.maxMessages)) {
+              throw const AppFailure(
+                FailureKind.configuration,
+                'Unexpected tool calls or insufficient room to preserve their complete exchange. Nothing from this tool group was executed.',
+              );
+            }
+            validateToolTranscript([
+              ...history,
+              {
+                'role': 'assistant',
+                'tool_calls': delta.toolCalls
+                    .map((call) => call.toJson())
+                    .toList(),
+              },
+            ], allowPending: true);
+            roundToolCalls = delta.toolCalls;
+            roundReasoningDetails = delta.reasoningDetails;
+          }
+          if (delta.content.isNotEmpty || delta.reasoning.isNotEmpty) {
+            progress = delta.reasoning.isNotEmpty && delta.content.isEmpty
+                ? 'Receiving reasoning…'
+                : 'Receiving response…';
+          }
+          if (delta.done) {
+            generationWatch.stop();
+            publish();
+          } else {
+            publishTimer ??= Timer(const Duration(milliseconds: 32), publish);
+          }
+        }
+        generationWatch.stop();
+        publish();
         token.throwIfCancelled();
-        provider = delta.provider ?? provider;
-        requestId = delta.requestId ?? requestId;
-        if (delta.content.isNotEmpty || delta.reasoning.isNotEmpty) {
-          firstTokenMs ??= generationWatch.elapsedMilliseconds;
+        if (!completed) {
+          throw AppFailure(
+            FailureKind.stream,
+            'The response ended unexpectedly. Received text is kept.',
+            retryable: true,
+          );
         }
-        contentBuffer.write(delta.content);
-        reasoningBuffer.write(delta.reasoning);
-        finishReason = delta.finishReason ?? finishReason;
-        usage = delta.usage ?? usage;
-        completed |= delta.done;
-        if (delta.content.isNotEmpty || delta.reasoning.isNotEmpty) {
-          progress = delta.reasoning.isNotEmpty && delta.content.isEmpty
-              ? 'Receiving reasoning…'
-              : 'Receiving response…';
+        if (roundToolCalls.isEmpty) break;
+        // Close the assistant group before execution so reload never executes it.
+        _toolAttempted = true;
+        _retryUserIndex = null;
+        history.add(_messages[assistantIndex].toApi());
+        var stopped = false;
+        final limitReached =
+            toolRounds >= 4 ||
+            _messages.length + roundToolCalls.length + 1 > config.maxMessages;
+        for (final call in roundToolCalls) {
+          ToolExecution result;
+          if (limitReached || stopped || token.isCancelled) {
+            result = ToolExecution(
+              limitReached
+                  ? 'Tool loop limit reached. This call was not executed.'
+                  : 'This call was not executed because the turn stopped.',
+              isError: true,
+            );
+          } else {
+            progress = 'Awaiting approval for ${call.name}…';
+            _notify();
+            try {
+              result = tools == null
+                  ? const ToolExecution(
+                      'No tool connection is available.',
+                      isError: true,
+                    )
+                  : await tools!.execute(
+                      call,
+                      enabledNames: _activeTools,
+                      cancel: token,
+                      maxResultChars: config.maxResponseChars,
+                      confirm: (tool, arguments) async {
+                        final approval = approveTool;
+                        if (approval == null) return false;
+                        final allowed = await Future.any<bool>([
+                          approval(tool, arguments),
+                          token.whenCancelled.then((_) => false),
+                        ]);
+                        if (allowed && !token.isCancelled) {
+                          progress = 'Running ${tool.originalName}…';
+                          _notify();
+                        }
+                        return allowed && !token.isCancelled;
+                      },
+                    );
+            } catch (_) {
+              result = const ToolExecution(
+                'The tool was stopped before a result was recorded. Check its external state; this call will not be retried.',
+                isError: true,
+                uncertain: true,
+              );
+            }
+            stopped |= result.uncertain;
+          }
+          if (_disposed || generation != _generation) return;
+          final message = ChatMessage(
+            role: 'tool',
+            content: result.content,
+            toolCallId: call.id,
+            modelId: model.id,
+          );
+          _messages.add(message);
+          history.add(message.toApi());
+          _notify();
         }
-        if (delta.done) {
-          generationWatch.stop();
-          publish();
-        } else {
-          publishTimer ??= Timer(const Duration(milliseconds: 32), publish);
+        // Every subsequent model round needs room for its assistant, up to
+        // sixteen results, and a final interruption message. Reserve the whole
+        // group here instead of skipping individual calls after dispatch.
+        final capacityReached = _messages.length + 18 > config.maxMessages;
+        if (limitReached || capacityReached || stopped || token.isCancelled) {
+          // Keep the completed assistant/tool group untouched on interruption.
+          assistantIndex = _messages.length;
+          _messages.add(
+            ChatMessage(
+              role: 'assistant',
+              content: '',
+              modelId: model.id,
+              complete: false,
+            ),
+          );
+          roundToolCalls = [];
+          roundReasoningDetails = [];
+          completed = false;
+          throw AppFailure(
+            token.isCancelled
+                ? FailureKind.cancelled
+                : FailureKind.configuration,
+            limitReached || capacityReached
+                ? 'The tool loop reached its four-round limit or has insufficient room to preserve another complete tool exchange. Start a new conversation to continue.'
+                : 'Tool execution stopped. Its recorded outcome must be checked before requesting another action.',
+          );
         }
-      }
-      generationWatch.stop();
-      publish();
-      token.throwIfCancelled();
-      if (!completed) {
-        throw AppFailure(
-          FailureKind.stream,
-          'The response ended unexpectedly. Received text is kept.',
-          retryable: true,
+        toolRounds++;
+        assistantIndex = _messages.length;
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: '',
+            modelId: model.id,
+            complete: false,
+          ),
         );
+        roundToolCalls = [];
+        roundReasoningDetails = [];
+        completed = false;
+        finishReason = null;
+        usage = null;
+        generationWatch.start();
+        progress = 'Waiting for the model to use tool results…';
+        _notify();
+        validateToolTranscript(history);
       }
       health.recordSuccess(model.id, provider: provider);
       health.recordModalityResult(
@@ -500,6 +767,8 @@ class ChatController extends ChangeNotifier {
         role: 'assistant',
         content: previous.content,
         reasoning: previous.reasoning,
+        toolCalls: previous.toolCalls,
+        reasoningDetails: previous.reasoningDetails,
         modelId: model.id,
         complete: false,
         failure: failure,
@@ -558,6 +827,9 @@ class ChatController extends ChangeNotifier {
     _textTokenEstimates.clear();
     _contextStartIndex = 0;
     _outputTokenLimit = null;
+    _requestParameters = {};
+    _enabledTools = {};
+    _toolAttempted = false;
     _retryUserIndex = null;
     _retryModelId = null;
     busy = false;
@@ -573,6 +845,9 @@ class ChatController extends ChangeNotifier {
     'retryUserIndex': _retryUserIndex,
     'retryModelId': _retryModelId,
     'contextStartIndex': _contextStartIndex,
+    'requestParameters': _requestParameters,
+    'enabledTools': _enabledTools.toList(),
+    'toolAttempted': _toolAttempted,
     if (_outputTokenLimit != null) 'outputTokenLimit': _outputTokenLimit,
   };
   String exportSession() => jsonEncode(exportSessionData());
@@ -607,7 +882,7 @@ class ChatController extends ChangeNotifier {
       var attachmentChars = 0;
       for (final item in list) {
         if (item is! Map ||
-            !{'user', 'assistant'}.contains(item['role']) ||
+            !{'user', 'assistant', 'tool'}.contains(item['role']) ||
             item['content'] is! String ||
             item['reasoning'] is! String ||
             (item['modelId'] != null && item['modelId'] is! String)) {
@@ -681,6 +956,13 @@ class ChatController extends ChangeNotifier {
             role: item['role'] as String,
             content: content,
             reasoning: reasoning,
+            toolCalls: (item['toolCalls'] as List? ?? const [])
+                .map(ToolCall.fromJson)
+                .toList(),
+            toolCallId: item['toolCallId'] as String?,
+            reasoningDetails: (item['reasoningDetails'] as List? ?? const [])
+                .map((value) => Map<String, dynamic>.from(value as Map))
+                .toList(),
             modelId: item['modelId'] as String?,
             complete: complete,
             attachments: List.unmodifiable(attachments),
@@ -701,6 +983,51 @@ class ChatController extends ChangeNotifier {
           ),
         );
       }
+      validateToolTranscript(
+        restored.map((message) => message.toJson()).toList(),
+        allowPending: true,
+      );
+      final pending = <String>{};
+      for (final message in restored) {
+        pending.addAll(message.toolCalls.map((call) => call.id));
+        if (message.toolCallId != null) pending.remove(message.toolCallId);
+      }
+      if (restored.length + pending.length > config.maxMessages) {
+        throw const FormatException(
+          'Interrupted tool history exceeds the message limit.',
+        );
+      }
+      for (final id in pending) {
+        restored.add(
+          ChatMessage(
+            role: 'tool',
+            content:
+                'The app reloaded before this tool outcome was saved. Execution may have completed; inspect external state before any new action. No tool was resumed.',
+            toolCallId: id,
+          ),
+        );
+      }
+      final storedParameters = object['requestParameters'];
+      if (storedParameters != null &&
+          (storedParameters is! Map<String, dynamic> ||
+              jsonEncode(storedParameters).length > 65536)) {
+        throw const FormatException('Invalid stored parameters.');
+      }
+      final storedTools = object['enabledTools'] ?? const [];
+      if (storedTools is! List ||
+          storedTools.length > 64 ||
+          storedTools.any(
+            (name) =>
+                name is! String ||
+                !RegExp(r'^[A-Za-z0-9_-]{1,64}$').hasMatch(name),
+          )) {
+        throw const FormatException('Invalid stored tool selection.');
+      }
+      _requestParameters = Map<String, dynamic>.from(
+        storedParameters as Map? ?? const {},
+      );
+      _enabledTools = storedTools.cast<String>().toSet();
+      _toolAttempted = object['toolAttempted'] == true || pending.isNotEmpty;
       _messages.clear();
       _messages.addAll(restored);
       _hasDispatchedUserContent =
@@ -719,6 +1046,17 @@ class ChatController extends ChangeNotifier {
           outputLimit is int && outputLimit >= 16 && outputLimit <= 32768
           ? outputLimit
           : null;
+      if (!_requestParameters.containsKey('max_tokens') &&
+          !_requestParameters.containsKey('max_completion_tokens') &&
+          _outputTokenLimit != null) {
+        _requestParameters['max_tokens'] = _outputTokenLimit;
+      }
+      final savedBudget =
+          _requestParameters['max_tokens'] ??
+          _requestParameters['max_completion_tokens'];
+      if (savedBudget is int && savedBudget > 0) {
+        _outputTokenLimit = savedBudget;
+      }
       final retryIndex = object['retryUserIndex'];
       if (retryIndex is int &&
           retryIndex >= 0 &&
@@ -730,6 +1068,15 @@ class ChatController extends ChangeNotifier {
       } else {
         _retryUserIndex = null;
         _retryModelId = null;
+      }
+      if (_retryUserIndex != null &&
+          _messages
+              .skip(_retryUserIndex!)
+              .any(
+                (message) =>
+                    message.toolCalls.isNotEmpty || message.role == 'tool',
+              )) {
+        _toolAttempted = true;
       }
       error = canRetry ? _messages.last.failure : null;
       _notify();
@@ -807,7 +1154,7 @@ class ChatController extends ChangeNotifier {
   void _notify() {
     if (_disposed) return;
     final status =
-        '$busy|$progress|${error?.kind}|${error?.message}|$canRetry|$_retryModelId|$_contextStartIndex|$_outputTokenLimit|$canContinue';
+        '$busy|$progress|${error?.kind}|${error?.message}|$canRetry|$_retryModelId|$_contextStartIndex|$_outputTokenLimit|$canContinue|${jsonEncode(_requestParameters)}|${_enabledTools.join(',')}';
     if (status != _lastStatus) {
       _lastStatus = status;
       _statusChanges.notifyListeners();

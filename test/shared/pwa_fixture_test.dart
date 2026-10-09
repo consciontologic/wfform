@@ -73,11 +73,9 @@ void main() {
       expect(state['fault'], 'missing');
       expect(
         File('${fixture.path}/host/__releases/$old/main.dart.js').existsSync(),
-        isTrue,
+        isFalse,
       );
-      final main = File(
-        '${fixture.path}/host/__releases/${state['release']}/main.dart.js',
-      );
+      final main = File('${fixture.path}/host/main.dart.js');
       expect(main.existsSync(), isFalse);
       expect(
         File('${fixture.path}/host/service_worker.js').readAsStringSync(),
@@ -103,10 +101,7 @@ void main() {
     () {
       createFixture(source, fixture);
       publishFault(fixture, 'c', 'corrupt');
-      final state = readFixture(fixture);
-      final main = File(
-        '${fixture.path}/host/__releases/${state['release']}/main.dart.js',
-      );
+      final main = File('${fixture.path}/host/main.dart.js');
       final manifest =
           jsonDecode(
                 File('${fixture.path}/host/release.json').readAsStringSync(),

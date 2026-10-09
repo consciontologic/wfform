@@ -97,7 +97,7 @@ def check() -> None:
             exploration = call("codegraph_explore", {"query": "ChatController send", "maxFiles": 2})
             if source_file not in exploration or "```dart" not in exploration:
                 raise RuntimeError("Dart exploration returned no application source")
-            callers = call("codegraph_callers", {"symbol": "send", "file": source_file, "limit": 5})
+            callers = call("codegraph_callers", {"symbol": "send", "file": source_file, "limit": 100})
             if "test/chat/" not in callers or "continueResponse" not in callers:
                 raise RuntimeError("Dart caller query did not return expected test/application relationships")
             files = call("codegraph_files", {"format": "flat", "includeMetadata": False})

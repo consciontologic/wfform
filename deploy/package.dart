@@ -37,21 +37,6 @@ void packageRelease({required Directory source, required Directory target}) {
       File('${source.path}/service_worker.js'),
       File('${site.path}/service_worker.js'),
     );
-    final generations = Directory('${source.path}/__releases');
-    if (!generations.existsSync()) {
-      throw StateError('Immutable releases missing.');
-    }
-    for (final generation in generations.listSync(followLinks: false)) {
-      final id = generation.uri.pathSegments
-          .where((part) => part.isNotEmpty)
-          .last;
-      if (generation is! Directory || !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)) {
-        throw StateError(
-          'Unexpected release directory; publish a complete build first.',
-        );
-      }
-      _copyGeneration(generation, Directory('${site.path}/__releases/$id'));
-    }
     for (final path in ['Dockerfile', '.dockerignore']) {
       _copyChecked(File(path), File('${stage.path}/$path'));
     }
@@ -80,7 +65,7 @@ void _copyGeneration(Directory source, Directory target) {
   final manifestBytes = _readChecked(manifestFile);
   final value = jsonDecode(utf8.decode(manifestBytes));
   if (value is! Map ||
-      value['format'] != 2 ||
+      value['format'] != 3 ||
       value['version'] is! String ||
       !RegExp(r'^[a-f0-9]{64}$').hasMatch(value['version'] as String) ||
       value['assets'] is! Map) {
