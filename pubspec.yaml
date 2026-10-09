@@ -12,7 +12,7 @@ topics:
   - pwa
   - markdown
 publish_to: none
-version: 0.3.0+10
+version: 1.0.0
 environment:
   sdk: ^3.10.9
   # Includes Flutter's Android web keyboard-dismissal engine fix (3.38.6).
@@ -32,6 +32,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - docs/tools.md
+    - docs/wfformcomp.md
     - assets/emoji/
     - assets/fonts/Roboto_LICENSE.txt
     - assets/fonts/RobotoMono_LICENSE.txt

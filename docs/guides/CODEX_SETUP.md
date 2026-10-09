@@ -51,14 +51,17 @@ instructions before work. These adaptations change client mechanics only:
 - Ignore Copilot YAML `tools`, `agent`, and handoff metadata. Use native Codex
   file-editing, shell, search and delegation tools with equivalent capabilities.
 - A request to switch to an agent means use the matching native Codex role.
-  The coordinating parent owns tracking and staging; children return evidence
-  and never append duplicate tracking rows or stage one another's work.
+  The coordinating parent owns tracking, staging and guarded publication;
+  children return evidence and never append duplicate tracking rows, stage one
+  another's work or publish the combined work.
   Use `--agent=codex` in tracking commands even when source examples say copilot.
   Before final staging, reviewers and verifiers inspect the complete current
   diff, including unstaged changes and new files supplied by the parent.
   References to a staged diff in source workflows also accept this review set.
   Children verify tests and scope first; the parent then appends the completion
-  row, stages, and checks the final staged diff and tracking metadata.
+  row, stages, and checks the final staged diff and tracking metadata. After
+  `make git.dry`, it uses `make git` on the validated Gitflow work branch and
+  opens/updates its PR. `main`/`develop` remain PR-only; do not bypass protection.
 - `/plan`, `/implement`, `/review`, `/verify`, `/track`, `/self-review`,
   `/session-bootstrap` and `/roadmap-status` refer to the corresponding
   `$avb-*` skills in Codex. These are not installed as native slash commands.
@@ -114,6 +117,13 @@ is not automatically merged: review it against a fresh scaffold before updating.
 `--no-mcp`, `--no-skills` and agent exclusions skip new files; they do not remove
 previously installed integrations. Back up customizations before using `--force`.
 
+wfform does not include the upstream configuration generator. Maintain the
+checked-in `.codex/config.toml` and `.codex/agents/*.toml` here. When importing
+regenerated files, preserve the current AGENTS.md Gitflow policy: only the
+coordinating parent publishes validated work branches through `make git`, and
+delegated roles never stage or publish combined work. Never restore the old
+blanket publishing prohibition or permit direct `main`/`develop` writes.
+
 wfform's MCP definitions resolve the current Git checkout root before invoking
 the pinned launcher. Root and nested working directories therefore use the same
 index, while clones and worktrees use their own checkout without editing tracked
@@ -127,3 +137,12 @@ Do not commit credentials or change user-level trust settings in a scaffold.
 - [Skills and discovery](https://learn.chatgpt.com/docs/build-skills)
 - [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp)
 - [Project trust and configuration](https://learn.chatgpt.com/docs/config-file/config-basic)
+
+## 🌿 Gitflow delivery
+
+Read [the delivery workflow](GITFLOW.md) before starting a feature, bugfix,
+hotfix or release. Use the appropriate isolated work branch; keep main/develop
+free of direct implementation. Local coordinating agents publish validated work
+branches through `make git`; delegated agents return evidence without publishing.
+GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
+low-cost model; human review/merge and CI release gates still apply.

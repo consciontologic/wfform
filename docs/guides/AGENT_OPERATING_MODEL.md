@@ -26,8 +26,9 @@ access to the repo. To survive that, the repo owns the operating policy:
 
 2. **Tracking layer** — [`docs/tracking/tracking.csv`](../tracking/tracking.csv) is
    the agent's external memory. Every action that *would* be committed,
-   reverted, or noted appears as a row first. Humans push via `make git`;
-   agents never `git commit`.
+   reverted, or noted appears as a row first. Coordinating agents publish
+   validated Gitflow work branches through `make git`; `main`/`develop` change
+   through reviewed PRs only.
 
 3. **Crash-safe execution** — [`xops/agent/safe-run.sh`](../../xops/agent/safe-run.sh)
    wraps anything risky so the log + exit code survive a killed terminal.
@@ -55,5 +56,5 @@ access to the repo. To survive that, the repo owns the operating policy:
 1. Read [`AGENTS.md`](../../AGENTS.md) at session start.
 2. Wrap risky commands in [`safe-run.sh`](../../xops/agent/safe-run.sh).
 3. Append a tracking row whenever you'd want a commit / decision visible.
-4. `git add -A` and stop; the human runs `make git`.
+4. Review `git add -A` / `make git.dry`, publish the work branch with `make git`, and open its PR.
 5. Tests move with code in the same commit, always.

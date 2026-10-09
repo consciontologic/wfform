@@ -28,7 +28,12 @@ every targeted phase up front; you are done only when that queue is empty.
    (see [`self-review`](../../.agents/skills/self-review/SKILL.md)).
 6. **Append a tracking row** via
    [`xops/agent/tracking_append.sh`](../../xops/agent/tracking_append.sh)
-   and `git add -A`. Do **not** `git commit` / `git push`. On `action=commit`
+   and `git add -A`. After the review and verification gates below, the local
+   coordinating parent inspects `make git.dry` and publishes with `make git`
+   on the Gitflow work branch, then opens/updates its PR. Delegated agents return
+   evidence without tracking, staging or publishing the combined work.
+   GitHub Copilot cloud uses its assigned platform branch under AGENTS.md §2.
+   Never write directly to `main`/`develop` or bypass their protections. On `action=commit`
    the `summary` **must** be Conventional Commits (`type(scope)?(!)?:
    description`) — the appender rejects anything else (exit 65).
 7. **Move to the next bullet** — and across phase boundaries, the next phase —

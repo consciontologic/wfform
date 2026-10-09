@@ -8,6 +8,8 @@ On expanded layouts, history occupies the persistent sidebar, with Diagnostics a
 
 **New conversation** opens a writable workspace, resuming an existing unsent draft for the selected model when available. A blank workspace or model selection alone does not create a history row. **Drafts** lists unsent work, including text, files and attempts that failed before user content was dispatched. Drafts can be reopened, exported or deleted directly from their row, without selecting or archiving them first. They cannot be archived as chats. **Chats** lists conversations whose user content reached the request-dispatch boundary; a health probe alone does not qualify. The response indicator on the corresponding row spins while the request is active and stops on completion, failure or cancellation. Reduced-motion mode uses a static status icon with the same accessible label.
 
+Explicit parameter overrides and selected tools also make an unsent draft worth saving, even with an empty composer. They remain drafts until user content is dispatched. Complete assistant calls, matching tool-result IDs and opaque reasoning details are stored and exported with messages. Restore marks unfinished tool execution interrupted and never replays it; saved connections require explicit reconnection. See [connected tools](tools.md).
+
 Deleting the active draft removes its saved text and attachments and opens a new
 writable workspace for the current model. It waits for any already-running
 save, prevents another checkpoint from recreating that draft during deletion,

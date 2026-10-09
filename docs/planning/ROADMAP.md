@@ -26,8 +26,74 @@ Updated 2026-10-09. This is the authoritative current user scope, not a scaffold
 | Soft wrapper identity | 3 | 3 | Complete locally; artwork, favicon/public build and browser checks passed; remote/native releases separate |
 | Transparent icon family and appearance variants | 3 | 3 | Complete locally; 532 tests, public build and actual light/dark browser checks passed |
 | Version 0.3.0 publication | 3 | 2 | Local release gates and public artifact validation passed; publication in progress |
+| Model parameters and connected tools | 6 | 6 | Complete locally; two live model routes, browser MCP/CLI proof, Linux bundle and regression gates passed; public publication separate |
+| Companion platform downloads and easy installation | 8 | 0 | Graphical installation planned; Windows build support progresses in Phase 23; macOS deferred |
+| Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
+| Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
+| Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
+| Routine delivery automation with human release approval | 8 | 7 | MAI verified live; alternatives and CI lanes/caches tested; all history consolidated in PR #5 into develop; native CI and main activation pending |
+
+## Phase 26 — Routine delivery automation with human release approval
+
+Scope ID: delivery-automation. Requested 2026-10-09.
+
+**Goal:** automate routine AI work, PR coordination and verified release delivery,
+while retaining the owner's final production deployment approval.
+
+**Non-goals:** bypassing GitHub reviews/protection, direct source pushes to
+main/develop, storing the temporary test credential, unapproved model
+fallback, or claiming unattended operation before its credentials and bootstrap
+PR are installed. The user explicitly chose zero routine human PR reviews and
+one final deployment approval; required checks and conversations stay enforced.
+
+**Touched files:** GitHub delivery/package workflows and policy; xops delivery
+and publication helpers/tests; agent instructions; Gitflow/CI guides and reports.
+This bootstrap branches from the published 1.0.0 preparation commit because
+develop still predates the new delivery system; it integrates through a PR.
+It also carries the reviewed correction to Copilot's Windows launch repair,
+preserving configured-program environment isolation and adding regressions.
+
+**Test plan:** deterministic fake-API regressions for authorization, stale heads,
+required checks, duplicate events/tasks, deployment approval identity, immutable tags/assets,
+release dispatch and back-merge PRs; ops suite, workflow security audit and
+repository checks; live configuration read-back and actual CI, reported apart
+from mocks. Publication remains pending human approval.
+
+- [x] Implement trusted routine PR coordination and bounded explicit-model Copilot delegation, with tests.
+- [x] Automate approved SemVer tagging, rerun-safe package publication and develop back-merge preparation, with tests.
+- [ ] Document and configure credential isolation, native Copilot automation and eligible-human release approval without bypasses.
+- [x] Review, verify and publish the bootstrap PR; record remaining activation or human approval requirements accurately.
+- [x] Restrict security, quality and native tests to develop PRs and hotfix-to-main PRs; reuse exact-tree validation for promotion and release.
+- [x] Cache pinned SDK/dependencies/scanners safely and remove duplicate scans; verify workflow routing and source-provenance regressions.
+- [x] Try MAI-Code-1.1-Flash and configure supported, bounded fallback choices in the requested order without silent expensive substitution.
+- [x] Preserve all earlier PR work and history on the latest feature branch, close superseded PRs, and open one clean PR into develop.
+
+Local verification passed 643 Flutter tests and 78 Python ops tests, companion
+and PWA suites, workflow security and secret scans. GitHub's production reviewer
+and main-only environment credentials are configured and read back. Native
+Copilot auto-run remains an owner setting; see the
+[delivery verification report](../reports/delivery-automation-verification.md).
+The earlier PRs #1, #2 and #4 are closed. The replacement
+[PR #5](https://github.com/consciontologic/wfform/pull/5) targets `develop` and
+contains every change, preserving the historical branches and commit ancestry.
+Successful native CI and protected PR integration remain required before
+automation becomes active on main.
+
+**Release completion requested 2026-10-09:** investigate the Windows gate
+exit 71 in run `37955507918`, fix and verify its root cause, run all PR quality
+pipelines on the repaired source, merge through develop and main, and publish
+1.0.0 through the existing final production approval. Preserve later remote
+commits and all native checks; no blind retries or skipped tests.
+
+**Risks:** privileged workflows must never execute unreviewed PR code or consume
+its artifacts; GitHub event suppression requires explicit release dispatch;
+duplicate events must not duplicate paid tasks or overwrite immutable releases.
+The production environment requires the owner as reviewer. A recorded human
+approval for the exact release run must precede publication, including on reruns.
+Durable credentials and bootstrap deployment remain activation requirements.
 
 ## Established application baseline
+
 
 The app already provides Flutter web/PWA discovery and chat; validated free pricing; cached catalog and scoped health; streaming/cancellation/retry; local normalized history, archive/restore/delete and export/import; edit/resend and model-aware media; explicit context/output control; adaptive selectable UI with Light/Dark/System modes; and bounded diagnostics. Previous verification is preserved with its date in the [reports index](../reports/README.md). These are context, not newly completed items in this phase.
 
@@ -281,3 +347,197 @@ Scope ID: release-030. Requested 2026-10-09; the user explicitly authorized comm
 - [x] Set package version 0.3.0+10, synchronize app/static-page versions and add release notes.
 - [x] Run local release gates, real browser storage checks and the credential-free public build.
 - [ ] Commit and push through the existing workflow, verify CI/Pages and confirm the public PWA update and published assets.
+
+## Phase 21 — Model parameters and connected tools
+
+Scope ID: parameters-connected-tools. Requested 2026-10-09. Live feasibility is
+the first acceptance gate; catalog capability labels alone are not evidence.
+The optional local companion is named **wfformcomp**. User-supplied temporary
+test credentials stay in ignored local storage and are removed after testing.
+
+- [x] Prove ordinary chat, an actual MCP tool round trip, and an actual compiled wfformcomp command-tool round trip with tool-capable, zero-price OpenRouter models; record model/provider, request IDs, outcomes and limits without credentials.
+- [x] Add model-aware parameter controls, official explanatory references, absent-by-default overrides, validation and conversation persistence; keep routing/payment safeguards app-managed.
+- [x] Implement streamed tool calls, preserved reasoning/tool messages, bounded execution, user authorization, cancellation and recovery without replaying completed actions.
+- [x] Add user-supplied HTTP MCP connections and per-conversation tool selection, including compatible loopback servers, isolated credentials and actionable errors.
+- [x] Deliver the optional Dart wfformcomp binary, authenticated browser pairing, fixed configured command tools and local MCP reuse, with build/download documentation and release packaging.
+- [x] Verify regression gates, public web build, actual browser chat/MCP/companion use, persistence and failure handling; record native/public-release limitations separately and stage the completed source slice.
+
+The requested companion deliberately extends the static web application's
+boundary with a user-installed local process. The website and nginx remain
+static, and OpenRouter inference remains direct. Ordinary chat does not execute
+uploaded or generated code. Companion commands require explicit local
+configuration and user authorization; supplied credentials do not authorize
+source commits or pushes.
+
+Evidence: [parameters, MCP and wfformcomp verification](../reports/connected-tools-verification.md).
+Final local gates passed 596 tests (four opt-in skips), eight companion suite
+programs, seven Chromium storage checks and 14 operations tests. Actual Liquid
+and Cohere runs each passed ordinary chat, HTTP MCP and compiled companion tool
+loops. The 16.3 MB Linux x64 archive includes the current public web build;
+publication, other operating systems and third-party hosted MCP remain separate.
+
+## Phase 22 — Companion platform downloads and easy installation
+
+Scope ID: companion-installation. Requested 2026-10-09. **Graphical installation
+remains planned.** Phase 23 adds the Windows build/package path; native Windows
+artifact execution is still required before advertising downloads. This plan
+does not claim that graphical installers or macOS binaries exist.
+
+### Goal
+
+Provide a separate wfformcomp download for each supported operating system and
+architecture, with a normal **download → install/open → launch wfform** flow.
+First launch creates private settings automatically, starts the companion and
+opens the bundled wfform UI in the default browser. Pairing requires one clear
+approval, without copying tokens, entering ports, editing JSON, running terminal
+commands or installing Dart/Flutter. Configuring tools is a separate optional
+step in the UI; ordinary chat works without it.
+
+| Platform | Planned distribution | Release order and availability gate |
+|---|---|---|
+| Linux | Graphical package installation and an application-menu launcher; retain the portable archive as an advanced option | First; initially x64 on explicitly named, tested distributions. Choose the primary package format against those environments; no required chmod/terminal steps. |
+| Windows | Per-user graphical installer, Start-menu shortcut and normal uninstall entry | Alongside Linux installation work; initially x64, built and exercised on Windows before download availability. |
+| macOS | Signed/notarized application bundle with a familiar graphical install flow | Deferred until a macOS build/test environment and signing/notarization access are available. Label as planned, with no placeholder download. Validate Apple Silicon and Intel separately before advertising either. |
+
+### Non-goals
+
+This planning task does not build/publish installers, provision signing accounts,
+change this workstation, enable background startup by default, or promise every
+Linux distribution/CPU. The existing advanced CLI remains supported. Installation
+must not silently discover/import credentials, enable tools or execute commands.
+
+### Touched files
+
+Implementation will extend the existing `companion/bin/`, `companion/lib/`,
+Flutter connection/setup UI, `tool/build_companion.dart`, companion workflow,
+companion/package/UI tests, `docs/wfformcomp.md` and `docs/guides/CI_CD.md`.
+Search for existing platform packaging conventions before adding installer files;
+keep this roadmap the canonical plan.
+
+### Test plan
+
+Use clean Linux and Windows environments without a developer SDK. Starting from
+each downloaded artifact, use only the graphical install/launch flow, approve
+pairing, add an explicit fixture CLI/MCP connection and complete a model tool
+round trip. Verify a second launch, cancellation of descendants, quit/restart,
+upgrade, uninstall and storage preservation; repeat the same acceptance suite on
+macOS when that phase is enabled. Record actual OS/architecture and distinguish
+native tests, browser fixtures and opt-in live model evidence. Do not call a
+platform supported based only on compilation or CI configuration.
+
+### Phase 22 checklist — Companion installation
+
+- [ ] Define supported Linux distributions, minimum OS versions and architecture labels; choose the primary Linux installer/package and document clean-machine acceptance environments.
+- [ ] Add Linux graphical installation, application launcher and uninstall behavior; bundle the runtime/web assets so first use requires no developer tools or shell commands.
+- [ ] Add a native Windows build/package job and graphical per-user installer, shortcuts and uninstall entry; report signing status honestly and test the downloaded installer.
+- [ ] Implement Windows process-tree cancellation, private app-data/token permissions, and paths containing spaces/Unicode; run equivalent auth, session, CLI and stdio tests on Windows.
+- [ ] Add first-run setup that creates private settings, selects a stable loopback address, opens the bundled browser UI and pairs after explicit approval without exposing a long-lived token in URLs or logs.
+- [ ] Add graphical tool/MCP configuration with actionable missing-dependency messages and status/quit controls; keep autostart opt-in, preserve settings/history across upgrades, and ask explicitly before removing user data during uninstall.
+- [ ] Provide distinct OS/architecture download choices, checksums and release metadata; verify the installed Linux/Windows user journey and bounded ordinary-chat/MCP/CLI live proof before marking downloads available.
+- [ ] **Deferred macOS:** obtain a native build/test environment and signing access, produce the signed/notarized app, and pass the same install/pair/tool/upgrade/uninstall checks for each advertised architecture.
+
+### Risks and release gates
+
+Pairing convenience must preserve bearer authentication, exact-origin checks,
+user tool approval and explicit reconnect/no replay after reload. Define the
+local approval handshake before implementing automatic setup. Keep the hosted
+website and loopback history origins separate and explain transfer through
+export/import; keep the local origin stable across launches and upgrades.
+Repeated launch should reuse the running instance; occupied ports need visible
+recovery without silently moving users to an empty browser-history origin.
+Windows process-tree and file-permission behavior needs native verification,
+including the implementation added in Phase 23. Installer signing/OS warnings must be tested,
+never addressed by instructing users to disable protection. macOS deferral is a
+build, signing and verification dependency, not a claim that Dart lacks support:
+[Dart's compiler documentation](https://dart.dev/tools/dart-compile#exe) describes
+native Windows/macOS/Linux executables and currently limits cross-OS targets to
+Linux; [Apple's distribution guidance](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
+covers notarization. Linux/Windows work need not wait for macOS.
+
+## Phase 23 — Readable data, tools quick start and Windows build support
+
+Scope ID: readable-tools-windows. Requested 2026-10-09.
+
+**Goal:** make displayed structured data easy to read, explain tools with usable
+examples, and add the Windows companion build/package path.
+
+**Non-goals:** executing displayed content, changing exact copied/exported data,
+publishing source or releases, and claiming a native Windows/macOS run from Linux.
+The full graphical installer and automatic pairing journey remains Phase 22.
+
+**Touched files:** shared document/presentation renderers and tests, connection
+help, user guides, companion runtime/tests, build tooling and companion CI.
+
+**Test plan:** regression tests for JSON/YAML and nested source strings across
+dialogs, tool history, diagnostics and previews; exact-copy and malformed/large
+input cases; compact browser checks and bundled help; Linux companion packaging
+and process tests, plus a native Windows CI job covering its compiled artifact.
+
+- [x] Share bounded readable data rendering across approvals, tool messages, diagnostics, response code blocks and file previews, preserving originals and safe fallback.
+- [x] Add a plain-language tools/MCP/companion quick start with concrete examples and make it available from the app.
+- [x] Implement Windows executable/archive packaging, native CI checks and platform-specific companion safeguards while preserving Linux and deferring macOS.
+- [x] Pass local regression/build/repository gates, inspect the actual preview, document Windows execution limits and stage the reviewed change.
+
+**Risks:** content reformatting must not alter requests or stored data; nested
+outputs must stay bounded and must never run scripts. Windows packaging and
+process cleanup require native execution evidence before a supported download
+is advertised. Preserve existing conversations, tool approvals and local secrets.
+
+Evidence: [Phase 23 verification](../reports/readable-tools-windows-verification.md).
+Native Windows build/runtime acceptance is still pending its CI runner; no
+Windows download or graphical installer is claimed complete by this phase.
+
+## Phase 24 — Open Cradle identity
+
+Scope ID: open-cradle-branding. Requested 2026-10-09 after approval of the Open Cradle concept.
+
+- [x] Replace the W mark with the approved open folded band and linked AI nodes, and update all ten companion glyphs to the same rounded visual language without changing labels or controls.
+- [x] Regenerate every favicon, public/PWA and native launcher variant from shared geometry; preserve transparent exterior/interior artwork and light/dark variants, with no colored backing plate in any export, including iOS and legacy maskable files.
+- [x] Verify artwork at small sizes, alpha/contrast, theme and responsive controls, release assets and the actual local browser; preserve the separately staged tools/companion work and stage the reviewed branding changes.
+
+**Test plan:** focused rendered-artwork/transparency/PNG and integration regressions; full `make verify`, CodeGraph sync/check, public build and local browser checks in both appearances. Native binaries and public publication are separate from this artwork update.
+
+Evidence: [Open Cradle verification](../reports/open-cradle-branding-verification.md).
+
+**Transparency clarification (2026-10-09):** the user requires only the artwork in both themes, with no opaque platform exception. All 40 PNGs must carry alpha, and the manifest must select general-purpose icons without requesting maskable background compositing. The full follow-up gate passed 617 Flutter tests, ten companion suites, independent alpha/HTTP audits and the actual local PWA update.
+
+## Phase 25 — Desktop tools and 1.0.0 delivery workflow
+
+Scope ID: release-100. Requested 2026-10-09.
+
+**Goal:** make tool access desktop-only, simplify copying, and prepare a tested
+1.0.0 with Gitflow, standard release packages, free quality checks and playable
+developer examples.
+
+**Non-goals:** a VS Code extension implementation (opinion requested), macOS or
+graphical installers, bypassing GitHub's review controls, paid security services,
+and direct source publication to main/develop outside reviewed PRs.
+
+**Touched files:** Flutter tools/presentation and tests; web PWA/build/deploy
+scripts and tests; GitHub workflows; agent entrypoints; examples; release docs
+and changelog; both repositories' public descriptions/topics.
+
+**Test plan:** platform and resumed-chat tool guards; focused copy-control tests;
+actual example MCP/CLI calls; PWA migration and offline/update checks; strict
+SemVer/package gates; free scanner reports; full verify, browser and package
+acceptance; authenticated metadata read-back and Copilot capability discovery.
+
+- [x] Fade tools on phones/tablets with a clear explanation; enforce desktop-only dispatch and preserve ordinary chat/history.
+- [x] Keep essential copy actions and remove redundant copies across nested displays.
+- [x] Add runnable example MCP/programs with a short developer walkthrough and real protocol tests.
+- [x] Prepare 1.0.0, flat PWA assets, versioned Linux/Windows packages and gated GitHub Releases with free quality/security reports.
+- [x] Configure Gitflow and Copilot delegation guidance, update both repository descriptions/topics and document actual permission/cost limits.
+- [x] Verify the combined change, record evidence, stage it, and provide the VS Code extension recommendation.
+
+**Risks:** old service workers need a tested migration from hashed directories;
+mobile saved tool exchanges must not block normal chat; existing staged branding
+and tool work must survive. Copilot availability/prices and native Windows runs
+must be verified separately from local configuration. Phase 26 supersedes the
+original model selection with the owner-authorized MAI policy.
+
+**Evidence:** [1.0.0 verification](../reports/release-100-verification.md). Remaining
+remote gates: publish this reviewed source through guarded `make git`, run native
+Windows CI, require the actual CI check contexts and publish the reviewed SemVer
+tag. The earlier GPT-5.3-Codex success and failed GPT-6 Luna trial are historical
+evidence; Phase 26 selects MAI after its successful live trial. These remote
+release gates are not claimed by local completion.

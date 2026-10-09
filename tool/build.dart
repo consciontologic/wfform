@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'content_hash.dart';
+import 'release_version.dart';
 
-/// Compile away from the running host, then publish complete immutable releases.
+/// Compile away from the running host, then publish complete verified flat packages.
 /// No arbitrary compiler flags or dart-define credentials are accepted.
 Future<void> main(List<String> args) async {
   var output = 'build/web';
@@ -39,6 +40,7 @@ Future<void> main(List<String> args) async {
   if (output.trim().isEmpty || target.path == Directory.current.path) {
     throw ArgumentError('Choose a dedicated release output directory.');
   }
+  validatePublicationTarget(target);
   Directory('build').createSync();
   final temporary = Directory('build').createTempSync('pwa-input-');
   try {
@@ -127,7 +129,9 @@ Release prepareRelease(Directory source, String workerTemplate) {
         utf8
             .decode(bytes)
             .replaceAll(
-              RegExp(r'__releases/[a-f0-9]{64}/flutter_bootstrap\.js'),
+              RegExp(
+                r'(?:__releases/[a-f0-9]{64}/)?flutter_bootstrap\.js(?:\?build=[a-f0-9]{64})?',
+              ),
               'flutter_bootstrap.js',
             ),
       );
@@ -136,9 +140,11 @@ Release prepareRelease(Directory source, String workerTemplate) {
       bytes = utf8.encode(
         utf8
             .decode(bytes)
-            .replaceAll(
-              RegExp(r'__releases/[a-f0-9]{64}/'),
-              '__RELEASE_BASE__',
+            .replaceAllMapped(
+              RegExp(
+                r"""(const (?:releasePath|path) = ['"])(?:__releases/)?[a-f0-9]{64}/?(['"])""",
+              ),
+              (match) => '${match[1]}__RELEASE_BASE__${match[2]}',
             ),
       );
       if (!utf8.decode(bytes).contains('__RELEASE_BASE__')) {
@@ -171,7 +177,8 @@ Release prepareRelease(Directory source, String workerTemplate) {
   final version = sha256(
     utf8.encode(
       jsonEncode({
-        'format': 2,
+        'format': 3,
+        'packageVersion': readReleaseVersion(),
         'worker': sha256(utf8.encode(workerTemplate)),
         'assets': {
           for (final entry in raw.entries) entry.key: sha256(entry.value),
@@ -179,26 +186,27 @@ Release prepareRelease(Directory source, String workerTemplate) {
       }),
     ),
   );
-  final prefix = '__releases/$version/';
+
   raw['index.html'] = utf8.encode(
     utf8
         .decode(raw['index.html']!)
         .replaceAll(
           'src="flutter_bootstrap.js"',
-          'src="${prefix}flutter_bootstrap.js"',
+          'src="flutter_bootstrap.js?build=$version"',
         ),
   );
   raw['flutter_bootstrap.js'] = utf8.encode(
     utf8
         .decode(raw['flutter_bootstrap.js']!)
-        .replaceAll('__RELEASE_BASE__', prefix),
+        .replaceAll('__RELEASE_BASE__', version),
   );
   final entries = {
     for (final entry in raw.entries)
       entry.key: {'sha256': sha256(entry.value), 'bytes': entry.value.length},
   };
   final manifest = <String, Object?>{
-    'format': 2,
+    'format': 3,
+    'packageVersion': readReleaseVersion(),
     'version': version,
     'assets': entries,
   };
@@ -208,58 +216,133 @@ Release prepareRelease(Directory source, String workerTemplate) {
   return Release(version, raw, manifest, worker);
 }
 
-/// Publish immutable assets before changing either launch HTML or worker.
-/// Pointer files are atomically renamed: no half-written entrypoint is served.
-void publishRelease(Release release, Directory target) {
-  target.createSync(recursive: true);
-  final releases = Directory('${target.path}/__releases')..createSync();
-  final immutable = Directory('${releases.path}/${release.version}');
-  if (immutable.existsSync()) {
-    for (final entry in release.assets.entries) {
-      final file = File('${immutable.path}/${entry.key}');
-      if (!file.existsSync() ||
-          sha256(file.readAsBytesSync()) != sha256(entry.value)) {
-        throw StateError(
-          'Existing immutable release is damaged: ${entry.key}. Restore or remove that incomplete directory before publishing.',
-        );
-      }
+/// Replacement is restricted to an empty or recognized generated directory.
+/// Canonical checks run before compilation or any mutation, including legacy imports.
+void validatePublicationTarget(Directory target) {
+  final root = Directory.current.resolveSymbolicLinksSync();
+  final normalized = Directory.fromUri(target.absolute.uri.normalizePath());
+  final path = normalized.path.replaceFirst(RegExp(r'[/\\]+$'), '');
+  if (path == root ||
+      root.startsWith('$path${Platform.pathSeparator}') ||
+      path == normalized.parent.path) {
+    throw ArgumentError('Output cannot be the project root or an ancestor.');
+  }
+  var ancestor = normalized;
+  while (true) {
+    if (FileSystemEntity.typeSync(ancestor.path, followLinks: false) ==
+        FileSystemEntityType.link) {
+      throw StateError(
+        'Output directories must not contain symlink ancestors.',
+      );
     }
-  } else {
-    final stage = releases.createTempSync('staging-');
-    try {
-      for (final entry in release.assets.entries) {
-        final file = File('${stage.path}/${entry.key}');
-        file.parent.createSync(recursive: true);
-        file.writeAsBytesSync(entry.value, flush: true);
-      }
-      File(
-        '${stage.path}/release.json',
-      ).writeAsStringSync(jsonEncode(release.manifest), flush: true);
-      stage.renameSync(immutable.path);
-    } finally {
-      if (stage.existsSync()) stage.deleteSync(recursive: true);
+    if (ancestor.parent.path == ancestor.path) break;
+    ancestor = ancestor.parent;
+  }
+  if (!normalized.existsSync() ||
+      normalized.listSync(followLinks: false).isEmpty) {
+    return;
+  }
+  final manifestFile = File('$path/release.json');
+  if (!manifestFile.existsSync() ||
+      manifestFile.lengthSync() > 1024 * 1024 ||
+      FileSystemEntity.typeSync(manifestFile.path, followLinks: false) !=
+          FileSystemEntityType.file) {
+    throw StateError(
+      'Output contains unowned files; choose an empty dedicated build directory.',
+    );
+  }
+  final manifest = jsonDecode(manifestFile.readAsStringSync());
+  if (manifest is! Map ||
+      ![2, 3].contains(manifest['format']) ||
+      manifest['assets'] is! Map ||
+      manifest['version'] is! String ||
+      !RegExp(r'^[a-f0-9]{64}$').hasMatch(manifest['version'] as String)) {
+    throw StateError('Output is not a recognized generated PWA build.');
+  }
+  final owned = <String>{
+    'release.json',
+    'service_worker.js',
+    'flutter_service_worker.js',
+    '.wfform-public-build',
+    'config/local.json',
+  };
+  for (final key in (manifest['assets'] as Map).keys) {
+    if (key is! String || !isShellAsset(key)) {
+      throw StateError('Invalid prior build ownership.');
+    }
+    owned.add(key);
+  }
+  for (final required in [
+    'index.html',
+    'main.dart.js',
+    'flutter_bootstrap.js',
+    'manifest.json',
+  ]) {
+    if (!owned.contains(required) || !File('$path/$required').existsSync()) {
+      throw StateError('Incomplete prior build ownership.');
     }
   }
-  // Root aliases preserve identity and legacy upgrade support. New Flutter pages
-  // load immutable URLs after the new index is published.
-  for (final entry in release.assets.entries.where(
-    (entry) => entry.key != 'index.html',
+  for (final entry in normalized.listSync(
+    recursive: true,
+    followLinks: false,
   )) {
-    writeAtomic(File('${target.path}/${entry.key}'), entry.value);
+    final relative = entry.path
+        .substring(path.length + 1)
+        .replaceAll('\\', '/');
+    final old = RegExp(r'^__releases/[a-f0-9]{64}/(.+)$').firstMatch(relative);
+    final legacy =
+        old != null &&
+        (old.group(1) == 'release.json' || isShellAsset(old.group(1)!));
+    if (entry is File && (owned.contains(relative) || legacy)) continue;
+    if (entry is Directory &&
+        (owned.any((file) => file.startsWith('$relative/')) ||
+            relative == '__releases' ||
+            RegExp(
+              r'^__releases/[a-f0-9]{64}(?:/(?:assets|icons|canvaskit)(?:/.*)?)?$',
+            ).hasMatch(relative))) {
+      continue;
+    }
+    throw StateError('Output contains an unowned file or link: $relative');
   }
-  writeAtomic(
-    File('${target.path}/release.json'),
-    utf8.encode(jsonEncode(release.manifest)),
-  );
-  writeAtomic(File('${target.path}/index.html'), release.assets['index.html']!);
-  writeAtomic(
-    File('${target.path}/service_worker.js'),
-    utf8.encode(release.worker),
-  );
-  final legacy = File('${target.path}/flutter_service_worker.js');
-  if (legacy.existsSync()) legacy.deleteSync();
-  // Keep disk releases addressable for open clients. Static-host owners choose
-  // their historical-release retention window; the browser cache prunes safely.
+}
+
+/// Assemble a complete flat static site beside the target before replacing it.
+/// Installed clients retain their verified generation in browser Cache Storage.
+void publishRelease(Release release, Directory target) {
+  validatePublicationTarget(target);
+  target.parent.createSync(recursive: true);
+  final stage = target.parent.createTempSync('pwa-stage-');
+  final previous = Directory('${target.path}.previous-$pid');
+  if (previous.existsSync()) {
+    throw StateError('A prior publication needs recovery.');
+  }
+  try {
+    for (final entry in release.assets.entries) {
+      writeAtomic(File('${stage.path}/${entry.key}'), entry.value);
+    }
+    writeAtomic(
+      File('${stage.path}/.wfform-public-build'),
+      utf8.encode('wfform generated static build 3\n'),
+    );
+    writeAtomic(
+      File('${stage.path}/release.json'),
+      utf8.encode(jsonEncode(release.manifest)),
+    );
+    writeAtomic(
+      File('${stage.path}/service_worker.js'),
+      utf8.encode(release.worker),
+    );
+    if (target.existsSync()) target.renameSync(previous.path);
+    try {
+      stage.renameSync(target.path);
+    } catch (_) {
+      if (previous.existsSync()) previous.renameSync(target.path);
+      rethrow;
+    }
+    if (previous.existsSync()) previous.deleteSync(recursive: true);
+  } finally {
+    if (stage.existsSync()) stage.deleteSync(recursive: true);
+  }
 }
 
 void writeAtomic(File target, List<int> bytes) {

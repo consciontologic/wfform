@@ -27,10 +27,17 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
       'Source and destination must be separate, non-nested directories.',
     );
   }
+  if (FileSystemEntity.typeSync(
+        '${target.path}/__releases',
+        followLinks: false,
+      ) ==
+      FileSystemEntityType.link) {
+    throw StateError('A legacy release directory must not be a symlink.');
+  }
   final manifest = _object(_read(source, 'release.json'), 'release.json');
   final version = manifest['version'];
   final assets = manifest['assets'];
-  if (manifest['format'] != 2 ||
+  if (manifest['format'] != 3 ||
       version is! String ||
       !_digest.hasMatch(version) ||
       assets is! Map<String, dynamic>) {
@@ -48,7 +55,6 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
     }
   }
   final files = <String, List<int>>{};
-  final prefix = '__releases/$version/';
   for (final entry in assets.entries) {
     final path = entry.key;
     final metadata = entry.value;
@@ -60,7 +66,7 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
         metadata['bytes'] is! int) {
       throw FormatException('Unsupported release asset metadata: $path');
     }
-    for (final location in [path, '$prefix$path']) {
+    for (final location in [path]) {
       final bytes = _read(source, location);
       if (bytes.length != metadata['bytes'] ||
           sha256(bytes) != metadata['sha256']) {
@@ -80,11 +86,6 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
     }
   }
   files['release.json'] = _read(source, 'release.json');
-  final immutableManifest = _read(source, '${prefix}release.json');
-  if (sha256(immutableManifest) != sha256(files['release.json']!)) {
-    throw StateError('Root and immutable release manifests disagree.');
-  }
-  files['${prefix}release.json'] = immutableManifest;
   files['service_worker.js'] = _read(source, 'service_worker.js');
   files['.nojekyll'] = const [];
   files['CNAME'] = utf8.encode('wfform.com\n');
@@ -133,9 +134,6 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
     }
   }
   final next = <String, String>{
-    // Existing clients keep their immutable URLs across deployments.
-    for (final entry in previous.entries)
-      if (entry.key.startsWith('__releases/')) entry.key: entry.value,
     for (final entry in files.entries) entry.key: sha256(entry.value),
   };
   final removed = previous.keys.where((path) => !next.containsKey(path));
@@ -153,11 +151,6 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
     }
     if (files.containsKey(path) && existing != newHash) changed.add(path);
     if (removed.contains(path) && existing != null) changed.add(path);
-    if (path.startsWith('__releases/') &&
-        !files.containsKey(path) &&
-        existing != oldHash) {
-      throw StateError('A retained immutable release is incomplete: $path');
-    }
   }
   final paths = next.keys.toList()..sort();
   final ownershipBytes = utf8.encode(
@@ -177,6 +170,27 @@ WebsitePublication prepareWebsite(Directory source, Directory target) {
       writeAtomic(File('${target.path}/$path'), files[path]!);
     } else {
       File('${target.path}/$path').deleteSync();
+    }
+  }
+  // Only remove directories that contained owned paths. Unmanaged empty
+  // directories and links are user state and remain untouched.
+  final oldDirectories = <String>{};
+  for (final path in previous.keys.where(
+    (path) => path.startsWith('__releases/'),
+  )) {
+    final parts = path.split('/');
+    for (var length = 1; length < parts.length; length++) {
+      oldDirectories.add(parts.take(length).join('/'));
+    }
+  }
+  final directories = oldDirectories.toList()
+    ..sort((a, b) => b.length.compareTo(a.length));
+  for (final path in directories) {
+    final directory = Directory('${target.path}/$path');
+    if (FileSystemEntity.typeSync(directory.path, followLinks: false) ==
+            FileSystemEntityType.directory &&
+        directory.listSync(followLinks: false).isEmpty) {
+      directory.deleteSync();
     }
   }
   if (changed.contains(_ownershipFile)) writeAtomic(ownership, ownershipBytes);
@@ -220,7 +234,7 @@ bool _safe(String path) =>
 
 bool _previouslyManaged(String path) {
   // Historical ownership must outlive a retired asset's release eligibility:
-  // remove its owned root alias, but keep immutable copies for existing clients.
+  // remove its owned root alias and retired copies during the flat migration.
   const retiredAssets = {'github-mark.svg'};
   if (!_safe(path)) return false;
   if (const {

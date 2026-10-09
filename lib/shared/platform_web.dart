@@ -8,6 +8,7 @@ import 'package:web/web.dart' as web;
 
 import 'platform.dart';
 import 'diagnostics.dart';
+import 'pwa_cache_identity.dart';
 
 LocalStore createStore() => BrowserStore();
 LocalStore createSessionStore() => BrowserSessionStore();
@@ -48,6 +49,16 @@ class BrowserPlatformBridge extends PlatformBridge {
   Completer<void>? _activation;
   final List<void Function()> _removeListeners = [];
 
+  // Keep UI and request policy aligned for this app session if input devices change.
+  late final bool _toolsAvailable = browserSupportsTools(
+    userAgent: web.window.navigator.userAgent,
+    platform: web.window.navigator.platform,
+    maxTouchPoints: web.window.navigator.maxTouchPoints,
+    primaryPointerCoarse: web.window.matchMedia('(pointer: coarse)').matches,
+    anyFinePointer: web.window.matchMedia('(any-pointer: fine)').matches,
+  );
+  @override
+  bool get toolsAvailable => _toolsAvailable;
   @override
   bool get online => _online;
   @override
@@ -256,7 +267,8 @@ class BrowserPlatformBridge extends PlatformBridge {
                 (uri.host == 'openrouter.ai' ||
                     RegExp(r'(^|/)api(?:/|$)').hasMatch(uri.path));
             final authorization = request.headers.has('authorization');
-            final query = uri?.hasQuery ?? false;
+            final query =
+                uri != null && uri.hasQuery && pwaCacheBuild(uri) == null;
             final crossOrigin =
                 uri != null &&
                 (!const {'http', 'https'}.contains(uri.scheme) ||
@@ -273,9 +285,7 @@ class BrowserPlatformBridge extends PlatformBridge {
             // counters. Never inspect application/API/cache response bodies.
             if (!crossOrigin &&
                 uri != null &&
-                RegExp(
-                  r'/__releases/[a-f0-9]{64}/release\.json$',
-                ).hasMatch(uri.path)) {
+                pwaCompletionBuild(uri) != null) {
               final marker = await cache.match(request).toDart;
               if (marker != null) {
                 final raw = (await marker.text().toDart).toDart;
@@ -284,7 +294,7 @@ class BrowserPlatformBridge extends PlatformBridge {
                   if (decoded is Map && decoded['install'] is Map) {
                     final counts = decoded['install'] as Map;
                     installs.add({
-                      'release': uri.path.split('/').reversed.skip(1).first,
+                      'release': pwaCompletionBuild(uri),
                       for (final key in [
                         'reusedAssets',
                         'reusedBytes',

@@ -14,7 +14,7 @@ void main() {
   ];
 
   test(
-    'selected exact ID, zero price guards, no fallbacks, supported reasoning',
+    'selected exact ID, zero price guards, no fallbacks, remote defaults',
     () {
       final api = ChatApi(config, FakeTransport((_) => endpoints()));
       final request = api.requestBody(testModel, input);
@@ -30,7 +30,18 @@ void main() {
           'audio': '0',
         },
       });
-      expect(request['reasoning'], {'enabled': true});
+      expect(request.containsKey('reasoning'), isFalse);
+      expect(request.containsKey('max_tokens'), isFalse);
+      expect(
+        api.requestBody(
+          testModel,
+          input,
+          parameters: {
+            'reasoning': {'enabled': true},
+          },
+        )['reasoning'],
+        {'enabled': true},
+      );
       expect(
         api
             .requestBody(

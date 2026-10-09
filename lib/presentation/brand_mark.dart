@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'brand_artwork.dart';
 
-/// The soft W wraps a lavender module. Decorative beside the product name.
+/// An open folded band cradles two linked nodes. Decorative beside the name.
 class WfformMark extends StatelessWidget {
   const WfformMark({super.key, this.size = 34});
 
@@ -80,257 +80,253 @@ class _BrandPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.width / 100, size.height / 100);
-    // Knock out overlapped rear artwork inside this isolated layer. Clearing
-    // a front card/bubble never erases the widget's real background.
+    // Knockouts belong to the artwork layer, never the actual host surface.
     canvas.saveLayer(const Rect.fromLTWH(0, 0, 100, 100), Paint());
     final outline = Paint()
       ..color = ink
       ..style = PaintingStyle.stroke
-      ..strokeWidth = (160 / size.width).clamp(
-        glyph == null ? wrapperStroke : 5,
-        10,
-      )
+      ..strokeWidth = (150 / size.width).clamp(6.0, 9.4)
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
-    void shape(Path path, [Color? fill]) {
-      canvas.drawPath(path, Paint()..blendMode = BlendMode.clear);
-      if (fill != null) canvas.drawPath(path, Paint()..color = fill);
-      canvas.drawPath(path, outline);
+    void stroke(Path path) => canvas.drawPath(path, outline);
+    void node(Offset point, [double radius = 7]) => canvas.drawCircle(
+      point,
+      math.max(radius, (128 / size.width).clamp(7.0, 8.0)),
+      Paint()..color = lavender,
+    );
+    void line(Offset from, Offset to) => canvas.drawLine(from, to, outline);
+    void ring(Offset center, double radius) {
+      canvas.drawCircle(center, radius, Paint()..blendMode = BlendMode.clear);
+      canvas.drawCircle(center, radius, outline);
     }
 
-    Path rounded(double x, double y, double w, double h, double r) => Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r)),
-      );
+    Path bubble(double x, double y, double w, double h) => Path()
+      ..moveTo(x + w * .57, y)
+      ..lineTo(x + 15, y)
+      ..quadraticBezierTo(x, y, x, y + 15)
+      ..lineTo(x, y + h - 15)
+      ..quadraticBezierTo(x, y + h, x + 12, y + h)
+      ..lineTo(x + 12, y + h + 10)
+      ..quadraticBezierTo(x + 12, y + h + 13, x + 17, y + h + 9)
+      ..lineTo(x + 29, y + h)
+      ..lineTo(x + w - 15, y + h)
+      ..quadraticBezierTo(x + w, y + h, x + w, y + h - 15)
+      ..lineTo(x + w, y + 23);
 
     switch (glyph) {
       case null:
-        final wrapper = Path()..moveTo(20, 19);
-        for (final c in wrapperCurves) {
-          wrapper.cubicTo(c[0], c[1], c[2], c[3], c[4], c[5]);
+        for (final band in cradleBands) {
+          final contour = Path()..moveTo(band.x, band.y);
+          for (final c in band.curves) {
+            contour.cubicTo(c[0], c[1], c[2], c[3], c[4], c[5]);
+          }
+          canvas.drawPath(contour..close(), Paint()..color = ink);
         }
-        wrapper.close();
-        shape(wrapper);
-        canvas.drawPath(
-          rounded(
-            wrapperCore.left,
-            wrapperCore.top,
-            wrapperCore.width,
-            wrapperCore.height,
-            wrapperCoreRadius,
-          ),
-          Paint()..color = lavender,
+        final first = cradleNodes.first;
+        final second = cradleNodes.last;
+        canvas.drawLine(
+          Offset(first.x, first.y),
+          Offset(second.x, second.y),
+          Paint()
+            ..color = lavender
+            ..strokeWidth = cradleLinkWidth
+            ..strokeCap = StrokeCap.round,
         );
-      case BrandGlyph.models:
-        canvas.save();
-        canvas.translate(33, 54);
-        canvas.rotate(-.32);
-        shape(rounded(-20, -25, 35, 51, 9));
-        canvas.restore();
-        canvas.save();
-        canvas.translate(68, 54);
-        canvas.rotate(.32);
-        shape(rounded(-15, -25, 35, 51, 9));
-        canvas.restore();
-        shape(rounded(34, 18, 33, 53, 9), lavender);
-      case BrandGlyph.chat:
-        final back = Path()
-          ..moveTo(49, 32)
-          ..lineTo(72, 32)
-          ..quadraticBezierTo(89, 32, 89, 49)
-          ..lineTo(89, 61)
-          ..quadraticBezierTo(89, 72, 79, 74)
-          ..lineTo(79, 84)
-          ..lineTo(65, 75)
-          ..lineTo(50, 75)
-          ..quadraticBezierTo(34, 75, 34, 60)
-          ..lineTo(34, 48)
-          ..quadraticBezierTo(34, 32, 49, 32)
-          ..close();
-        shape(back, lavender);
-        final front = Path()
-          ..moveTo(28, 21)
-          ..lineTo(52, 21)
-          ..quadraticBezierTo(68, 21, 68, 37)
-          ..lineTo(68, 53)
-          ..quadraticBezierTo(68, 66, 53, 66)
-          ..lineTo(37, 66)
-          ..lineTo(23, 76)
-          ..lineTo(23, 66)
-          ..quadraticBezierTo(12, 64, 12, 52)
-          ..lineTo(12, 37)
-          ..quadraticBezierTo(12, 21, 28, 21)
-          ..close();
-        shape(front);
-      case BrandGlyph.history:
-        final arc = Path()
-          ..moveTo(17, 60)
-          ..cubicTo(26, 99, 82, 92, 85, 54)
-          ..cubicTo(89, 16, 38, 1, 20, 33);
-        canvas.drawPath(arc, outline);
-        final arrow = Path()
-          ..moveTo(16, 26)
-          ..lineTo(19, 39)
-          ..lineTo(30, 31)
-          ..close();
-        shape(arrow, ink);
-        canvas.drawPath(
-          Path()
-            ..moveTo(51, 29)
-            ..lineTo(51, 51)
-            ..lineTo(65, 63),
-          outline,
-        );
-        canvas.drawCircle(const Offset(51, 51), 7.5, Paint()..color = lavender);
-      case BrandGlyph.documents:
-        final back = Path()
-          ..moveTo(48, 16)
-          ..lineTo(68, 16)
-          ..lineTo(85, 32)
-          ..lineTo(85, 68)
-          ..quadraticBezierTo(85, 78, 75, 78)
-          ..lineTo(48, 78)
-          ..quadraticBezierTo(39, 78, 39, 69)
-          ..lineTo(39, 26)
-          ..quadraticBezierTo(39, 16, 48, 16)
-          ..close();
-        shape(back, lavender);
-        canvas.drawPath(
-          Path()
-            ..moveTo(67, 18)
-            ..lineTo(67, 30)
-            ..quadraticBezierTo(67, 35, 73, 35)
-            ..lineTo(84, 35),
-          outline,
-        );
-        shape(rounded(14, 28, 49, 57, 10));
-        for (final y in [49.0, 64.0]) {
-          canvas.drawLine(Offset(27, y), Offset(50, y), outline);
-        }
-      case BrandGlyph.settings:
-        final vertices = <Offset>[
-          for (var i = 0; i < 24; i++)
-            Offset(
-              50 + (i % 4 < 2 ? 38 : 29) * math.cos(i * math.pi / 12),
-              50 + (i % 4 < 2 ? 38 : 29) * math.sin(i * math.pi / 12),
-            ),
-        ];
-        final first = (vertices.last + vertices.first) / 2;
-        final gear = Path()..moveTo(first.dx, first.dy);
-        for (var i = 0; i < vertices.length; i++) {
-          final point = vertices[i];
-          final end = (point + vertices[(i + 1) % vertices.length]) / 2;
-          gear.quadraticBezierTo(point.dx, point.dy, end.dx, end.dy);
-        }
-        shape(gear..close());
-        // Preserve a visible center after the minimum small-size outline.
-        final hubRadius = (240 / size.width).clamp(11.0, 15.0);
-        canvas.drawCircle(
-          const Offset(50, 50),
-          hubRadius,
-          Paint()..color = lavender,
-        );
-        canvas.drawCircle(const Offset(50, 50), hubRadius, outline);
-      case BrandGlyph.diagnostics:
-        shape(rounded(12, 18, 76, 53, 10));
-        canvas.drawPath(
-          Path()
-            ..moveTo(22, 47)
-            ..lineTo(34, 47)
-            ..lineTo(42, 33)
-            ..lineTo(54, 59)
-            ..lineTo(64, 43)
-            ..lineTo(77, 43),
-          outline,
-        );
-        canvas.drawCircle(
-          const Offset(77, 43),
-          (112 / size.width).clamp(5.0, 7.0),
-          Paint()..color = lavender,
-        );
-        canvas.drawLine(const Offset(50, 72), const Offset(50, 83), outline);
-        canvas.drawLine(const Offset(33, 84), const Offset(67, 84), outline);
-      case BrandGlyph.context:
-        for (final x in [25.0, 50.0, 75.0]) {
-          canvas.drawLine(Offset(x, 18), Offset(x, 82), outline);
-        }
-        final knobWidth = (384 / size.width).clamp(16.0, 24.0);
-        final knobHeight = (416 / size.width).clamp(20.0, 26.0);
-        Path knob(double x, double y) => rounded(
-          x - knobWidth / 2,
-          y - knobHeight / 2,
-          knobWidth,
-          knobHeight,
-          6,
-        );
-        shape(knob(25, 39), lavender);
-        shape(knob(50, 66));
-        shape(knob(75, 34));
-      case BrandGlyph.chats:
-        // Three offset cards communicate a collection, distinct from Chat's
-        // two conversational speech bubbles.
-        shape(rounded(32, 16, 54, 48, 9));
-        shape(rounded(24, 24, 54, 48, 9));
-        final front = Path()
-          ..moveTo(25, 32)
-          ..lineTo(60, 32)
-          ..quadraticBezierTo(69, 32, 69, 41)
-          ..lineTo(69, 69)
-          ..quadraticBezierTo(69, 79, 59, 79)
-          ..lineTo(35, 79)
-          ..lineTo(22, 87)
-          ..lineTo(22, 78)
-          ..quadraticBezierTo(15, 76, 15, 68)
-          ..lineTo(15, 42)
-          ..quadraticBezierTo(15, 32, 25, 32)
-          ..close();
-        shape(front);
-        for (final x in [26.0, 42.0, 58.0]) {
+        for (final point in cradleNodes) {
           canvas.drawCircle(
-            Offset(x, 55),
-            (112 / size.width).clamp(3.5, 7.0),
+            Offset(point.x, point.y),
+            point.radius,
             Paint()..color = lavender,
           );
         }
-      case BrandGlyph.drafts:
-        shape(rounded(19, 15, 53, 70, 10));
-        canvas.drawLine(const Offset(31, 32), const Offset(55, 32), outline);
-        canvas.drawLine(const Offset(31, 46), const Offset(46, 46), outline);
-        final pencil = Path()
-          ..moveTo(44, 70)
-          ..lineTo(70, 40)
-          ..quadraticBezierTo(75, 35, 80, 40)
-          ..lineTo(84, 44)
-          ..quadraticBezierTo(88, 48, 84, 53)
-          ..lineTo(57, 82)
-          ..lineTo(41, 87)
-          ..close();
-        shape(pencil, lavender);
-        final tip = Path()
-          ..moveTo(44, 70)
-          ..lineTo(57, 82)
-          ..lineTo(41, 87)
-          ..close();
-        canvas.drawPath(tip, Paint()..color = lavender);
-        canvas.drawPath(tip, outline);
-        canvas.drawLine(const Offset(69, 43), const Offset(81, 55), outline);
-      case BrandGlyph.archived:
-        shape(rounded(18, 35, 64, 48, 9));
-        shape(rounded(13, 20, 74, 20, 7));
-        final handleWidth = (512 / size.width).clamp(24.0, 32.0);
-        final handleHeight = (352 / size.width).clamp(11.0, 22.0);
-        shape(
-          rounded(
-            50 - handleWidth / 2,
-            57.5 - handleHeight / 2,
-            handleWidth,
-            handleHeight,
-            5,
-          ),
-          lavender,
+      case BrandGlyph.models:
+        // Nested open cards, with the same rising entry and rounded cradle base.
+        stroke(
+          Path()
+            ..moveTo(43, 16)
+            ..lineTo(24, 23)
+            ..quadraticBezierTo(14, 27, 14, 38)
+            ..lineTo(14, 65)
+            ..quadraticBezierTo(14, 78, 27, 78),
         );
+        stroke(
+          Path()
+            ..moveTo(55, 22)
+            ..lineTo(38, 28)
+            ..quadraticBezierTo(28, 32, 28, 43)
+            ..lineTo(28, 70)
+            ..quadraticBezierTo(28, 84, 43, 84)
+            ..lineTo(70, 84)
+            ..quadraticBezierTo(85, 84, 85, 69)
+            ..lineTo(85, 45),
+        );
+        line(const Offset(44, 55), const Offset(65, 55));
+        node(const Offset(72, 30));
+      case BrandGlyph.chat:
+        stroke(bubble(13, 22, 73, 51));
+        line(const Offset(34, 47), const Offset(58, 47));
+        node(const Offset(77, 22));
+      case BrandGlyph.history:
+        stroke(
+          Path()
+            ..moveTo(45, 15)
+            ..cubicTo(22, 15, 10, 34, 13, 56)
+            ..cubicTo(16, 81, 42, 91, 64, 81)
+            ..cubicTo(80, 74, 87, 60, 85, 44),
+        );
+        stroke(
+          Path()
+            ..moveTo(47, 32)
+            ..lineTo(47, 53)
+            ..lineTo(64, 61),
+        );
+        node(const Offset(76, 25));
+      case BrandGlyph.documents:
+        stroke(
+          Path()
+            ..moveTo(51, 15)
+            ..lineTo(32, 15)
+            ..quadraticBezierTo(19, 15, 19, 29)
+            ..lineTo(19, 72)
+            ..quadraticBezierTo(19, 85, 33, 85)
+            ..lineTo(67, 85)
+            ..quadraticBezierTo(81, 85, 81, 71)
+            ..lineTo(81, 45),
+        );
+        stroke(
+          Path()
+            ..moveTo(52, 17)
+            ..lineTo(52, 28)
+            ..quadraticBezierTo(52, 39, 64, 39)
+            ..lineTo(78, 39),
+        );
+        line(const Offset(33, 53), const Offset(63, 53));
+        line(const Offset(33, 67), const Offset(54, 67));
+        node(const Offset(73, 22));
+      case BrandGlyph.settings:
+        // A soft, open gear: the upper-right node occupies the deliberate break.
+        final vertices = <Offset>[
+          for (var i = 0; i <= 26; i++)
+            Offset(
+              50 +
+                  (i % 4 < 2 ? 36 : 29) *
+                      math.cos((-20 + i * 12) * math.pi / 180),
+              50 +
+                  (i % 4 < 2 ? 36 : 29) *
+                      math.sin((-20 + i * 12) * math.pi / 180),
+            ),
+        ];
+        final gear = Path()..moveTo(vertices.first.dx, vertices.first.dy);
+        for (var i = 1; i < vertices.length - 1; i++) {
+          final point = vertices[i];
+          final end = (point + vertices[i + 1]) / 2;
+          gear.quadraticBezierTo(point.dx, point.dy, end.dx, end.dy);
+        }
+        stroke(gear);
+        ring(const Offset(50, 50), 11);
+        node(const Offset(73, 23));
+      case BrandGlyph.diagnostics:
+        stroke(
+          Path()
+            ..moveTo(53, 18)
+            ..lineTo(28, 18)
+            ..quadraticBezierTo(13, 18, 13, 33)
+            ..lineTo(13, 58)
+            ..quadraticBezierTo(13, 72, 28, 72)
+            ..lineTo(71, 72)
+            ..quadraticBezierTo(86, 72, 86, 58)
+            ..lineTo(86, 43),
+        );
+        stroke(
+          Path()
+            ..moveTo(26, 47)
+            ..lineTo(36, 47)
+            ..lineTo(44, 34)
+            ..lineTo(55, 58)
+            ..lineTo(65, 43)
+            ..lineTo(75, 43),
+        );
+        line(const Offset(50, 73), const Offset(50, 84));
+        line(const Offset(34, 85), const Offset(66, 85));
+        node(const Offset(75, 22));
+      case BrandGlyph.context:
+        for (final y in [27.0, 50.0, 74.0]) {
+          line(Offset(18, y), Offset(82, y));
+        }
+        ring(const Offset(35, 27), 9);
+        ring(const Offset(43, 74), 9);
+        canvas.drawCircle(
+          const Offset(64, 50),
+          11,
+          Paint()..blendMode = BlendMode.clear,
+        );
+        node(const Offset(64, 50), 10);
+      case BrandGlyph.chats:
+        stroke(
+          Path()
+            ..moveTo(57, 15)
+            ..lineTo(36, 15)
+            ..quadraticBezierTo(22, 15, 22, 27),
+        );
+        stroke(
+          Path()
+            ..moveTo(87, 41)
+            ..lineTo(87, 57)
+            ..quadraticBezierTo(87, 71, 76, 73),
+        );
+        stroke(bubble(12, 29, 63, 44));
+        for (final x in [29.0, 43.0, 57.0]) {
+          canvas.drawCircle(Offset(x, 50), 3.5, Paint()..color = ink);
+        }
+        node(const Offset(77, 22));
+      case BrandGlyph.drafts:
+        stroke(
+          Path()
+            ..moveTo(50, 16)
+            ..lineTo(30, 16)
+            ..quadraticBezierTo(17, 16, 17, 30)
+            ..lineTo(17, 71)
+            ..quadraticBezierTo(17, 85, 31, 85)
+            ..lineTo(61, 85)
+            ..quadraticBezierTo(74, 85, 77, 73),
+        );
+        line(const Offset(30, 35), const Offset(50, 35));
+        line(const Offset(30, 49), const Offset(43, 49));
+        stroke(
+          Path()
+            ..moveTo(47, 62)
+            ..lineTo(72, 34)
+            ..quadraticBezierTo(76, 30, 80, 34)
+            ..lineTo(85, 39)
+            ..quadraticBezierTo(89, 43, 84, 48)
+            ..lineTo(59, 74)
+            ..lineTo(44, 78)
+            ..lineTo(47, 62),
+        );
+        line(const Offset(49, 64), const Offset(58, 72));
+        node(const Offset(75, 20));
+      case BrandGlyph.archived:
+        stroke(
+          Path()
+            ..moveTo(22, 46)
+            ..lineTo(22, 70)
+            ..quadraticBezierTo(22, 84, 37, 84)
+            ..lineTo(65, 84)
+            ..quadraticBezierTo(81, 84, 81, 69)
+            ..lineTo(81, 46),
+        );
+        stroke(
+          Path()
+            ..moveTo(51, 20)
+            ..lineTo(25, 20)
+            ..quadraticBezierTo(14, 20, 14, 31)
+            ..quadraticBezierTo(14, 41, 25, 41)
+            ..lineTo(87, 41),
+        );
+        line(const Offset(39, 58), const Offset(63, 58));
+        node(const Offset(76, 22));
     }
-    canvas.restore(); // isolated artwork layer
+    canvas.restore();
     canvas.restore();
   }
 

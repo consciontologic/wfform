@@ -26,7 +26,9 @@ multiple `[ ]` bullets. **This is the most common place agents drop work.**
    diagnose within the rules. Write a `checkpoint.json`, append a
    `action=block, status=blocked` row, surface the blocker clearly.
 5. **When every bullet is `[x]`**, run the phase's *Test plan* line one
-   final time, then end in `staged` (see AGENTS.md §2).
+   final time, then complete guarded work-branch publication and its PR
+   (`published` in AGENTS.md §2). Use `staged` only for an explicitly requested
+   local-only handoff; delegated agents return evidence to their parent.
 
 ## Anti-patterns
 

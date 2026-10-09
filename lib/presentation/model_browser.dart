@@ -830,11 +830,13 @@ class _ModelDescription extends StatefulWidget {
 
 class _ModelDescriptionState extends State<_ModelDescription> {
   bool expanded = false;
+  bool showLinkCopy = false;
 
   void _openPage(Uri uri) {
     try {
       widget.state.platform.openUrl(uri);
     } catch (_) {
+      setState(() => showLinkCopy = true);
       widget.state.diagnostics.record(
         'model.link.open',
         failure: const AppFailure(
@@ -903,12 +905,13 @@ class _ModelDescriptionState extends State<_ModelDescription> {
                 ),
               ),
             ),
-            SelectableIconButton(
-              tooltip: 'Copy model page link',
-              onPressed: () =>
-                  Clipboard.setData(ClipboardData(text: '$modelPage')),
-              icon: const Icon(Icons.copy_outlined, size: 18),
-            ),
+            if (showLinkCopy)
+              SelectableIconButton(
+                tooltip: 'Copy model page link',
+                onPressed: () =>
+                    Clipboard.setData(ClipboardData(text: '$modelPage')),
+                icon: const Icon(Icons.copy_outlined, size: 18),
+              ),
           ],
         ),
       ],

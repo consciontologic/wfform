@@ -31,6 +31,70 @@ void main() {
   });
   tearDown(() => scratch.deleteSync(recursive: true));
 
+  test(
+    '1.0.0 publishes a flat package and removes retired release folders',
+    () {
+      final release = build.prepareRelease(source, template);
+      final target = Directory('${scratch.path}/flat');
+      build.publishRelease(release, target);
+      File('${target.path}/__releases/${'b' * 64}/main.dart.js')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('retired');
+      build.publishRelease(release, target);
+      expect(Directory('${target.path}/__releases').existsSync(), isFalse);
+      expect(release.manifest['format'], 3);
+      expect(release.manifest['packageVersion'], '1.0.0');
+      expect(File('${target.path}/main.dart.js').existsSync(), isTrue);
+      expect(
+        utf8.decode(release.assets['index.html']!),
+        contains('flutter_bootstrap.js?build=${release.version}'),
+      );
+    },
+  );
+
+  test(
+    'publication preserves unowned directories and rejects project ancestors',
+    () {
+      final release = build.prepareRelease(source, template);
+      final target = Directory('${scratch.path}/unowned')..createSync();
+      final sentinel = File('${target.path}/keep.txt')
+        ..writeAsStringSync('user work');
+      expect(() => build.publishRelease(release, target), throwsStateError);
+      expect(sentinel.readAsStringSync(), 'user work');
+      expect(
+        () => build.publishRelease(release, Directory('.')),
+        throwsArgumentError,
+      );
+      expect(
+        () => build.publishRelease(release, Directory('../wfform')),
+        throwsArgumentError,
+      );
+      expect(
+        () => build.publishRelease(release, Directory('..')),
+        throwsArgumentError,
+      );
+      final linked = '${scratch.path}/linked';
+      Link(linked).createSync(target.absolute.path);
+      expect(
+        () => build.publishRelease(release, Directory(linked)),
+        throwsStateError,
+      );
+      expect(sentinel.readAsStringSync(), 'user work');
+    },
+  );
+
+  test('stamping preserves unrelated bootstrap digest constants', () {
+    final digest = 'a' * 64;
+    File('${source.path}/flutter_bootstrap.js').writeAsStringSync(
+      "const releasePath = '__RELEASE_BASE__';\nconst checksum = '$digest';",
+    );
+    final release = build.prepareRelease(source, template);
+    expect(
+      utf8.decode(release.assets['flutter_bootstrap.js']!),
+      contains("const checksum = '$digest';"),
+    );
+  });
+
   test('all browser-tab icons survive release hashing and publication', () {
     const paths = [
       'favicon-16.png',
@@ -54,12 +118,7 @@ void main() {
         'bytes': expected.length,
       });
       expect(File('${target.path}/$path').readAsBytesSync(), expected);
-      expect(
-        File(
-          '${target.path}/__releases/${release.version}/$path',
-        ).readAsBytesSync(),
-        expected,
-      );
+      expect(File('${target.path}/$path').readAsBytesSync(), expected);
     }
   });
 
@@ -231,24 +290,27 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       isNot(changed.version),
     );
   });
-  test('manifest hashes describe stamped bytes and immutable startup URLs', () {
-    final release = build.prepareRelease(source, template);
-    final entries = release.manifest['assets'] as Map;
-    for (final entry in release.assets.entries) {
-      expect((entries[entry.key] as Map)['sha256'], sha256(entry.value));
-      expect((entries[entry.key] as Map)['bytes'], entry.value.length);
-    }
-    expect(
-      utf8.decode(release.assets['index.html']!),
-      contains('__releases/${release.version}/flutter_bootstrap.js'),
-    );
-    expect(
-      utf8.decode(release.assets['flutter_bootstrap.js']!),
-      contains('__releases/${release.version}/'),
-    );
-    expect(release.worker, isNot(contains('__BUILD_ID__')));
-    expect(release.worker, isNot(contains('__PRECACHE_MANIFEST__')));
-  });
+  test(
+    'manifest hashes describe stamped bytes and cache identity in startup URLs',
+    () {
+      final release = build.prepareRelease(source, template);
+      final entries = release.manifest['assets'] as Map;
+      for (final entry in release.assets.entries) {
+        expect((entries[entry.key] as Map)['sha256'], sha256(entry.value));
+        expect((entries[entry.key] as Map)['bytes'], entry.value.length);
+      }
+      expect(
+        utf8.decode(release.assets['index.html']!),
+        contains('flutter_bootstrap.js?build=${release.version}'),
+      );
+      expect(
+        utf8.decode(release.assets['flutter_bootstrap.js']!),
+        contains(release.version),
+      );
+      expect(release.worker, isNot(contains('__BUILD_ID__')));
+      expect(release.worker, isNot(contains('__PRECACHE_MANIFEST__')));
+    },
+  );
   test('real host keeps its bootstrap guard identity after URL stamping', () {
     File('${source.path}/index.html').writeAsStringSync(
       File(
@@ -261,58 +323,49 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
     expect(
       index,
       contains(
-        '<script id="flutter-bootstrap" src="__releases/${release.version}/flutter_bootstrap.js" async>',
+        '<script id="flutter-bootstrap" src="flutter_bootstrap.js?build=${release.version}" async>',
       ),
     );
     expect(index, isNot(contains('src="flutter_bootstrap.js"')));
   });
-  test('publishing creates complete immutable release before pointer files', () {
-    final release = build.prepareRelease(source, template);
-    final target = Directory('${scratch.path}/published');
-    build.publishRelease(release, target);
-    for (final entry in release.assets.entries) {
+  test(
+    'publication assembles a complete flat release before directory replacement',
+    () {
+      final release = build.prepareRelease(source, template);
+      final target = Directory('${scratch.path}/published');
+      build.publishRelease(release, target);
+      for (final entry in release.assets.entries) {
+        expect(
+          File('${target.path}/${entry.key}').readAsBytesSync(),
+          entry.value,
+        );
+      }
       expect(
-        File(
-          '${target.path}/__releases/${release.version}/${entry.key}',
-        ).readAsBytesSync(),
-        entry.value,
+        jsonDecode(File('${target.path}/release.json').readAsStringSync()),
+        release.manifest,
       );
-    }
-    expect(
-      jsonDecode(File('${target.path}/release.json').readAsStringSync()),
-      release.manifest,
-    );
-    expect(
-      File('${target.path}/service_worker.js').readAsStringSync(),
-      release.worker,
-    );
-    expect(
-      target
-          .listSync(recursive: true)
-          .where(
-            (entry) =>
-                entry.path.contains('publishing-') ||
-                entry.path.contains('staging-'),
-          ),
-      isEmpty,
-    );
-    // Reassembling stamped output is stable; changed policy keeps old URLs alive.
-    expect(build.prepareRelease(target, template).version, release.version);
-    final update = build.prepareRelease(source, '$template\n// next policy');
-    build.publishRelease(update, target);
-    expect(
-      File(
-        '${target.path}/__releases/${release.version}/main.dart.js',
-      ).existsSync(),
-      isTrue,
-    );
-    expect(
-      File(
-        '${target.path}/__releases/${update.version}/main.dart.js',
-      ).existsSync(),
-      isTrue,
-    );
-  });
+      expect(
+        File('${target.path}/service_worker.js').readAsStringSync(),
+        release.worker,
+      );
+      expect(
+        target
+            .listSync(recursive: true)
+            .where(
+              (entry) =>
+                  entry.path.contains('publishing-') ||
+                  entry.path.contains('staging-'),
+            ),
+        isEmpty,
+      );
+      // Reassembling stamped output is stable; changed policy keeps old URLs alive.
+      expect(build.prepareRelease(target, template).version, release.version);
+      final update = build.prepareRelease(source, '$template\n// next policy');
+      build.publishRelease(update, target);
+      expect(File('${target.path}/main.dart.js').existsSync(), isTrue);
+      expect(File('${target.path}/main.dart.js').existsSync(), isTrue);
+    },
+  );
   test(
     'missing assets, old bootstrap and credential-like scripts fail closed',
     () {
@@ -340,16 +393,16 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
     expect(index, contains('<base href="/studio/">'));
     expect(
       index,
-      contains('src="__releases/${release.version}/flutter_bootstrap.js"'),
+      contains('src="flutter_bootstrap.js?build=${release.version}"'),
     );
     final scope = Uri.parse('https://example.test/studio/');
     expect(
-      scope.resolve('__releases/${release.version}/main.dart.js').path,
-      '/studio/__releases/${release.version}/main.dart.js',
+      scope.resolve('main.dart.js?build=${release.version}').path,
+      '/studio/main.dart.js',
     );
   });
   test(
-    'damaged immutable releases refuse publication before pointer changes',
+    'a complete rebuild replaces damaged flat files with verified bytes',
     () {
       final release = build.prepareRelease(source, template);
       final target = Directory('${scratch.path}/published');
@@ -357,10 +410,12 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       final worker = File(
         '${target.path}/service_worker.js',
       ).readAsStringSync();
-      File(
-        '${target.path}/__releases/${release.version}/main.dart.js',
-      ).writeAsStringSync('damaged');
-      expect(() => build.publishRelease(release, target), throwsStateError);
+      File('${target.path}/main.dart.js').writeAsStringSync('damaged');
+      build.publishRelease(release, target);
+      expect(
+        File('${target.path}/main.dart.js').readAsBytesSync(),
+        release.assets['main.dart.js'],
+      );
       expect(
         File('${target.path}/service_worker.js').readAsStringSync(),
         worker,
@@ -384,11 +439,8 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       }
     },
   );
-  test('immutable HTTP caching applies only to versioned release URLs', () {
-    expect(
-      cacheControlFor('__releases/${'a' * 64}/main.dart.js'),
-      'public, max-age=31536000, immutable',
-    );
+  test('flat and retired HTTP paths require revalidation', () {
+    expect(cacheControlFor('__releases/${'a' * 64}/main.dart.js'), 'no-store');
     for (final path in [
       'index.html',
       'service_worker.js',
@@ -476,10 +528,7 @@ printf '{"name":"wfform","id":"./"}' > "$output/manifest.json"
       expect(fetch, contains("url.pathname.includes('/config/')"));
       expect(fetch, contains('url.search'));
       expect(fetch, contains('releaseUrl(version, path)'));
-      expect(
-        fetch,
-        contains('if (!(await caches.has(name))) return fetch(request);'),
-      );
+      expect(fetch, contains('if (!(await caches.has(name)))'));
       expect(template, contains('if (unknown) return;'));
       expect(template, contains('keep.add(PREFIX + version)'));
       expect(template, contains("event.data?.type === 'APPLY_UPDATE'"));

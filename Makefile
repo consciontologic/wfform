@@ -73,18 +73,40 @@ deps:
 	flutter pub get
 ## format            Check Dart formatting without rewriting files
 format:
-	dart format --output=none --set-exit-if-changed lib test tool deploy
+	dart format --output=none --set-exit-if-changed lib test tool deploy companion examples
 ## analyze           Analyze Flutter/Dart source and tools
 analyze:
 	flutter analyze
 ## test              Run deterministic Flutter tests (live checks remain opt-in)
 test:
-	flutter test --reporter expanded
+	flutter test --reporter expanded $(TEST_ARGS)
 ## repository.check  Check repository secret/config hygiene
 repository.check:
 	dart run tool/check_repository.dart
 ## verify            Run formatting, analysis, tests and repository checks
-verify: format analyze test repository.check
+verify: companion.deps version.check format analyze test repository.check companion.verify pwa.verify
+
+.PHONY: companion.deps companion.verify companion.build
+## companion.deps    Resolve the companion's development tooling from local cache
+companion.deps:
+	dart pub get --offline -C companion
+## companion.verify  Analyze and test the optional local companion
+companion.verify: companion.deps
+	dart analyze companion --fatal-infos
+	dart run companion/test/server_test.dart
+	dart run companion/test/stdio_test.dart
+	dart run companion/test/static_host_test.dart
+	dart run companion/test/session_test.dart
+	dart run companion/test/process_group_test.dart
+	dart run companion/test/process_runner_test.dart
+	dart run companion/test/private_file_test.dart
+	dart run companion/test/cli_test.dart
+	dart run companion/test/uncertainty_test.dart
+	dart run companion/test/stdio_sessions_test.dart
+	dart run companion/test/example_playground_test.dart
+## companion.build   Bundle the current-host companion and credential-free web build
+companion.build: build.public
+	dart run tool/build_companion.dart --web-root build/publish-web
 ## build             Build complete versioned release PWA for Dart host
 build:
 	dart run tool/build.dart
@@ -124,3 +146,24 @@ tls.check:
 ## tls.down          Stop the TLS-enabled project container
 tls.down:
 	TLS=1 deploy/scripts/app.sh down
+
+.PHONY: version.check version.sync pwa.verify release.package security.report
+## version.check     Check plain SemVer identity across app, companion and web pages
+version.check:
+	dart run tool/release_version.dart --check
+## version.sync      Synchronize identities from the root pubspec version
+version.sync:
+	dart run tool/release_version.dart --sync
+## pwa.verify        Exercise the worker install, corruption and legacy cache migration
+pwa.verify:
+	node --test test/shared/pwa_worker_test.mjs
+## release.package   Build verified versioned web and current-host companion archives
+release.package: companion.build
+	dart run tool/package_web.dart build/publish-web
+## security.report   Query free OSV vulnerability data and write package/SBOM reports
+security.report:
+	mkdir -p build/reports
+	flutter pub deps --json > build/reports/pub-deps.json
+	dart pub deps --json -C companion > build/reports/companion-deps.json
+	flutter pub outdated --json > build/reports/pub-outdated.json
+	dart run tool/security_report.dart build/reports/pub-deps.json build/reports/companion-deps.json

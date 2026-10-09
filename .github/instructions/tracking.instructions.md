@@ -1,6 +1,6 @@
 ---
 applyTo: '**'
-description: Mandatory end-of-turn tracking + staging gate. Always applied.
+description: Mandatory tracking, staging and guarded work-branch publication gate. Always applied.
 ---
 
 # 📝 Tracking is a MANDATORY end-of-turn gate — not optional
@@ -11,7 +11,7 @@ The long form (state machine, forbidden git ops) lives in [`AGENTS.md`](../../AG
 ## The gate
 
 **When the coordinating parent completes an authorized slice with real changes
-and passing gates, it MUST do both of these before handing control back:**
+and passing gates, it MUST complete these steps before handing control back:**
 
 Delegated agents return evidence to the parent without duplicate tracking or
 staging. Failed gates enter AGENTS.md §5a recovery first; blocked or reverted
@@ -36,13 +36,17 @@ work follows the corresponding terminal state in AGENTS.md §2.
 
 2. **Stage the work**: run `git add -A`.
 
-Then STOP. Do **not** `git commit` or `git push` — the human runs `make git`.
+3. **Publish the validated work branch**: inspect `make git.dry`, then run
+   `make git` and open/update the appropriate PR. Stop at staging only when the
+   user explicitly requested a local-only handoff. GitHub Copilot cloud may
+   publish its assigned platform branch under AGENTS.md §2. Never write directly
+   to `main`/`develop` or bypass review, required checks or branch protection.
 
 ## Non-negotiable
 
 - **Never end a turn with a modified working tree that has no matching pending
   tracking row.** `make git` refuses a dirty tree with no pending row, so a
-  missing row silently blocks the human's next commit — that is the exact
+  missing row blocks the next guarded commit — that is the exact
   failure this file exists to prevent.
 - **Do not batch or defer.** Append the row for a slice of work when that slice
   is done, not "later". If you made several unrelated changes, prefer one row
@@ -51,5 +55,6 @@ Then STOP. Do **not** `git commit` or `git push` — the human runs `make git`.
 - If a gate failed and you reverted, append an `--action=revert --status=failed`
   row instead — never leave the change untracked.
 
-Treat "did I append the tracking row and `git add -A`?" as the last checklist
-item of every turn, exactly like running tests before declaring done.
+Check tracking, the reviewed staging set and the actual publication outcome
+before declaring done. Report the commit/PR and any remaining review/release
+gate; a published work branch is not a merged release.

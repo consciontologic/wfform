@@ -1,0 +1,6 @@
+{
+  "port": 8765,
+  "allowedOrigins": ["https://wfform.com"],
+  "tools": [],
+  "mcpServers": []
+}

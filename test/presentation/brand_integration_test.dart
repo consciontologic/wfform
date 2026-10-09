@@ -66,6 +66,9 @@ void main() {
             ),
             findsOneWidget,
           );
+          await tester.ensureVisible(contextButton);
+          await tester.pumpAndSettle();
+          expect(contextButton.hitTestable(), findsOneWidget);
           await tester.tap(contextButton);
           await tester.pumpAndSettle();
           expect(

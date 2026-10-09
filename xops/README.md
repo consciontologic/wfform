@@ -8,7 +8,7 @@ This directory contains the installed agent-workspace operations, implemented wi
 | --- | --- |
 | `xops/agent/` | Bootstrap/recovery, captured command execution and tracking append scripts |
 | `xops/lib/log.sh` | Shared shell logging |
-| `xops/makefile/` | Repository tracking, human git workflow, roadmap and CodeGraph dispatchers |
+| `xops/makefile/` | Repository tracking, guarded Gitflow publication, roadmap and CodeGraph dispatchers |
 | `Makefile` | The single command entry point for repository operations, Flutter checks/build/serve and nginx deployment |
 | `tool/` | Dart release assembly, static serving, PWA fixtures, measurements and repository checks |
 | `deploy/scripts/app.sh` | Container lifecycle and optional local TLS; calls Docker Compose with validated paths |
@@ -22,7 +22,12 @@ The original framework scaffolder is not installed in this project. Do not add a
 
 `make help` lists all targets from the root Makefile. Daily app commands are `make deps`, `format`, `analyze`, `test`, `repository.check`, `verify`, `build` and `serve`. Container commands are `make image`, `up`, `down`, `restart`, `logs`, `check` and `tls.cert`, `tls.up`, `tls.check`, `tls.down`. See [Docker deployment](../docs/guides/DOCKER.md) for credential handling, ports and TLS limits.
 
-Repository operations remain `make track.add`, `track.list`, `roadmap.status`, `git.dry` and the human-only `make git`. Agents do not commit or push; delegated agents return evidence to the coordinating parent, who performs the authorized tracking/staging pass.
+Repository operations remain `make track.add`, `track.list`, `roadmap.status`,
+`git.dry` and `make git`. After verification, the coordinating parent tracks,
+stages, reviews `make git.dry`, then publishes the Gitflow work branch with
+`make git` and opens/updates its PR. Delegated agents return evidence without
+publishing combined work. Never commit/push directly to `main`/`develop` or
+bypass their review/check protections.
 
 ## Runtime helpers
 

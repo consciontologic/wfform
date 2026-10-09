@@ -4,6 +4,8 @@ import '../../config/app_config.dart';
 import '../../shared/diagnostics.dart';
 import '../../shared/transport.dart';
 import '../models/model.dart';
+import '../parameters/request_parameters.dart';
+import '../tools/tools.dart';
 import 'sse.dart';
 import 'chat_metadata.dart';
 
@@ -17,6 +19,9 @@ class ChatDelta {
     this.finishReason,
     this.usage,
     this.failure,
+    this.toolCalls = const [],
+    this.reasoningDetails = const [],
+    this.toolProgress = false,
   });
   final String content;
   final String reasoning;
@@ -26,6 +31,9 @@ class ChatDelta {
   final String? finishReason;
   final ChatUsage? usage;
   final AppFailure? failure;
+  final List<ToolCall> toolCalls;
+  final List<Map<String, dynamic>> reasoningDetails;
+  final bool toolProgress;
 }
 
 /// API adaptation lives here, away from widgets and conversation ownership.
@@ -45,43 +53,62 @@ class ChatApi {
     List<Map<String, dynamic>> messages, {
     bool probe = false,
     int? outputTokens,
-  }) => {
-    'model': model.id,
-    'messages': messages,
-    'stream': true,
-    'provider': {
-      'allow_fallbacks': false,
-      'max_price': {
-        'prompt': '0',
-        'completion': '0',
-        'request': '0',
-        'image': '0',
-        'audio': '0',
-      },
-    },
-    // The default PDF parser can fall back to a paid OCR engine. A native-only
-    // parser is explicit whenever any retained user turn includes a PDF.
-    if (messages.any(
-      (message) =>
-          message['content'] is List &&
-          (message['content'] as List).any(
-            (part) => part is Map && part['type'] == 'file',
-          ),
-    ))
-      'plugins': [
-        {
-          'id': 'file-parser',
-          'pdf': {'engine': 'native'},
+    Map<String, dynamic> parameters = const {},
+    List<Map<String, dynamic>> tools = const [],
+  }) {
+    if (tools.isNotEmpty && !model.supportedParameters.contains('tools')) {
+      throw const FormatException('The selected model does not support tools.');
+    }
+    final values = RequestParameters.toRequest(
+      model,
+      parameters,
+      toolNames: {for (final tool in tools) tool['function']['name'] as String},
+    );
+    return {
+      ...values,
+      'model': model.id,
+      'messages': messages,
+      'stream': true,
+      'provider': {
+        'allow_fallbacks': false,
+        if (tools.isNotEmpty || values.isNotEmpty || outputTokens != null)
+          'require_parameters': true,
+        'max_price': {
+          'prompt': '0',
+          'completion': '0',
+          'request': '0',
+          'image': '0',
+          'audio': '0',
         },
-      ],
-    // A probe must not disable a model's mandatory reasoning. Keep its default
-    // behavior; the small output limit and probe timeout still bound the check.
-    if (model.supportsReasoning && !probe) 'reasoning': {'enabled': true},
-    if (probe && model.supportedParameters.contains('max_tokens'))
-      'max_tokens': 16,
-    if (!probe && model.supportedParameters.contains('max_tokens'))
-      'max_tokens': outputTokens ?? config.maxOutputTokens,
-  };
+      },
+      // The default PDF parser can fall back to a paid OCR engine. A native-only
+      // parser is explicit whenever any retained user turn includes a PDF.
+      if (messages.any(
+        (message) =>
+            message['content'] is List &&
+            (message['content'] as List).any(
+              (part) => part is Map && part['type'] == 'file',
+            ),
+      ))
+        'plugins': [
+          {
+            'id': 'file-parser',
+            'pdf': {'engine': 'native'},
+          },
+        ],
+      // A probe must not disable a model's mandatory reasoning. Keep its default
+      // behavior; the small output limit and probe timeout still bound the check.
+      if (tools.isNotEmpty && !probe) 'tools': tools,
+      if (probe && model.supportedParameters.contains('max_tokens'))
+        'max_tokens': 16,
+      if (!probe &&
+          outputTokens != null &&
+          !values.containsKey('max_tokens') &&
+          !values.containsKey('max_completion_tokens') &&
+          model.supportedParameters.contains('max_tokens'))
+        'max_tokens': outputTokens,
+    };
+  }
 
   Stream<ChatDelta> stream(
     FreeModel model,
@@ -89,6 +116,8 @@ class ChatApi {
     required CancelToken cancel,
     bool probe = false,
     int? outputTokens,
+    Map<String, dynamic> parameters = const {},
+    List<Map<String, dynamic>> tools = const [],
     void Function(int status, String? requestId)? onResponse,
     void Function(Map<String, String> headers)? onHeaders,
     void Function()? onDispatch,
@@ -101,6 +130,8 @@ class ChatApi {
       cancel: requestCancel,
       probe: probe,
       outputTokens: outputTokens,
+      parameters: parameters,
+      tools: tools,
       onResponse: onResponse,
       onHeaders: onHeaders,
       onDispatch: onDispatch,
@@ -114,7 +145,9 @@ class ChatApi {
       idleTimeout: probe ? config.probeTimeout : config.streamIdleTimeout,
       overallTimeout: probe ? config.probeTimeout : config.streamOverallTimeout,
       isProgress: (delta) =>
-          delta.content.isNotEmpty || delta.reasoning.isNotEmpty,
+          delta.content.isNotEmpty ||
+          delta.reasoning.isNotEmpty ||
+          delta.toolProgress,
       onDispose: () {
         unlink();
         requestCancel.cancel();
@@ -130,6 +163,8 @@ class ChatApi {
     required CancelToken cancel,
     bool probe = false,
     int? outputTokens,
+    Map<String, dynamic> parameters = const {},
+    List<Map<String, dynamic>> tools = const [],
     void Function(int status, String? requestId)? onResponse,
     void Function(Map<String, String> headers)? onHeaders,
     void Function()? onDispatch,
@@ -152,7 +187,14 @@ class ChatApi {
       Uri.parse('${config.apiBaseUrl}/chat/completions'),
       headers: headers,
       body: jsonEncode(
-        requestBody(model, messages, probe: probe, outputTokens: outputTokens),
+        requestBody(
+          model,
+          messages,
+          probe: probe,
+          outputTokens: outputTokens,
+          parameters: parameters,
+          tools: tools,
+        ),
       ),
       timeout: probe ? config.probeTimeout : config.streamOverallTimeout,
       cancel: cancel,
@@ -194,6 +236,8 @@ class ChatApi {
     var total = 0;
     String? finishReason;
     ChatUsage? usage;
+    final toolCalls = ToolCallAccumulator();
+    final reasoningDetails = <Map<String, dynamic>>[];
     await for (final event in decodeSse(
       response.body,
       cancel: cancel,
@@ -201,7 +245,7 @@ class ChatApi {
     )) {
       try {
         if (event == '[DONE]') {
-          if (!received) {
+          if (!received && !toolCalls.isNotEmpty) {
             throw AppFailure(
               FailureKind.stream,
               'The API ended the response without any text or reasoning.',
@@ -211,9 +255,12 @@ class ChatApi {
               provider: provider,
             );
           }
+          final calls = toolCalls.finish();
           cancel.cancel();
           yield ChatDelta(
             done: true,
+            toolCalls: calls,
+            reasoningDetails: List.unmodifiable(reasoningDetails),
             provider: provider,
             requestId: requestId,
             finishReason: finishReason,
@@ -289,6 +336,29 @@ class ChatApi {
           delta['reasoning'] ?? delta['reasoning_content'],
           'SSE.data.choices[0].delta.reasoning',
         );
+        final fragments = delta['tool_calls'];
+        if (fragments != null &&
+            (fragments is! List || fragments.isNotEmpty) &&
+            (probe || tools.isEmpty || parameters['tool_choice'] == 'none')) {
+          throw const AppFailure(
+            FailureKind.schema,
+            'The provider requested tools although no tool calls were enabled for this request. Nothing was executed.',
+          );
+        }
+        toolCalls.add(fragments);
+        if (delta['reasoning_details'] != null) {
+          final details = delta['reasoning_details'];
+          if (details is! List ||
+              details.any((detail) => detail is! Map<String, dynamic>)) {
+            throw _schema(
+              'SSE.data.reasoning_details',
+              'array of objects',
+              details,
+            );
+          }
+          reasoningDetails.addAll(details.cast<Map<String, dynamic>>());
+          total += jsonEncode(details).length;
+        }
         // Prefer the plain representation to avoid displaying duplicated reasoning
         // when a provider emits both legacy and structured fields in one delta.
         if (reasoning.isEmpty && delta['reasoning_details'] != null) {
@@ -332,6 +402,7 @@ class ChatApi {
         yield ChatDelta(
           content: content,
           reasoning: reasoning,
+          toolProgress: delta['tool_calls'] != null,
           provider: provider,
           requestId: requestId,
           finishReason: finishReason,

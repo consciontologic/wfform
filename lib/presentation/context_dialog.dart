@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'selectable_surface.dart';
 import '../app/studio_state.dart';
 import 'brand_mark.dart';
@@ -71,20 +70,20 @@ class _ContextDialogState extends State<_ContextDialog> {
                 items: [
                   const DropdownMenuItem(
                     value: 0,
-                    child: _CopyableOption('Entire conversation'),
+                    child: _ContextOption('Entire conversation'),
                   ),
                   for (var i = 1; i < messages.length; i++)
                     if (messages[i].role == 'user')
                       DropdownMenuItem(
                         value: i,
-                        child: _CopyableOption(
+                        child: _ContextOption(
                           'Message ${i + 1}: ${messages[i].content.isEmpty ? 'Attachment' : messages[i].content}',
                         ),
                       ),
                   if (messages.isNotEmpty)
                     DropdownMenuItem(
                       value: messages.length,
-                      child: const _CopyableOption('Next message only'),
+                      child: const _ContextOption('Next message only'),
                     ),
                 ],
                 onChanged: state.chat.busy
@@ -167,23 +166,14 @@ class _ContextDialogState extends State<_ContextDialog> {
   }
 }
 
-/// Dropdown popup entries own their tap gesture; an inner SelectionArea would
-/// consume it and prevent choosing an option. Keep the usual selection action
-/// and expose an independent copy action for its complete (possibly clipped) text.
-class _CopyableOption extends StatelessWidget {
-  const _CopyableOption(this.text);
+/// Keep dropdown choices concise; complete messages remain selectable in chat.
+class _ContextOption extends StatelessWidget {
+  const _ContextOption(this.text);
   final String text;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis)),
-      SelectableIconButton(
-        tooltip:
-            'Copy option: ${text.length > 80 ? '${text.substring(0, 80)}…' : text}',
-        onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-        icon: const Icon(Icons.copy, size: 16),
-      ),
-    ],
+  Widget build(BuildContext context) => SelectableTooltip(
+    message: text,
+    child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
   );
 }

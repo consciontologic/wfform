@@ -1,6 +1,6 @@
 ---
 agent: agent
-description: Execute a plan end-to-end. Drains every checklist bullet, ships tests with code, ends in staged / reverted / no-op / blocked.
+description: Execute a plan end-to-end with tests and guarded Gitflow publication; terminal states follow AGENTS.md.
 ---
 
 # Implement a plan
@@ -143,12 +143,13 @@ the scope is not complete until every bullet is `[x]`.
 
 ## Terminal states
 
-Report exactly one. **`staged` only reports when the ENTIRE requested scope —
-every targeted phase — is complete.**
+Report exactly one under AGENTS.md §2. **Success requires the ENTIRE requested
+scope — every targeted phase — to be complete.**
 
-- **`staged`** — **every `[ ]` bullet in every targeted phase is now `[x]`, each phase passed the reviewer → verifier gate, gates green, tracking rows appended, ROADMAP ticked + status snapshot updated, `git add -A` clean.** Report `run_id`s, file list, and the ticked box count. This is the **only success state**.
+- **`published`** — every requested bullet is `[x]`, each phase passed review/verification, tracking and ROADMAP are current, and the coordinating parent inspected the staging set and `make git.dry`, ran `make git` on the validated work branch, and opened/updated its PR. Report `run_id`s, commit, PR and remaining review/release gates. Never commit/push directly to `main`/`develop` or bypass their protections.
+- **`staged`** — the same scope and verification gates are complete, tracking is appended and changes are staged, but the user explicitly requested a local-only handoff. Report `run_id`s, file list and ticked box count. Delegated agents return evidence to their parent without publishing combined work.
 - **`reverted`** — a bullet failed, could not be fixed within the rules, and the user declined to unblock it. Append `action=revert, status=failed`. Undo only this task's isolated edits; preserve all unrelated work. *Rare; most failures are fixed within the loop.*
 - **`no-op`** — `git status -s` was already clean and no edit was needed (only for a trivial single-file plan, never for a phase or ROADMAP scope).
 - **`blocked`** — a documented **real** blocker (a decision only the human can make, scope outside the allow-list, a gate you cannot diagnose within the rules) **or** an involuntary interruption. Write `docs/tracking/state/checkpoint.json` + session memory + an `action=block` tracking row. *The next session resumes from the checkpoint and keeps draining.*
 
-**Not states:** "I'll let you review and commit", "partial completion", "token / context limits", "phase N done — awaiting go-ahead for N+1". None of these end the turn. Only `staged` (whole scope done), `reverted` (fatal error, user opt-out), `no-op` (nothing to do), or `blocked` (real blocker / involuntary interruption, checkpoint written).
+**Not states:** "I'll let you review and commit", "partial completion", "token / context limits", "phase N done — awaiting go-ahead for N+1". A published branch awaiting required review is not a merged release; report the actual remaining gate without bypassing it.

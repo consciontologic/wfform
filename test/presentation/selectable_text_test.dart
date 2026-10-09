@@ -269,7 +269,7 @@ void main() {
   );
 
   testWidgets(
-    'context option copy preserves full text and native selection at narrow 200 percent scale',
+    'context choices keep full text available without copy clutter at narrow 200 percent scale',
     (tester) async {
       final h = fixture.Harness();
       h.state.setTextScale(2);
@@ -297,11 +297,11 @@ void main() {
       await tester.tap(find.byType(DropdownButtonFormField<int>));
       await tester.pumpAndSettle();
       final label = 'Message 3: $question';
-      final hint = 'Copy option: ${label.substring(0, 80)}…';
-      await tester.ensureVisible(find.byTooltip(hint).last);
-      await tester.tap(find.byTooltip(hint).last);
-      await tester.pumpAndSettle();
-      expect(copied, label);
+      expect(find.byTooltip(label), findsWidgets);
+      expect(
+        find.byTooltip('Copy option: ${label.substring(0, 80)}…'),
+        findsNothing,
+      );
       expect(h.state.chat.contextStartIndex, 0);
       await tester.tap(find.text(label).last);
       await tester.pumpAndSettle();

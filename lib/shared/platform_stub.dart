@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'platform.dart';
 
 LocalStore createStore() => MemoryStore();
@@ -5,6 +6,9 @@ LocalStore createSessionStore() => MemoryStore();
 PlatformBridge createBridge() => StubPlatformBridge();
 
 class StubPlatformBridge extends PlatformBridge {
+  @override
+  bool get toolsAvailable =>
+      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
   @override
   bool get online => true;
   @override

@@ -17,10 +17,15 @@ Default field choices (override if the work is different):
 - `--summary` must follow Conventional Commits: `type(scope): description`
 - `--refs` semi-colon-separated file paths and any issue / PR / ADR links
 
-After appending, run `git add -A` if there are unstaged changes. Do **not**
-`git commit` or `git push` — that is the human's job via `make git`.
+After appending, run `git add -A` if there are unstaged changes. Once the full
+implementation, review and verification gates pass, the coordinating parent
+inspects `make git.dry`, publishes the validated Gitflow work branch with
+`make git`, and opens/updates its PR under AGENTS.md §2. This tracking command
+alone does not establish passing gates. Never commit/push directly to
+`main`/`develop` or bypass protection.
 
 Report:
 - `run_id` and the row contents (one line).
 - The list of staged files (or "no diff to stage" if none).
 - Any tests run with `passed / failed` counts.
+- The published commit/PR, when publication has completed.

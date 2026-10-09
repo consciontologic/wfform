@@ -137,12 +137,9 @@ void publishFault(Directory fixture, String variant, String fault) {
     throw ArgumentError('Unknown static fixture fault.');
   }
   final release = fixtureRelease(fixture, variant);
-  final directory = Directory(
-    '${fixture.path}/host/__releases/${release.version}',
-  );
-  if (directory.existsSync()) {
+  if (state['release'] == release.version) {
     throw StateError(
-      'This fixture revision was already published; repair it or prepare a new fixture.',
+      'This revision was already published; choose another variant.',
     );
   }
   publishFixtureRelease(fixture, release, fault: fault);
@@ -165,35 +162,20 @@ void publishFixtureRelease(
   final host = Directory('${fixture.path}/host')..createSync();
   try {
     publishRelease(release, stage);
-    final broken = File(
-      '${stage.path}/__releases/${release.version}/main.dart.js',
-    );
+    final broken = File('${stage.path}/main.dart.js');
     if (fault == 'missing') {
       broken.deleteSync();
     }
     if (fault == 'corrupt') {
       broken.writeAsStringSync('/* deliberately corrupt static fixture */');
     }
-    final versions = Directory('${host.path}/__releases')..createSync();
-    Directory(
-      '${stage.path}/__releases/${release.version}',
-    ).renameSync('${versions.path}/${release.version}');
-    for (final entry in release.assets.entries.where(
-      (entry) => entry.key != 'index.html',
-    )) {
-      writeAtomic(File('${host.path}/${entry.key}'), entry.value);
-    }
-    writeAtomic(
-      File('${host.path}/release.json'),
-      utf8.encode(jsonEncode(release.manifest)),
-    );
-    writeAtomic(File('${host.path}/index.html'), release.assets['index.html']!);
-    writeAtomic(
-      File('${host.path}/service_worker.js'),
-      utf8.encode(release.worker),
-    );
+    host.deleteSync(recursive: true);
+    stage.renameSync(host.path);
+    File('${host.path}/config/local.json')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync('{"apiKey":""}');
   } finally {
-    stage.deleteSync(recursive: true);
+    if (stage.existsSync()) stage.deleteSync(recursive: true);
   }
 }
 
@@ -209,7 +191,7 @@ void repairFixture(Directory fixture) {
     );
   }
   writeAtomic(
-    File('${fixture.path}/host/__releases/${release.version}/main.dart.js'),
+    File('${fixture.path}/host/main.dart.js'),
     release.assets['main.dart.js']!,
   );
   state['fault'] = null;

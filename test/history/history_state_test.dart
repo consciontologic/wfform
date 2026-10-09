@@ -107,6 +107,59 @@ class ReadFailRepository extends MemoryHistoryRepository {
 }
 
 void main() {
+  test(
+    'explicit settings on a blank composer persist as a draft across reload',
+    () async {
+      for (final parametersOnly in [true, false]) {
+        final h = HistoryHarness();
+        await h.initialize();
+        final id = h.state.activeConversationId;
+        if (parametersOnly) {
+          expect(
+            h.state.chat.setRequestParameters({
+              'temperature': 0,
+              'logprobs': false,
+            }),
+            true,
+          );
+        } else {
+          expect(h.state.chat.setEnabledTools({'fixture_read'}), true);
+        }
+        expect(h.state.draft, isEmpty);
+        expect(h.state.chat.messages, isEmpty);
+        expect(await h.state.flushHistory(), true);
+        expect(h.repo.records, hasLength(1));
+        expect(h.state.history.single.isDraft, true);
+        h.state.dispose();
+
+        final restored = HistoryHarness(
+          repository: h.repo,
+          preferences: h.store,
+        );
+        addTearDown(restored.state.dispose);
+        await restored.initialize();
+        expect(restored.state.activeConversationId, id);
+        expect(
+          restored.state.chat.requestParameters,
+          parametersOnly ? {'temperature': 0, 'logprobs': false} : isEmpty,
+        );
+        expect(
+          restored.state.chat.enabledTools,
+          parametersOnly ? isEmpty : {'fixture_read'},
+        );
+        expect(restored.state.toolConnections.registry.connections, isEmpty);
+        expect(
+          restored.transport.requests.every(
+            (request) => request.method == 'GET',
+          ),
+          true,
+        );
+        expect(restored.state.draft, isEmpty);
+        expect(restored.state.history.single.isDraft, true);
+      }
+    },
+  );
+
   testWidgets('failed startup read offers row recovery, not a no-op save', (
     tester,
   ) async {

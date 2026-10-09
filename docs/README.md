@@ -1,6 +1,6 @@
 # wfform documentation
 
-Start with the [application README](../README.md) for a quick start and the [setup guide](guides/README.md) for configuration and optional checks. This index separates implemented project contracts, active work, historical evidence and reusable agent-framework references.
+Start with the [application README](../README.md) to chat, the [simple tools guide](tools.md) to connect an MCP server or local program, and the [setup guide](guides/README.md) for development configuration and optional checks. This index separates implemented project contracts, active work, historical evidence and reusable agent-framework references.
 
 ## Application contracts
 
@@ -8,6 +8,8 @@ Start with the [application README](../README.md) for a quick start and the [set
 |---|---|
 | [Catalog](catalog.md) | Structured discovery, free-price eligibility, unresolved prices, quarantine, refresh/cache and selection |
 | [Chat and health](chat.md) | Request/streaming behavior, context/output budgets, health, allowance and failures |
+| [Tools quick start](tools.md) | Plain-language examples for chat, MCP, local programs, approval, reconnecting and parameters |
+| [wfformcomp](wfformcomp.md) | Optional local command/MCP companion and bundled web hosting |
 | [Multimodal input](multimodal.md) | Supported media, capability/price guards, formats and provider limits |
 | [File rendering](file-rendering.md) | Local document/source previews, Markdown/code rendering and text-file handling |
 | [History](history.md) | Persistence, migration, archive/restore/delete, export/import and conflicts |
@@ -34,3 +36,9 @@ Start with the [application README](../README.md) for a quick start and the [set
 | [xops](../xops/README.md) | Shell/Python repository operations, separate from Flutter runtime |
 
 The documents above describe this project. Update the owning document when a contract changes. Historical verification counts retain their original date and scope; a new build needs new evidence.
+
+## 🌱 Development
+
+- [Gitflow and Copilot handoff](guides/GITFLOW.md)
+- [Example MCP and companion playground](../examples/tools_playground/README.md)
+- [Release notes](../CHANGELOG.md)

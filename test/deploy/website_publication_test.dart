@@ -38,6 +38,7 @@ void main() {
     // Format-1 deployments before 0.1.2 owned both these exact paths.
     for (final path in ['github-mark.svg', immutable]) {
       final file = File('${target.path}/$path')
+        ..parent.createSync(recursive: true)
         ..writeAsStringSync('<svg>previous artwork</svg>');
       (previous['files'] as Map<String, dynamic>)[path] = sha256(
         file.readAsBytesSync(),
@@ -95,7 +96,7 @@ void main() {
         File(
           '${target.path}/__releases/${prior.version}/index.html',
         ).existsSync(),
-        isTrue,
+        isFalse,
       );
       expect(prepareWebsite(source, target).changedPaths, isEmpty);
     });
@@ -155,41 +156,30 @@ void main() {
     expect(File('${target.path}/index.html').readAsStringSync(), originalIndex);
   });
 
-  test(
-    'preserves unmanaged files and old immutable assets, removes owned aliases',
-    () {
-      Directory('${target.path}/.git').createSync();
-      File('${target.path}/.git/config').writeAsStringSync('git metadata');
-      Directory('${target.path}/docs').createSync();
-      File('${target.path}/docs/manual.md').writeAsStringSync('manual');
-      final first = release('first', obsolete: true);
-      prepareWebsite(source, target);
-      final second = release('second');
-      final changed = prepareWebsite(source, target).changedPaths;
-      expect(changed, contains('assets/old.txt'));
-      expect(File('${target.path}/assets/old.txt').existsSync(), isFalse);
-      expect(
-        File(
-          '${target.path}/__releases/${first.version}/assets/old.txt',
-        ).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(
-          '${target.path}/__releases/${second.version}/index.html',
-        ).existsSync(),
-        isTrue,
-      );
-      expect(
-        File('${target.path}/.git/config').readAsStringSync(),
-        'git metadata',
-      );
-      expect(
-        File('${target.path}/docs/manual.md').readAsStringSync(),
-        'manual',
-      );
-    },
-  );
+  test('preserves unmanaged files and removes obsolete owned assets', () {
+    Directory('${target.path}/.git').createSync();
+    File('${target.path}/.git/config').writeAsStringSync('git metadata');
+    Directory('${target.path}/docs').createSync();
+    File('${target.path}/docs/manual.md').writeAsStringSync('manual');
+    final first = release('first', obsolete: true);
+    prepareWebsite(source, target);
+    release('second');
+    final changed = prepareWebsite(source, target).changedPaths;
+    expect(changed, contains('assets/old.txt'));
+    expect(File('${target.path}/assets/old.txt').existsSync(), isFalse);
+    expect(
+      File(
+        '${target.path}/__releases/${first.version}/assets/old.txt',
+      ).existsSync(),
+      isFalse,
+    );
+    expect(File('${target.path}/index.html').existsSync(), isTrue);
+    expect(
+      File('${target.path}/.git/config').readAsStringSync(),
+      'git metadata',
+    );
+    expect(File('${target.path}/docs/manual.md').readAsStringSync(), 'manual');
+  });
 
   for (final alreadyRemoved in [false, true]) {
     test('migrates retired owned artwork, root removed: $alreadyRemoved', () {
@@ -203,10 +193,7 @@ void main() {
       final result = prepareWebsite(source, target);
       expect(root.existsSync(), isFalse);
       expect(result.changedPaths.contains('github-mark.svg'), !alreadyRemoved);
-      expect(
-        File('${target.path}/$immutable').readAsStringSync(),
-        '<svg>previous artwork</svg>',
-      );
+      expect(File('${target.path}/$immutable').existsSync(), isFalse);
       expect(
         File(
           '${target.path}/__releases/${next.version}/github-mark.svg',
@@ -221,7 +208,8 @@ void main() {
               )
               as Map;
       expect(ownership['files'] as Map, isNot(contains('github-mark.svg')));
-      expect(ownership['files'] as Map, contains(immutable));
+      expect(ownership['files'] as Map, isNot(contains(immutable)));
+      expect(Directory('${target.path}/__releases').existsSync(), isFalse);
       expect(prepareWebsite(source, target).changedPaths, isEmpty);
     });
   }
@@ -306,16 +294,15 @@ void main() {
     }
   });
 
-  test('a missing retired immutable asset still blocks publication', () {
+  test('missing retired assets do not block the flat migration', () {
     final prior = release('prior');
     prepareWebsite(source, target);
     final immutable = addPreviouslyOwnedArtwork(prior);
     File('${target.path}/$immutable').deleteSync();
-    final index = File('${target.path}/index.html').readAsStringSync();
     release('next');
-    expect(() => prepareWebsite(source, target), throwsStateError);
-    expect(File('${target.path}/index.html').readAsStringSync(), index);
-    expect(File('${target.path}/github-mark.svg').existsSync(), isTrue);
+    prepareWebsite(source, target);
+    expect(File('${target.path}/github-mark.svg').existsSync(), isFalse);
+    expect(Directory('${target.path}/__releases').existsSync(), isFalse);
   });
 
   test('rejects local configuration before modifying destination', () {
@@ -418,6 +405,26 @@ void main() {
       '${target.path}/index.html',
     ).createSync('${scratch.absolute.path}/outside');
     expect(() => prepareWebsite(source, target), throwsStateError);
+  });
+
+  test('unowned legacy symlinks fail before any publication mutation', () {
+    release('next');
+    final external = Directory('${scratch.path}/external')..createSync();
+    final keep = Directory('${external.path}/keep')..createSync();
+    Link('${target.path}/__releases').createSync(external.absolute.path);
+    expect(() => prepareWebsite(source, target), throwsStateError);
+    expect(keep.existsSync(), isTrue);
+    expect(File('${target.path}/index.html').existsSync(), isFalse);
+  });
+
+  test('flat migration preserves unmanaged empty legacy directories', () {
+    final prior = release('prior');
+    prepareWebsite(source, target);
+    addPreviouslyOwnedArtwork(prior);
+    final keep = Directory('${target.path}/__releases/unmanaged')..createSync();
+    release('next');
+    prepareWebsite(source, target);
+    expect(keep.existsSync(), isTrue);
   });
 
   test('ignores source files outside the release allowlist', () {
