@@ -614,13 +614,22 @@ class CompanionServer {
       return;
     }
     if (request.contentLength > _maxBodyBytes) {
-      response.statusCode = 413;
+      // Subscribe without consuming an unbounded rejected upload. Otherwise
+      // HttpResponse.close automatically starts draining an unread request.
+      final body = request.listen(null)..pause();
+      try {
+        await _rejectOversized(response);
+      } finally {
+        await body.cancel();
+      }
       return;
     }
     final bytes = <int>[];
     await for (final part in request.timeout(const Duration(seconds: 10))) {
       if (bytes.length + part.length > _maxBodyBytes) {
-        response.statusCode = 413;
+        // Leaving await-for cancels the request stream and closes its socket.
+        // Send the rejection before that cancellation can discard its headers.
+        await _rejectOversized(response);
         return;
       }
       bytes.addAll(part);
@@ -734,6 +743,13 @@ class CompanionServer {
         return;
     }
     _write(request, {'jsonrpc': '2.0', 'id': id, 'result': result});
+  }
+
+  Future<void> _rejectOversized(HttpResponse response) async {
+    response.statusCode = 413;
+    response.contentLength = 0;
+    response.persistentConnection = false;
+    await response.close().timeout(const Duration(seconds: 1));
   }
 
   void _write(HttpRequest request, Map<String, Object?> body) {

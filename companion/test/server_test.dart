@@ -8,6 +8,42 @@ void check(bool condition, String message) {
   if (!condition) throw StateError(message);
 }
 
+Future<void> checkUnfinishedOversizedRequest(
+  Uri endpoint,
+  String token, {
+  required bool chunked,
+}) async {
+  final socket = await Socket.connect(endpoint.host, endpoint.port);
+  final response = utf8.decoder
+      .bind(socket)
+      .transform(const LineSplitter())
+      .first
+      .then<Object>((line) => line, onError: (Object error) => error);
+  try {
+    socket.write(
+      'POST /mcp HTTP/1.1\r\n'
+      'Host: ${endpoint.authority}\r\n'
+      'Authorization: Bearer $token\r\n'
+      'Content-Type: application/json\r\n'
+      '${chunked ? 'Transfer-Encoding: chunked' : 'Content-Length: 270000'}\r\n'
+      '\r\n',
+    );
+    if (chunked) {
+      // Cross the limit without finishing the body. Cancellation must not
+      // destroy the connection before the server sends its rejection.
+      socket.write('40001\r\n${'a' * 262145}\r\n');
+    }
+    await socket.flush();
+    final status = await response.timeout(const Duration(seconds: 3));
+    check(
+      status == 'HTTP/1.1 413 Request Entity Too Large',
+      '${chunked ? 'Chunked' : 'Declared'} oversized request lost its 413: $status',
+    );
+  } finally {
+    socket.destroy();
+  }
+}
+
 Future<void> main() async {
   void pass(String title) => stdout.writeln('PASS $title');
 
@@ -121,6 +157,17 @@ Future<void> main() async {
   }
 
   try {
+    await checkUnfinishedOversizedRequest(
+      server.endpoint,
+      token,
+      chunked: true,
+    );
+    await checkUnfinishedOversizedRequest(
+      server.endpoint,
+      token,
+      chunked: false,
+    );
+    pass('unfinished oversized uploads receive 413 before client EOF');
     for (final auth in <String?>[null, 'wrong-token']) {
       check(
         (await request(

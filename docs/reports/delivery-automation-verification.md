@@ -224,6 +224,19 @@ independent review approved the narrow environment exception.
 The standalone playground test also uses this Windows compatibility environment
 when starting its fixture directly, preserving the same no-inheritance contract.
 
+The next [native Windows job](https://github.com/consciontologic/wfform/actions/runs/37959130905/job/113918124200)
+confirmed process launch, literal argv, deadlines, output bounds and cancellation.
+It then exposed a separate oversized HTTP upload failure. The body-limit branch
+returned from `await for`, cancelling Dart's request parser/socket before the
+outer handler could finish its 413 response. The correction must send the bounded
+rejection before cancellation, without draining an unbounded upload or weakening
+the existing size-limit assertion. A still-open chunked upload regression covers
+this ordering independently of platform timing.
+Both declared-length and chunked unfinished uploads now pass with all 11
+companion suites and analysis in
+`/tmp/agent-runs/chunked-overflow-companion-final--20261009T163405Z-519242.log`.
+Independent review approved the bounded response and cancellation ordering.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

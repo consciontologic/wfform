@@ -51,6 +51,8 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
   The trusted helper keeps its runtime environment while configured tools retain
   explicit environment isolation and literal arguments. Empty Windows tool
   environments use a non-secret compatibility marker to avoid launch errors.
+- 📡 Oversized companion requests receive their HTTP 413 response before the
+  upload stream is cancelled, including on Windows.
 
 ## [0.3.0] - 2026-10-09
 
