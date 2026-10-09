@@ -4,6 +4,8 @@ Reports must state their date, revision/release when known, commands, fixture/li
 
 ## Current application evidence
 
+- [Routine delivery and human release approval](delivery-automation-verification.md): bounded AI delegation, protected PR automation, immutable release recovery and the owner's final production deployment approval; live settings and activation limits are recorded separately from mocked tests.
+
 - [Desktop tools and 1.0.0 delivery](release-100-verification.md): desktop-only tools, concise copy controls, runnable MCP playground, Gitflow and free security reports, flat PWA update and Linux packaging; remote Copilot/Windows/public release gates remain explicit.
 
 - [Open Cradle branding](open-cradle-branding-verification.md): approved open wrapper/AI mark, ten companion glyphs, 40 fully transparent exports and light/dark artwork with no backing plates; 617 Flutter tests, all ten companion suites, public build and actual local PWA update/browser checks passed. Public publication and native builds remain separate.

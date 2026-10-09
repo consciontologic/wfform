@@ -1,0 +1,115 @@
+# 🤖 Routine delivery and human release approval
+
+Date: 2026-10-09. Version: 1.0.0. Bootstrap branch:
+`codex/feature/delivery-automation`, based on published preparation commit
+`f7966bc9b0bef2dc8c631ab1ef200f730b8ec9e8`. The user explicitly chose the
+production deployment approval model after confirming this is a solo-maintained
+repository. This supersedes the earlier independent human PR review policy.
+
+## Intended delivery
+
+A trusted request starts one explicitly selected Copilot task. Its managed PR
+must pass the actual web, security, Linux and Windows checks. Routine work uses
+native PR merging, with current-head validation and protected-branch checks.
+One additional CI repair is permitted for a managed request; an uncertain task
+submission is recorded and never blindly repeated. Release preparation and
+develop back-merges use work branches and PRs.
+
+After promotion to main, the package workflow validates the exact merged source
+and builds/tests both native packages. Its combined publication job waits for
+the owner's **Approve deployment** action. Before any publication it also reads
+GitHub's approval audit for this run, source SHA and production environment.
+Agents never submit this approval. A bypassed environment job without a genuine
+human approval receipt cannot publish through the checked publisher.
+
+Tags and released assets are immutable. Interrupted draft uploads can resume
+using matching artifacts; conflicting content fails closed. The website retains
+its current-main guard. A public package and an updated website are distinct
+outcomes if website publication fails after package publication.
+
+## Live GitHub configuration
+
+Authenticated API writes and read-backs confirmed:
+
+- Repository auto-merge enabled.
+- `main`, `develop`, `release/1.0.0`, and future `release/*` require the four
+  named checks from GitHub Actions app 15368, an up-to-date branch, resolved
+  conversations, and PR integration. Human PR approval count is zero by the
+  user's explicit choice. Administrator enforcement is enabled; force pushes
+  and deletions are disabled.
+- `automation` permits only the main branch and contains
+  `WFFORM_AUTOMATION_TOKEN`. Secret existence is observable; its value and scopes
+  cannot be read back from GitHub's secret store.
+- `production` permits only main and requires the human account
+  `consciontologic`. Self-review prevention is off deliberately so the sole owner
+  can approve a manually initiated recovery run. Its deployment token is now an
+  environment secret, and the repository-wide copy was removed after verifying
+  the environment copy exists.
+- The native environment administrator-bypass flag remains enabled; its setting
+  is not exposed by the documented update API used here. The publisher's actual
+  human-approval audit is an additional mandatory guard, not a claim that the
+  checkbox was disabled.
+- Four `ai:*` intake labels and four matching `work:*` labels exist.
+
+Ignored JSON receipts under `.local/release-100/` record the configuration,
+before-state, secret names only, and read-backs. No token value is committed.
+
+## Verification status
+
+`make verify` passed with 643 Flutter tests (four existing opt-in skips), both
+analyzers, 176 formatted Dart files, eleven companion suites, five Node PWA
+tests, version agreement and repository secret/configuration checks. Evidence:
+`/tmp/agent-runs/delivery-full-verify--20261009T134924Z-384996.log`.
+
+Independent review reproduced and corrected GitHub task database-ID handling,
+automation-token event propagation, isolated back-merge branches, stale branch
+synchronization and release check provenance. Unit tests use fake GitHub
+responses; they do not prove a live approval, release or website deployment.
+Final verification passed all 78 Python ops tests (27 delivery, 18 publication,
+33 existing), the offline strict workflow security audit, shell syntax, JSON/YAML
+parsing, diff hygiene and repository/version checks. A redacted Gitleaks scan of
+the prospective 499-file source snapshot found no leaks. Evidence:
+`/tmp/agent-runs/delivery-final-python--20261009T135336Z-392132.log`,
+`/tmp/agent-runs/delivery-final-zizmor--20261009T135336Z-392133.log`, and
+`/tmp/agent-runs/delivery-final-secrets--20261009T135356Z-392367.log`.
+The protected-head synchronization regression was tested red then green; the
+controller refuses to update a protected work branch directly. CodeGraph sync
+and a live symbol query confirmed the new publication helper is indexed.
+
+## Activation and 1.0.0 limits
+
+Default-branch workflows become active only after the bootstrap changes reach
+main through passing PR checks. Durable credentials must have the documented
+scopes. Native Copilot workflow auto-run is a separate repository setting; the
+owner was given its exact location after secrets were isolated.
+
+The earlier Windows retry at head `4391ae94be5c46e7bc3b45613aecd9f8ceb1ab6f`
+still failed to launch the test program. A second explicitly selected
+GPT-5.3-Codex task completed and produced head
+`01eb553aa8fb57a59547b1faba2e6ae66035a230`; its CI initially required GitHub
+workflow approval. Neither that task's completion nor this automation change
+constitutes successful native Windows execution or a published 1.0.0 release.
+Read-only review of that exact head also found two Dart compile errors in its
+new diagnostic code: `ProcessException.osError` is not a getter (`errorCode` is
+the supported property), and a local `pass()` function is called before its
+declaration. The bootstrap carries a corrected, locally reviewed implementation
+of the narrow Windows launch fix. Only the trusted inert helper inherits its
+parent runtime environment; configured programs keep their explicit environment
+and run without a shell. Regression coverage checks source-runtime selection,
+actual child environment isolation and literal argument forwarding. Native
+Windows CI on this combined PR is still required; the old Copilot head is not
+accepted as passing evidence.
+
+The corrected three-file slice passed the pinned Dart 3.10.9 analyzer, all
+eleven companion suites (22 PASS groups) and all 19 affected Flutter deployment
+tests. A separate review found no remaining blockers. Evidence:
+`/tmp/agent-runs/windows-companion-gate--20261009T140134Z-399449.log` and
+`/tmp/agent-runs/windows-deploy-regression--20261009T140157Z-400685.log`.
+
+## References
+
+- [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)
+- [Native Copilot workflow settings](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings)
+- [Workflow review audit](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run)
+- [Environment restrictions](https://docs.github.com/en/rest/deployments/environments)
+- [Routine setup and recovery](../guides/CI_CD.md)

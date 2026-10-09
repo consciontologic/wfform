@@ -15,34 +15,34 @@ void main() {
       '[Guide](TOOLS.md) [Setup](README.md#setup)',
     );
   });
-  test(
-    'manual builds stay read-only and tag publish requires both native packages',
-    () {
-      final workflow = File(
-        '.github/workflows/companion.yml',
-      ).readAsStringSync();
-      expect(workflow, contains('  workflow_dispatch:'));
-      expect(workflow, contains('permissions:\n  contents: read'));
-      expect(workflow, contains('runs-on: windows-2022'));
-      expect(workflow, contains('needs: [linux, windows]'));
-      expect(
-        workflow,
-        allOf(contains("github.event_name == 'push'"), contains("refs/tags/")),
-      );
-      final commands = workflow
-          .split('  windows:')
-          .last
-          .split('  publish:')
-          .first;
-      expect(commands, contains('Expand-Archive'));
-      expect(commands, contains('WFFORMCOMP_TEST_BINARY'));
-      expect(commands, contains('WFFORMCOMP_TEST_WEB_ROOT'));
-      expect(commands, contains('companion/test/cli_test.dart'));
-      expect(commands, contains('process_group'));
-      expect(commands, contains('private_file'));
-      expect(commands, contains('process_runner'));
-    },
-  );
+  test('release dispatch requires approved main and both native packages', () {
+    final workflow = File('.github/workflows/companion.yml').readAsStringSync();
+    expect(workflow, contains('  workflow_dispatch:'));
+    expect(workflow, contains('permissions:\n  contents: read'));
+    expect(workflow, contains('runs-on: windows-2022'));
+    expect(workflow, contains('needs: [linux, windows]'));
+    expect(
+      workflow,
+      allOf(
+        contains("github.event_name == 'workflow_dispatch'"),
+        contains("github.ref == 'refs/heads/main'"),
+        contains('release_delivery.py publish'),
+        contains('environment: production'),
+      ),
+    );
+    final commands = workflow
+        .split('  windows:')
+        .last
+        .split('  publish:')
+        .first;
+    expect(commands, contains('Expand-Archive'));
+    expect(commands, contains('WFFORMCOMP_TEST_BINARY'));
+    expect(commands, contains('WFFORMCOMP_TEST_WEB_ROOT'));
+    expect(commands, contains('companion/test/cli_test.dart'));
+    expect(commands, contains('process_group'));
+    expect(commands, contains('private_file'));
+    expect(commands, contains('process_runner'));
+  });
   test('native package identity uses Windows exe and zip, Linux tar', () {
     final windows = CompanionPackageTarget('windows', 'x64');
     expect(windows.binaryName, 'wfformcomp-1.0.0-windows-x64.exe');

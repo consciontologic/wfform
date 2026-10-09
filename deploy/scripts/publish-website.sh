@@ -5,11 +5,15 @@ report_status() {
   if [[ -n ${GITHUB_OUTPUT:-} ]]; then printf 'status=%s\n' "$1" >> "$GITHUB_OUTPUT"; fi
 }
 
-if [[ ${GITHUB_ACTIONS:-} != true || ! ${GITHUB_REF:-} =~ ^refs/tags/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || ${GITHUB_EVENT_NAME:-} != push ]]; then
-  echo 'Website publication is only supported by the verified semantic-release GitHub workflow.' >&2
+if [[ ${GITHUB_ACTIONS:-} != true || ${GITHUB_REF:-} != refs/heads/main || ${GITHUB_EVENT_NAME:-} != workflow_dispatch ]]; then
+  echo 'Website publication requires the approved release dispatch on main.' >&2
   exit 1
 fi
-: "${WFFORM_DEPLOY_TOKEN:?Add the WFFORM_DEPLOY_TOKEN Actions secret to the source repository.}"
+if [[ ! ${WFFORM_RELEASE_SHA:-} =~ ^[0-9a-f]{40}$ || ${WFFORM_RELEASE_SHA:-} != "${GITHUB_SHA:-}" || ! ${WFFORM_RELEASE_VERSION:-} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || ! ${WFFORM_RELEASE_PR:-} =~ ^[1-9][0-9]*$ ]]; then
+  echo 'Website publication identity differs from the approved workflow source.' >&2
+  exit 1
+fi
+: "${WFFORM_DEPLOY_TOKEN:?Add WFFORM_DEPLOY_TOKEN to the production environment.}"
 : "${GH_TOKEN:?The source repository read token is required.}"
 : "${GITHUB_SHA:?Missing source revision.}"
 : "${GITHUB_REPOSITORY:?Missing source repository.}"

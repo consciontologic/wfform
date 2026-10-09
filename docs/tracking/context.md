@@ -361,3 +361,13 @@ through `make git`; assigned Copilot cloud tasks use their managed platform
 branches. `main` and `develop` change only through reviewed PRs. An eligible
 independent reviewer supplies required approval, then plain SemVer-tag CI
 publishes after merge; a Copilot PR requester cannot supply its approving review.
+
+## Routine delivery approval policy (2026-10-09)
+
+The user's later choice supersedes the PR-review requirement above: routine PRs
+use required CI and conversation resolution, with zero configured human PR
+approvals. The final release requires the owner's production deployment approval.
+Source main/develop still change only through protected PRs, and administrators
+are now subject to the required checks. See [delivery verification](../reports/delivery-automation-verification.md)
+for actual live settings, test results and bootstrap status. A completed AI task
+or green mocked test must not be reported as a live release.

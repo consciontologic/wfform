@@ -1,0 +1,22 @@
+{
+  "repository": "consciontologic/wfform",
+  "production": "main",
+  "integration": "develop",
+  "production_reviewer": {"login": "consciontologic", "id": 339074048},
+  "checks_app_id": 15368,
+  "checks": {
+    "Web checks": [".github/workflows/web.yml"],
+    "Security checks": [".github/workflows/security.yml", ".github/workflows/companion.yml"],
+    "Linux package": [".github/workflows/companion.yml"],
+    "Windows package": [".github/workflows/companion.yml"]
+  },
+  "workflow_names": ["🌐 Web quality", "🛡️ Free security and package reports", "📦 Packages and release"],
+  "intake_labels": {"ai:feature": "feature", "ai:bugfix": "bugfix", "ai:hotfix": "hotfix", "ai:release": "release"},
+  "max_pull_requests": 30,
+  "max_task_receipts": 10,
+  "max_initial_tasks_per_request": 1,
+  "max_repairs_per_request": 1,
+  "max_repair_submissions_per_run": 1,
+  "release_workflow": "companion.yml",
+  "note": "Only trusted main orchestration runs with credentials. Native GitHub merge requirements remain authoritative. A production environment approval from the eligible human is mandatory for final release. One initial task and at most one diagnosed CI repair use the same explicit model per authorized issue. Uncertain paid task or release dispatch receipts are never automatically retried."
+}

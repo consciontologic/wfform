@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:wfformcomp/process_group.dart';
 import 'package:wfformcomp/wfformcomp.dart';
 
 void check(bool condition, String message) {
@@ -8,7 +9,39 @@ void check(bool condition, String message) {
 }
 
 Future<void> main() async {
+  void pass(String title) => stdout.writeln('PASS $title');
+
   const token = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN';
+  const literal = r'hello; $(touch SHOULD_NOT_EXIST) " && echo injected';
+  final direct = await (() async {
+    try {
+      return await startProgram(Platform.resolvedExecutable, [
+        File('companion/test/command_fixture.dart').absolute.path,
+        'echo',
+        literal,
+      ], environment: {});
+    } on ProcessException catch (error) {
+      throw StateError(
+        'Direct startProgram launch failed: ${error.message} '
+        '(errorCode=${error.errorCode}).',
+      );
+    }
+  })();
+  final directOutput = utf8.decoder.bind(direct.stdout).join();
+  final directErrors = utf8.decoder.bind(direct.stderr).join();
+  try {
+    await direct.stdin.close();
+    final code = await direct.exitCode.timeout(const Duration(seconds: 10));
+    check(code == 0, 'Direct startProgram launch exited with $code.');
+    check((await directErrors).isEmpty, 'Direct startProgram wrote stderr.');
+    check(
+      (jsonDecode(await directOutput) as List).single == literal,
+      'Direct startProgram launch changed argv.',
+    );
+    pass('direct startProgram launch gate and argv forwarding');
+  } finally {
+    stopProgram(direct);
+  }
   final config = CompanionConfig.fromJson({
     'port': 0,
     'allowedOrigins': ['http://localhost:8080'],
@@ -86,7 +119,6 @@ Future<void> main() async {
     return object(jsonDecode(res.body), 'response');
   }
 
-  void pass(String title) => stdout.writeln('PASS $title');
   try {
     for (final auth in <String?>[null, 'wrong-token']) {
       check(
@@ -191,7 +223,6 @@ Future<void> main() async {
     );
     check(extra['isError'] == true, 'Unexpected arguments accepted');
     pass('tool discovery and name/schema validation');
-    const literal = r'hello; $(touch SHOULD_NOT_EXIST) " && echo injected';
     final echoed = object(
       (await rpc(
         'tools/call',
@@ -201,6 +232,11 @@ Future<void> main() async {
         },
       ))['result'],
       'result',
+    );
+    check(
+      echoed['isError'] == false,
+      'Echo tool failed before payload decode: '
+      '${((echoed['content'] as List).single as Map)['text']}',
     );
     final payload =
         jsonDecode(

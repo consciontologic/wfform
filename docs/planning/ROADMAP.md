@@ -31,6 +31,51 @@ Updated 2026-10-09. This is the authoritative current user scope, not a scaffold
 | Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
 | Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
 | Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
+| Routine delivery automation with human release approval | 4 | 2 | Implementation and local verification complete; native Copilot auto-run setup and bootstrap integration remain activation gates |
+
+## Phase 26 — Routine delivery automation with human release approval
+
+Scope ID: delivery-automation. Requested 2026-10-09.
+
+**Goal:** automate routine AI work, PR coordination and verified release delivery,
+while retaining the owner's final production deployment approval.
+
+**Non-goals:** bypassing GitHub reviews/protection, direct source pushes to
+main/develop, storing the temporary test credential, automatic paid-model
+fallback, or claiming unattended operation before its credentials and bootstrap
+PR are installed. The user explicitly chose zero routine human PR reviews and
+one final deployment approval; required checks and conversations stay enforced.
+
+**Touched files:** GitHub delivery/package workflows and policy; xops delivery
+and publication helpers/tests; agent instructions; Gitflow/CI guides and reports.
+This bootstrap branches from the published 1.0.0 preparation commit because
+develop still predates the new delivery system; it integrates through a PR.
+It also carries the reviewed correction to Copilot's Windows launch repair,
+preserving configured-program environment isolation and adding regressions.
+
+**Test plan:** deterministic fake-API regressions for authorization, stale heads,
+required checks, duplicate events/tasks, deployment approval identity, immutable tags/assets,
+release dispatch and back-merge PRs; ops suite, workflow security audit and
+repository checks; live configuration read-back and actual CI, reported apart
+from mocks. Publication remains pending human approval.
+
+- [x] Implement trusted routine PR coordination and bounded explicit-model Copilot delegation, with tests.
+- [x] Automate approved SemVer tagging, rerun-safe package publication and develop back-merge preparation, with tests.
+- [ ] Document and configure credential isolation, native Copilot automation and eligible-human release approval without bypasses.
+- [ ] Review, verify and publish the bootstrap PR; record remaining activation or human approval requirements accurately.
+
+Local verification passed 643 Flutter tests and 78 Python ops tests, companion
+and PWA suites, workflow security and secret scans. GitHub's production reviewer
+and main-only environment credentials are configured and read back. Native
+Copilot auto-run remains an owner setting; see the
+[delivery verification report](../reports/delivery-automation-verification.md).
+
+**Risks:** privileged workflows must never execute unreviewed PR code or consume
+its artifacts; GitHub event suppression requires explicit release dispatch;
+duplicate events must not duplicate paid tasks or overwrite immutable releases.
+The production environment requires the owner as reviewer. A recorded human
+approval for the exact release run must precede publication, including on reruns.
+Durable credentials and bootstrap deployment remain activation requirements.
 
 ## Established application baseline
 

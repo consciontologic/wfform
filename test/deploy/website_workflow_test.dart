@@ -39,16 +39,19 @@ void main() {
     environment = {
       'PATH': '${scratch.path}:${Platform.environment['PATH']}',
       'GITHUB_ACTIONS': 'true',
-      'GITHUB_REF': 'refs/tags/1.0.0',
-      'GITHUB_EVENT_NAME': 'push',
-      'GITHUB_SHA': 'fixture-source-sha',
+      'GITHUB_REF': 'refs/heads/main',
+      'GITHUB_EVENT_NAME': 'workflow_dispatch',
+      'GITHUB_SHA': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      'WFFORM_RELEASE_SHA': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      'WFFORM_RELEASE_VERSION': '1.0.0',
+      'WFFORM_RELEASE_PR': '3',
       'GITHUB_REPOSITORY': 'consciontologic/wfform',
       'WFFORM_DEPLOY_TOKEN': 'fixture-deploy-token',
       'GH_TOKEN': 'fixture-read-token',
       'RUNNER_TEMP': scratch.path,
       'TEST_CALLS': calls.path,
     };
-    await executable('gh', r'echo "${TEST_LATEST_SHA:-fixture-source-sha}"');
+    await executable('gh', r'echo "${TEST_LATEST_SHA:-$GITHUB_SHA}"');
     await executable('dart', r'''
 printf 'dart %s\n' "$*" >> "$TEST_CALLS"
 printf 'index.html\0.wfform-deployment.json\0' > "$5"
@@ -100,7 +103,12 @@ fi
       expect(commands(), contains('prepare_website.dart build/fixture-public'));
       expect(commands(), contains('add --all --force --pathspec-from-file='));
       expect(commands(), contains('--pathspec-file-nul'));
-      expect(commands(), contains('consciontologic/wfform@fixture-source-sha'));
+      expect(
+        commands(),
+        contains(
+          'consciontologic/wfform@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+      );
       expect(RegExp('push origin HEAD:main').allMatches(commands()).length, 1);
       expect(commands(), isNot(contains('fixture-deploy-token')));
       expect(
@@ -126,9 +134,22 @@ fi
     environment['GITHUB_EVENT_NAME'] = 'pull_request';
     expect((await run()).exitCode, 1);
     expect(commands(), isEmpty);
-    environment['GITHUB_EVENT_NAME'] = 'push';
+    environment['GITHUB_EVENT_NAME'] = 'workflow_dispatch';
     environment['TEST_LATEST_SHA'] = 'a-newer-commit';
     expect((await run()).exitCode, 0);
+    expect(commands(), isEmpty);
+  });
+
+  test('manual tags and wrong dispatch revisions cannot publish', () async {
+    environment['GITHUB_REF'] = 'refs/tags/1.0.0';
+    environment['GITHUB_EVENT_NAME'] = 'push';
+    expect((await run()).exitCode, 1);
+    expect(commands(), isEmpty);
+    environment['GITHUB_REF'] = 'refs/heads/main';
+    environment['GITHUB_EVENT_NAME'] = 'workflow_dispatch';
+    environment['WFFORM_RELEASE_SHA'] =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    expect((await run()).exitCode, 1);
     expect(commands(), isEmpty);
   });
 

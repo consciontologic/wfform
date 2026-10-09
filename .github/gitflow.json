@@ -12,7 +12,27 @@
   "tag_prefix": "",
   "required_checks": ["Web checks", "Security checks", "Linux package", "Windows package"],
   "require_pull_request": true,
-  "require_review": true,
+  "require_review": false,
+  "required_approving_review_count": 0,
+  "require_conversation_resolution": true,
   "force_push": false,
-  "note": "Copilot cloud owns copilot/* branches; preserve that platform requirement and encode the Gitflow work kind in its task/PR label and correct base. PR/review protection is enabled for main and develop with administrator bootstrap bypass. Add required CI contexts after these checks exist on GitHub."
+  "automation": {
+    "workflow": "delivery.yml",
+    "trusted_branch": "main",
+    "environment": "automation",
+    "issue_labels": ["ai:feature", "ai:bugfix", "ai:hotfix", "ai:release"],
+    "model_policy": ".github/copilot-model-policy.json",
+    "max_initial_tasks_per_issue": 1,
+    "max_managed_ci_repairs_per_issue": 1,
+    "respect_native_platform_constraints": true,
+    "final_release_approval": "production_environment_required_reviewer",
+    "publication_environment": "production",
+    "publication_reviewer": "consciontologic",
+    "prevent_self_review": false,
+    "administrator_bypass": false,
+    "publication_trigger": "validated_workflow_dispatch_on_main",
+    "back_merge": "pull_request",
+    "overwrite_existing_release_assets": false
+  },
+  "note": "User chose one final production deployment approval on 2026-10-09. main/develop require PRs, resolved conversations and the four named checks with strict updates; configured human PR reviews are zero, native GitHub/Copilot constraints still apply. consciontologic approves production; agents never submit that approval or use bypass. Automation becomes active only after workflows reach main and restricted environments/credentials are configured. This file describes policy; it does not apply GitHub settings."
 }

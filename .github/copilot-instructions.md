@@ -113,5 +113,15 @@ Read [the delivery workflow](../docs/guides/GITFLOW.md) before starting a featur
 hotfix or release. Use the appropriate isolated work branch; keep main/develop
 free of direct implementation. Local coordinating agents publish validated work
 branches through `make git`; delegated agents return evidence without publishing.
-GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
-low-cost model; human review/merge and CI release gates still apply.
+GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2,
+with an explicit low-cost model. Routine delivery submits authorized tasks and
+follows PR/check/release progress. Routine PRs auto-merge only after the four
+required checks, resolved conversations and any native GitHub constraints;
+configured human PR approvals are zero. The sole human release gate is
+**consciontologic** approving the `production` deployment before the combined
+tag/release/website job. Never approve that deployment, call its approval API,
+bypass protection or push source directly to `main`/`develop`.
+Read [CI/CD setup](../docs/guides/CI_CD.md#one-time-automation-setup) for the separate
+Copilot/PR user credential, optional PR-author App and deployment credential.
+Never copy a temporary chat token into a permanent secret or expose privileged
+credentials to a PR checkout.

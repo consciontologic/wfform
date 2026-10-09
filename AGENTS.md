@@ -97,12 +97,25 @@ Gitflow work branches through `make git`; never masquerade as Copilot. Prefer th
 reviewed lowest-cost available model in `.github/copilot-model-policy.json`;
 no Auto or pricier fallback. If Copilot is unavailable, prepare the handoff and
 report that limit honestly.
-Copilot prepares changes, tests and PR/release notes; GitHub's required human
-review/merge boundary remains. The requester of a Copilot-created PR cannot
-provide its required approving review; use an eligible independent reviewer.
-A maintainer publishes the plain
-`MAJOR.MINOR.PATCH` tag; deterministic CI builds and publishes its release.
-Do not bypass platform restrictions.
+Copilot prepares changes, tests and PR/release notes. Routine delivery may submit
+authorized tasks, follow checks, open promotion/back-merge PRs and enable GitHub
+auto-merge. The user chose **final deployment approval** on 2026-10-09: routine
+PRs require the four CI checks and resolved conversations, with zero configured
+human PR approvals. Respect any additional native GitHub/Copilot constraint.
+The `production` environment requires **consciontologic** to approve deployment
+before the combined tag/release/website job runs. This is the human release
+decision; no agent may call the approval API, approve through the UI or bypass it.
+Self-review prevention is deliberately off so the sole maintainer can approve
+their own dispatched release. Never use administrator bypass: publication checks
+the actual human approval receipt even if GitHub still offers a bypass button.
+After approval,
+deterministic CI validates the exact source, creates the plain
+`MAJOR.MINOR.PATCH` tag and publishes verified artifacts. Never move an existing
+tag or replace its assets.
+Copilot automation is bounded to one initial task and at most one managed CI
+repair, with the same explicit model; uncertain submissions are never retried.
+Keep automation/deployment secrets in the `main`-restricted environments
+documented in [CI/CD](docs/guides/CI_CD.md#one-time-automation-setup).
 
 ### Local coordinating agents
 
@@ -123,7 +136,7 @@ an authorized slice of work, the coordinating agent:
    then runs `make git` to publish the work branch. Do not publish while checks
    are failing or ownership of included changes is unresolved.
 4. Opens or updates the appropriate PR and reports its URL, published commit,
-   tracking `run_id` and verification evidence. Review and required CI checks
+   tracking `run_id` and verification evidence. Required CI and platform rules
    govern merging; never bypass protection or write to `main`/`develop` directly.
 
 ```bash

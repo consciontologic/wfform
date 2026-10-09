@@ -2,13 +2,16 @@
 
 User-visible changes to wfform are recorded here, starting with 0.3.0.
 
-## [Unreleased]
-
 ## [1.0.0] - 2026-10-09
 
 📦 Prepared for the reviewed release workflow; publication is a separate gate.
 
 ### ✨ Added
+
+- 🤖 Routine delivery for authorized Copilot tasks, PR checks, auto-merge and
+  release promotion, with protected branches and resolved conversations.
+- ✅ One final human deployment approval authorizes automatic SemVer tagging,
+  verified packages, website publication and a back-merge PR.
 
 - 🧪 Runnable MCP and local CLI playground with safe fixtures and a short walkthrough.
 - 🌿 Gitflow branches, guarded agent publication through `make git`, plain SemVer release packages and free quality/security reports.
@@ -31,6 +34,18 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 - Tool exchanges preserve opaque reasoning details and never replay actions after interruption or reload.
 - HTTP redirects are disabled to keep connection credentials at their configured endpoint.
 - Structured data shares readable previews across tool approvals/results, diagnostics, code blocks and files, with exact original content retained for copying and export.
+
+### 🔒 Security
+
+- 🔐 Automation and website credentials use separate environments restricted to
+  `main`; PR checks receive neither credential. Published tags and assets cannot
+  be silently replaced on a retry.
+
+### 🐛 Fixed
+
+- 🪟 Windows source launches recognize both Dart runtime executables. The trusted
+  process helper receives its runtime environment while configured tools retain
+  explicit environment isolation and literal arguments.
 
 ## [0.3.0] - 2026-10-09
 

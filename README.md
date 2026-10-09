@@ -43,7 +43,11 @@ make verify        # format, analysis, deterministic tests, repository checks
 make build.public  # credential-free release in build/publish-web
 ```
 
-`make help` lists all targets. GitHub Actions publishes web assets after source `main` pushes; setup is documented in the [CI/CD guide](docs/guides/CI_CD.md). Docker/nginx hosting is covered in the [Docker guide](docs/guides/DOCKER.md).
+`make help` lists all targets. [Routine delivery](docs/guides/GITFLOW.md) handles
+authorized Copilot tasks, PR checks and release preparation. The owner approves
+the final **production deployment**; CI then publishes verified packages and
+the website. Follow the [one-time setup](docs/guides/CI_CD.md#one-time-automation-setup)
+to enable it. Docker/nginx hosting is covered in the [Docker guide](docs/guides/DOCKER.md).
 
 ## Learn more
 

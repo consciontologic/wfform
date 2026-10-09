@@ -14,7 +14,8 @@ applyTo: 'deploy/**,Dockerfile,.dockerignore,Makefile*,xops/**,tool/**'
 - Preserve network-only configuration, service-worker update checks, hash-verified
   cached assets and safe draft-preserving updates.
 - Public builds use `--public` and must exclude configuration. The authorized
-  GitHub workflow publishes to `consciontologic/wfform.com` with a scoped Actions secret;
+  GitHub workflow publishes to `consciontologic/wfform.com` with a scoped secret
+  in the `main`-restricted `production` environment;
   preserve unmanaged destination files and tested legacy cached-client migration.
   Version 1.0.0 uses flat deployment files, not __releases directories.
   Read `docs/guides/CI_CD.md` and `docs/seo.md` before changing public deployment.

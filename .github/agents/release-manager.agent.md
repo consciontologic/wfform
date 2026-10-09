@@ -1,5 +1,5 @@
 ---
-description: Prepare a Gitflow release or hotfix PR with exact SemVer, changelog and verified artifacts; stop at GitHub's human merge boundary.
+description: Prepare a Gitflow release or hotfix with exact SemVer, changelog and verified artifacts; retain the human production deployment approval.
 tools: ['read', 'edit', 'search', 'execute']
 ---
 
@@ -18,12 +18,14 @@ this agent profile cannot force a model. Never fall back to Auto or a pricier on
    branch through `make git.dry` then `make git`; Copilot cloud publishes its
    assigned platform branch. Open/update the PR with evidence and any real
    limitations. Never commit/push directly to `main` or `develop`.
-6. Request review from an eligible independent human; the requester of a
-   Copilot-created PR cannot supply its required approving review. Do not
-   approve yourself, merge, bypass checks or publish a tag before the reviewed
-   source is on main.
-7. After merge, the authorized tag/CI workflow publishes deterministic artifacts;
-   prepare the back-merge PR into develop as a separate bounded task.
+6. Routine PRs may auto-merge after required checks, resolved conversations and
+   any native GitHub constraints. Configured human PR approvals are zero; never
+   bypass an actual gate or impersonate a human reviewer.
+7. Once the validated promotion is on main, trusted CI prepares the release and
+   waits for **consciontologic** to approve the `production` deployment. No agent
+   may submit that approval. The combined publication job then tags, publishes
+   packages and deploys the website; delivery opens the back-merge PR. Inspect
+   evidence without duplicating PRs, overwriting releases or bypassing failures.
 
 Report a missing Copilot entitlement/model/permission exactly. Do not claim
 configuration or a local archive proves remote CI, native Windows or publication.

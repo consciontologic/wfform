@@ -1,8 +1,14 @@
 # 🌿 Gitflow, without the ceremony
 
-**Work on a branch → open a PR → pass checks → review → merge → release.**
+**Describe the work → Copilot opens a PR → checks and auto-merge → you approve deployment.**
 Use this one repository, with an isolated checkout for each task. Never create
 a second GitHub repository for a feature.
+
+Once [automation setup](CI_CD.md#one-time-automation-setup) is complete and the
+workflows are on `main`, routine delivery follows tasks, checks and PRs for you.
+The owner makes the final release decision in GitHub's `production` deployment
+approval. Routine PRs need no configured human approval; checks and any native
+GitHub/Copilot restrictions still apply.
 
 ## 1. Pick the right lane
 
@@ -45,9 +51,26 @@ the PR description. Use a separate review pass before merging.
 3. Start a task from GitHub's **Agents** tab, or assign an issue to Copilot.
 4. Select `develop` for features/bugs, `main` for hotfixes.
 5. For release preparation, select the already-published `release/1.0.0` branch.
-   After the preparation PR merges there, open the promotion PR from that branch
-   into `main`, then plan its back-merge. The API uses one `base_ref` for both
+   Routine delivery opens its promotion PR into `main` after preparation is
+   merged and later opens the back-merge PR. The API uses one `base_ref` for both
    the agent branch and its PR; a prompt does not override that routing.
+
+For the unattended route, write a GitHub issue with the change, tests and allowed
+scope, then apply **one** label: `ai:feature`, `ai:bugfix`, `ai:hotfix` or
+`ai:release`. For example, “Explain a failed MCP connection” with `ai:bugfix`
+delegates a bugfix against `develop`. A release issue uses the title
+**`Release 1.0.0`** and label `ai:release`. Only a repository writer may authorize
+this task; issue text from a stranger is not authorization.
+
+You can also use **Actions → 🤖 Routine delivery → Run workflow** on `main`:
+choose `delegate`, the issue number, work kind and release version when needed.
+The controller allows one initial task and at most **one managed CI repair**
+per issue, using the same explicit model. A repair starts only after the first
+task finishes and CI fails on its current PR head; it continues the same branch.
+The controller records receipts and never repeats an uncertain submission.
+After that budget is used, a failure needs
+inspection rather than another automatic purchase. Read the issue/task links
+and workflow summary before requesting a follow-up.
 
 The repository's [model policy](../../.github/copilot-model-policy.json) selects
 **GPT-5.3-Codex** explicitly. On 2026-10-09 it had the lowest published rates
@@ -85,28 +108,38 @@ is separate from the free security and quality tools.
 ## 3. Review and merge
 
 Every PR needs a clear change description, matching tests and a changelog entry.
-Use **Web checks**, **Security checks**, **Linux package** and **Windows package**
-as required checks once the new workflows are present on GitHub. Do not require
-nonexistent checks before publishing the workflow change. No direct push to
+**Web checks**, **Security checks**, **Linux package** and **Windows package**
+are the required checks on `main` and `develop`. No direct push to
 `main`/`develop`, no force push, no silent skip on failure.
 
-**Repository setup verified on 2026-10-09:** `develop` was created from the
-existing `main`. Both branches require a PR, one approval and resolved
-conversations; stale approvals are dismissed and force-push/deletion disabled.
-Administrator bypass remains configured for human bootstrap/recovery; agents
-must not use it. The person who requested a Copilot PR cannot supply its
-required approving review; use another eligible reviewer. A PR author also
-cannot approve their own PR. CI is a manual
-merge gate until the new workflows run remotely and their actual check contexts
-are added to protection. The generated website repository is exempt from PR
-rules so its dedicated publisher can update it normally.
+**Policy configured on 2026-10-09:** `main`, `develop` and the initial
+`release/1.0.0` branch require a PR, the four
+named checks on up-to-date source and resolved conversations. Required human PR
+approvals are **zero**. Force-push, deletion and protection bypass are forbidden.
+This moves the user's release decision to one protected deployment approval.
+The generated website repository is exempt from source PR rules so its
+dedicated publisher can update it normally.
 
-GitHub cloud Copilot cannot approve or merge its own PR. An eligible independent
-reviewer approves, and a maintainer merges after checks pass; then CI performs deterministic packaging and
-publication. This is a GitHub platform limit, not an extra permission loop
-invented by wfform. The built-in Copilot review product chooses its own model;
-it is not enabled automatically because that cannot honor the cheapest-model
-requirement. Use the explicit low-cost review task plus the free CI reports.
+**Your one release decision:** open the waiting **📦 Packages and release** run,
+inspect its version, source commit, changes and successful package checks, then
+choose **Review deployments → production → Approve and deploy**. The configured
+reviewer is **consciontologic**. The tag, public downloads and website remain
+unpublished until that approval. You can approve even if you authored the PR
+or dispatched the run; the environment intentionally allows this for the sole
+maintainer. Agents never click approval or call its API.
+The publisher also checks the run's actual human approval receipt; using
+GitHub's administrator bypass without that receipt cannot publish a release.
+
+Copilot itself cannot approve or merge its PR. The controller uses native
+auto-merge only when GitHub allows it. It marks its own managed draft PR ready
+only after the verified task finishes and all four checks pass; unrelated drafts
+stay drafts. A remaining platform restriction or blocked check is reported
+rather than bypassed. If GitHub still requires an
+independent PR review in a particular case, a Copilot task requester cannot
+supply that review; deployment approval does not override that platform rule.
+The built-in Copilot review product chooses its own model; its existing settings
+are preserved. Our submitted tasks use the explicit model policy. These are
+separate from free CI reports. See [GitHub's review rules](https://docs.github.com/en/copilot/concepts/security-governance-and-network-settings/risks-and-mitigations).
 
 Local coordinating agents append tracking, stage and inspect `make git.dry`,
 then run `make git` on validated Gitflow work branches and open/update a PR.
@@ -131,13 +164,21 @@ Linux and Windows downloads remain distinguishable.
 
 1. Update the version and synchronize derived values with the release tool.
 2. Curate the emoji changelog under that version and run the gates.
-3. Merge the release PR into `main` after review.
-4. Publish a tag matching the version exactly on the reviewed main commit.
-5. CI builds verified web/Linux/Windows artifacts and checksums, creates the
-   GitHub Release. A separate job deploys the same approved web build to
-   `wfform.com` only while its source is still the current `main`; older tags
-   report the website step as skipped rather than rolling the site back.
-6. Back-merge the release/hotfix into `develop` through a PR.
+3. GitHub merges the release PR into `main` after required checks, conversations
+   and native platform constraints are satisfied.
+4. Routine delivery requests publication for that merged PR and exact source
+   commit. CI validates it and builds/tests web, Linux and Windows artifacts.
+5. **consciontologic** approves the waiting `production` deployment. One gated
+   job creates the matching tag and GitHub Release, then deploys the same web
+   build to `wfform.com`. It rechecks source identity before publication.
+6. Routine delivery opens the back-merge PR into `develop`; its normal check
+   and conversation requirements still apply.
+
+Do not manually move a tag or replace a released download. If publication stops,
+inspect the failed job, fix its cause and use the documented recovery flow. A
+conflicting existing tag or asset is a failure, not something automation deletes.
+Missing setup, absent reviews and failed checks are reported as remaining gates;
+having the workflow files in a branch does not mean delivery is active.
 
 Read [CI/CD](CI_CD.md) for exact commands, free reports and publication gates.
 macOS and graphical installers are tracked separately; do not advertise them
