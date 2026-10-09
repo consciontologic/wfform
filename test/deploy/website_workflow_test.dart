@@ -68,6 +68,30 @@ void main() {
     );
   });
 
+  test('container builds use bundled Docker and preserve archive handoff', () {
+    final linux = File(
+      '.github/workflows/companion.yml',
+    ).readAsStringSync().split('  linux:').last.split('  windows:').first;
+    expect(linux, isNot(contains('docker/setup-buildx-action@')));
+    final build = linux
+        .split('uses: docker/build-push-action@')
+        .last
+        .split('      - name:')
+        .first;
+    expect(build, contains('builder: default'));
+    expect(build, contains('load: true'));
+    expect(build, contains('push: false'));
+    expect(build, isNot(contains('outputs:')));
+    const save =
+        r'docker image save --output build/container/wfform.tar "$WFFORM_CONTAINER_IMAGE"';
+    expect(linux, contains(save));
+    expect(
+      linux.indexOf(save),
+      lessThan(linux.indexOf('container_package.py seal')),
+    );
+    expect(linux, contains('name: container-linux-amd64'));
+  });
+
   test(
     'read-only jobs cache locked dependencies and verified scanner downloads',
     () {

@@ -55,8 +55,10 @@ only after the existing `production` approval; there is no separate push-trigger
 container pipeline. Tags use plain SemVer only, with no `latest` alias. A different
 image under an existing version is rejected rather than overwritten.
 
-Flutter/pub dependencies and the Buildx tool binary are cached; each image is
-assembled from the pinned base and freshly verified public assets. Compiled
+Flutter/pub dependencies are cached. Container builds use the runner's bundled
+[Docker builder](https://docs.docker.com/build/builders/drivers/docker/), avoiding
+an additional Docker Hub BuildKit image pull. Each image is assembled from the
+pinned base and freshly verified public assets, then saved for the publisher. Compiled
 web/image layers are not exported to a shared BuildKit cache. Credentials and
 packaged releases remain outside dependency/tool caches. Publication uses the
 job-scoped `GITHUB_TOKEN` with `packages: write`; no additional registry secret
