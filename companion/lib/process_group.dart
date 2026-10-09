@@ -66,10 +66,14 @@ Future<Process> startProgram(
       rethrow;
     }
   }
-  final grouped =
-      Platform.isLinux &&
-      File('/usr/bin/setsid').existsSync() &&
-      File('/bin/kill').existsSync();
+  final grouped = Platform.isLinux;
+  if (grouped &&
+      (!File('/usr/bin/setsid').existsSync() ||
+          !File('/bin/kill').existsSync())) {
+    throw UnsupportedError(
+      'Linux process-group helpers /usr/bin/setsid and /bin/kill are required.',
+    );
+  }
   final process = await Process.start(
     grouped ? '/usr/bin/setsid' : executable,
     grouped ? [executable, ...arguments] : arguments,
