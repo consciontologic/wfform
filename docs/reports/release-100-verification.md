@@ -186,6 +186,40 @@ Source publication, native Windows CI, required check activation and a published
 1.0.0 tag/download are recorded only once actually observed. macOS and graphical
 installers remain future work; portable archives are not described as installers.
 
+### Independent preparation audit (2026-10-09, Copilot PR #2)
+
+This checkpoint is a fresh release-readiness audit for
+[`copilot/release-100-preparation` → `release/1.0.0`](https://github.com/consciontologic/wfform/pull/2).
+It does not replace the historical local evidence above.
+
+- Checked-out app version remains `1.0.0` in root `pubspec.yaml`.
+- Model policy remains explicit `gpt-5.3-codex` only (`allow_auto: false`,
+  `allow_paid_fallback: false`).
+- Release gating in `.github/workflows/companion.yml` remains strict:
+  `linux` needs `security`, `windows` needs `linux`, and `publish` needs both
+  native jobs and runs only on plain SemVer tag pushes.
+- Fresh local run: `python3 -m unittest discover -s xops/makefile -p 'test_*.py' -v`
+  passed all 33 tests in this session.
+- Fresh local `make version.check` and `make repository.check` could not run in
+  this sandbox because `dart` is unavailable (`make: dart: No such file or directory`).
+
+GitHub Actions evidence available at this checkpoint:
+
+- `🛡️ Free security and package reports` run `37934431905`: **success**.
+- `📦 Packages and release` run `37934432076`: still in progress; `security`
+  succeeded and `Linux package` started. `Windows package` has not completed yet.
+- `🌐 Web quality` run `37934431743`: in progress.
+
+Remaining gates before promotion from `release/1.0.0` to `main`:
+
+1. Let PR #2 complete review and merge into `release/1.0.0`.
+2. Observe green web/security/Linux/**native Windows** checks on the final
+   release-branch revision (do not infer Windows from Linux).
+3. Merge the release promotion PR (`release/1.0.0` → `main`) with eligible
+   independent approval and required checks.
+4. After reviewed main merge, publish plain tag `1.0.0`, then complete the
+   required `develop` back-merge PR.
+
 ## Opinion: a VS Code extension
 
 A small **desktop-first extension** is worthwhile after the 1.0.0 delivery path
