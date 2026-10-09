@@ -1,6 +1,44 @@
 # Docker and nginx deployment
 
-wfform remains a Flutter/Dart application. nginx serves static release files; the browser calls OpenRouter directly. There is no API proxy or application backend. This guide requires Flutter **3.38.10 / Dart 3.10.9**, Docker Engine with Compose, Make and Bash. OpenSSL is needed only for optional local TLS.
+wfform remains a Flutter/Dart application. nginx serves static release files; the browser calls OpenRouter directly. There is no API proxy or application backend. Using a published image requires Docker. Building from source also requires Flutter **3.38.10 / Dart 3.10.9**, Compose, Make and Bash. OpenSSL is needed only for optional local TLS.
+
+## Use a published GHCR image
+
+Approved releases publish the static web app as a **Linux amd64** image at
+`ghcr.io/consciontologic/wfform:<version>`. Windows/macOS users need Docker's Linux
+container mode; this image does not provide access to local CLI tools. Use the
+separate [wfformcomp](../wfformcomp.md) for those.
+
+This publishing path applies to future approved releases; the existing `1.0.0`
+release has no GHCR image. After an image is published, replace `VERSION` below
+with its exact SemVer:
+
+```sh
+docker pull ghcr.io/consciontologic/wfform:VERSION
+docker run --rm --name wfform --platform linux/amd64 \
+  --publish 127.0.0.1:8080:8080 \
+  --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+  ghcr.io/consciontologic/wfform:VERSION
+```
+
+Open **http://localhost:8080** and add your own key in Settings. No registry login
+is needed once the package is Public. There is no `latest` tag: choose a published
+SemVer and change it explicitly to upgrade. The workflow configuration is not
+proof that a tag is already available; inspect the release run's container result.
+
+**First publication:** GitHub initially creates a private package. In your account's
+**Packages → wfform → Package settings → Change visibility**, set it to **Public**
+to allow anonymous pulls. This is a one-time package setting. Ensure the package
+is connected to `consciontologic/wfform` and grants its Actions workflow write
+access. The publisher uses the built-in `GITHUB_TOKEN`; no separate registry
+secret is required. See [GitHub's Container Registry guide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+Container Registry storage and bandwidth are currently free under
+[GitHub's billing policy](https://docs.github.com/en/billing/concepts/product-billing/github-packages).
+GitHub Actions usage and retained workflow artifacts have separate limits.
+Images are built from allowlisted public files and published only after the same
+human production approval as the release. Existing version tags are preserved.
 
 ## Start a local container
 
@@ -13,7 +51,7 @@ make up
 make check
 ```
 
-Open **http://localhost:8080**. Paste your development API key in Settings. Docker uses a separate browser origin from the Dart host on 8765, so its IndexedDB history is separate. `make image` compiles under `build/container-input`, then publishes an isolated release under `build/container-web`; it does not replace `build/web` or interrupt an existing Dart server. Packaging preserves complete immutable release directories and the custom service worker; a raw `flutter build web` is insufficient. A hash of the public nginx policy contributes to the Docker release identity, so changing CSP creates new stamped HTML and a safe PWA update rather than silently retaining old cached headers. Identical application bytes and policy retain a stable identity.
+Open **http://localhost:8080**. Paste your development API key in Settings. Docker uses a separate browser origin from the Dart host on 8765, so its IndexedDB history is separate. `make image` compiles under `build/container-input`, then publishes an isolated release under `build/container-web`; it does not replace `build/web` or interrupt an existing Dart server. Packaging preserves verified flat release assets and the custom service worker; a raw `flutter build web` is insufficient. A hash of the public nginx policy contributes to the Docker release identity, so changing CSP creates new stamped HTML and a safe PWA update rather than silently retaining old cached headers. Identical application bytes and policy retain a stable identity.
 
 ```sh
 make logs       # follow the last 100 container log lines
@@ -21,7 +59,7 @@ make restart    # recreate from the current image without rebuilding
 make down       # stop/remove only this Compose project's containers/network
 ```
 
-Rebuild with `make image`, then use `make restart` to deploy changed source. A browser with an older release keeps its old asset URLs. Retain `build/container-web/__releases` across builds so the next image also contains those releases; do not clear it during an update when old tabs still matter. The service worker's integrity and safe-update behavior remains authoritative. This simple local workflow can briefly interrupt HTTP during container replacement; it is not a zero-downtime orchestrator. Browser-managed data is not a container volume and is unaffected by `down`.
+Rebuild with `make image`, then use `make restart` to deploy changed source. Version 1.0.0 uses flat assets, without physical `__releases` directories. The service worker preserves verified cached generations and offers an explicit update; an old uncached asset requires an update rather than substituting changed bytes. Its integrity and safe-update behavior remains authoritative. This simple local workflow can briefly interrupt HTTP during container replacement; it is not a zero-downtime orchestrator. Browser-managed data is not a container volume and is unaffected by `down`.
 
 `HTTP_PORT=8081 make up` chooses another loopback port; use the same variable for `check` and `restart`. Changing the origin changes browser-local storage. Defaults never publish on all network interfaces. The runtime runs as the invoking host user's non-root UID/GID, with a read-only root filesystem, dropped Linux capabilities, `no-new-privileges`, bounded memory/CPU/PIDs and one small writable `/tmp` tmpfs. No host firewall, system nginx or Docker daemon configuration is changed.
 
@@ -63,7 +101,7 @@ The enforced policy lives in `deploy/nginx/headers.conf`:
 - Framing, plugins and form submissions are blocked; `nosniff`, `no-referrer`, a restrictive Permissions Policy, same-origin opener/resource policies and frame denial apply to both successes and errors. Uploading a file does not require camera/microphone permission. Clipboard read and write are allowed only for **`self`**: Flutter 3.38.5's editable Paste control calls `Clipboard.getData`, which its web engine implements with `navigator.clipboard.readText()`. Denying clipboard read would break that path even when native keyboard paste still works. This origin allowance does not grant browser permission: secure-context, focus, user-activation and consent requirements still apply according to the browser.
 - COEP is not forced: the current app needs no cross-origin-isolation feature. Headers are not an authentication system, and no invented “A+++” security grade is claimed. No external scanner grade has been measured.
 
-The `add_header ... always` directives are included only at server scope; locations introduce no `add_header` directives that could erase inheritance. Root aliases, HTML, the worker, release metadata, configuration and 404s use **no-store**. Successful `__releases/<hash>/…` responses are immutable for one year. Gzip is enabled for eligible JS/JSON/CSS/WASM responses. Missing assets return real 404s, never SPA HTML, so an incomplete deployment cannot be mistaken for valid cached JavaScript. The web app currently mounts at `/`; deploying a subpath also requires compatible Flutter base href, nginx locations and CSP review.
+The `add_header ... always` directives are included only at server scope; locations introduce no `add_header` directives that could erase inheritance. Root aliases, HTML, the worker, release metadata, configuration and 404s use **no-store**. Flat asset responses also use `no-store`; the service worker manages content-verified cache generations. Gzip is enabled for eligible JS/JSON/CSS/WASM responses. Missing assets return real 404s, never SPA HTML, so an incomplete deployment cannot be mistaken for valid cached JavaScript. The web app currently mounts at `/`; deploying a subpath also requires compatible Flutter base href, nginx locations and CSP review.
 
 ## Verification commands and limits
 
@@ -78,7 +116,7 @@ make tls.up
 make tls.check
 ```
 
-`make check` executes `nginx -t`, verifies a non-root runtime and absence of baked local configuration, then checks HTTP health, CSP/security headers, no-store configuration/entrypoints, denied POST/dotfiles, uncached asset misses, correct WASM MIME, and the bytes/SHA-256/cache policy of every current immutable shell asset. It sends no OpenRouter request and never prints configuration content. `tls.check` adds HTTPS certificate verification and TLS-only HSTS checks. The Docker healthcheck itself performs a bounded local HTTP request every 15 seconds.
+`make check` executes `nginx -t`, verifies a non-root runtime and absence of baked local configuration, then checks HTTP health, CSP/security headers, no-store configuration/entrypoints, denied POST/dotfiles, uncached asset misses, correct WASM MIME, and the bytes/SHA-256/cache policy of every current verified shell asset. It sends no OpenRouter request and never prints configuration content. `tls.check` adds HTTPS certificate verification and TLS-only HSTS checks. The Docker healthcheck itself performs a bounded local HTTP request every 15 seconds.
 
 Unit tests cover allowlisting, malformed/traversal manifests, damaged content preserving the previous context, symlink/credential rejection, and the header/TLS contract. Browser rendering, CanvasKit, PWA install/update and live direct API behavior need a real browser; passing header checks alone is not evidence for them. Public TLS/ACME renewal, OS-level installation, scanner grades, deployed subpaths and other browser engines remain separate acceptance work.
 

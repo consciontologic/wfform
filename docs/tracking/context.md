@@ -378,3 +378,15 @@ promotions into main use controller metadata validation linking the exact source
 tree to successful develop validation. Release dispatch builds packages without
 repeating tests/scans. Cache pinned SDKs, locked dependencies and scanner binaries;
 keep credentials, application artifacts and fresh vulnerability results uncached.
+
+
+## Manual delivery and container registry policy (2026-10-09)
+
+The later user request removes the Routine delivery Actions workflow after
+refreshing from latest `main`. Copilot tasks, protected PR promotion/back-merge
+and **Packages and release** dispatch are coordinated explicitly. This supersedes
+the automatic controller behavior described above; quality lanes, source
+provenance checks and final human `production` approval remain. The release path
+also adds a Linux amd64 GHCR web image with plain SemVer tags. Configuration and
+local validation do not establish that an image has been published or made public;
+see [CI/CD](../guides/CI_CD.md) and [Docker](../guides/DOCKER.md).

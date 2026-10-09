@@ -2,26 +2,26 @@
 
 The source is **consciontologic/wfform**. The generated website is
 **consciontologic/wfform.com**, served at **https://wfform.com/**.
-Development follows [Gitflow](GITFLOW.md). The workflows automate delivery after
-the setup below. Their presence in a work branch, local checks and a queued task
-do not prove that automation is active or that a remote release has published.
+Development follows [Gitflow](GITFLOW.md). PR checks run automatically in the
+lanes below. Task assignment, PR promotion and release dispatch are explicit
+maintainer actions; the Routine delivery workflow has been removed. A workflow
+configuration or local build does not prove a remote release has published.
 
-## What happens automatically
+## Checks and publication
 
 | Workflow | When | What it does |
 |---|---|---|
 | 🌐 [Web quality](../../.github/workflows/web.yml) | PRs into `develop`; hotfix PRs into `main` | Format, analyzer, tests, coverage, repository hygiene, real Chrome history storage and public build validation |
 | 🛡️ [Free security and package reports](../../.github/workflows/security.yml) | The same eligible PRs, once per PR update | Gitleaks, OSV, license inventory, CycloneDX SBOM and zizmor |
 | 📦 [Packages and release](../../.github/workflows/companion.yml) | The same eligible PRs | Test/build Linux and Windows; keep downloadable CI artifacts |
-| 🤖 [Routine delivery](../../.github/workflows/delivery.yml) | Authorized issue labels, completed checks, hourly reconciliation, manual run | Submit bounded Copilot tasks, follow PR gates, open promotion/back-merge PRs and request approved releases |
-| 📦 Packages and release | Publication requested on `main` for a merged PR and exact source commit | Validate source/version/checks, build verified downloads, then wait for the owner's `production` approval before tagging and publishing |
+| 📦 Packages and release | Explicit manual dispatch on `main` for a merged PR and exact source commit | Validate source/version/checks, build verified downloads and container, then wait for the owner's `production` approval before tagging and publishing |
 
 Quality, security and native tests run **only** on PRs into `develop`, plus
 hotfix PRs directly into `main`. Other PR destinations and branch/tag pushes do
 not run them. GitHub filters PR triggers by destination, so non-hotfix PRs into
-`main` show skipped quality jobs without allocating their runners. Routine delivery
-checks prior validation metadata before auto-merge; there is no separate promotion
-PR workflow and no repeated analysis, tests or scans.
+`main` show skipped quality jobs without allocating their runners. Maintainers
+must promote the exact previously tested develop tree; there is no separate
+promotion PR workflow and no repeated analysis, tests or scans.
 
 Release dispatches on `main` build and package already-validated source; they do
 not repeat quality or security checks. An ordinary manual package run creates
@@ -33,10 +33,9 @@ colors make failures easier to find; full logs and machine-readable reports
 remain available.
 
 Native branch protection accepts skipped contexts. That alone does **not**
-prove a promotion was tested: the delivery controller enforces prior exact-tree
-validation before automatic merging, and the release authorizer independently
-rejects untested source before publication. A maintainer manually merging an
-untested PR into main cannot use that merge as release authorization.
+prove a promotion was tested: the release authorizer verifies prior exact-tree
+validation and rejects untested source before publication. A maintainer manually
+merging an untested PR into main cannot use that merge as release authorization.
 
 ## Cache policy
 
@@ -47,6 +46,28 @@ do not skip tests, dependency lock enforcement or fresh vulnerability results.
 PR caches never supply release artifacts or credentials. Release jobs build new
 artifacts from the approved source. Keep local configuration, tokens, reports
 and compiled application outputs out of shared dependency caches.
+
+## Container registry
+
+The same **Packages and release** run builds a Linux amd64 nginx image from its
+verified public web assets. It publishes `ghcr.io/consciontologic/wfform:<version>`
+only after the existing `production` approval; there is no separate push-triggered
+container pipeline. Tags use plain SemVer only, with no `latest` alias. A different
+image under an existing version is rejected rather than overwritten.
+
+Flutter/pub dependencies and the Buildx tool binary are cached; each image is
+assembled from the pinned base and freshly verified public assets. Compiled
+web/image layers are not exported to a shared BuildKit cache. Credentials and
+packaged releases remain outside dependency/tool caches. Publication uses the
+job-scoped `GITHUB_TOKEN` with `packages: write`; no additional registry secret
+is required. See the [Docker guide](DOCKER.md#use-a-published-ghcr-image) for usage
+and the one-time Public package visibility setting. The configured workflow alone
+does not establish that an image is already available. This applies to future
+approved releases; existing `1.0.0` downloads are unchanged and have no GHCR image.
+
+GitHub currently provides Container Registry storage and bandwidth free of charge;
+Actions runners, caches and retained artifacts follow their separate account
+limits. See [GitHub's billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-packages).
 
 ## One version, three downloads
 
@@ -77,9 +98,9 @@ make release.package
 and `build/release/`. Native Windows instructions do not require Make; see
 [wfformcomp](../wfformcomp.md#build-and-checks).
 
-GitHub merges routine PRs when protection is satisfied; the owner approves the
-final **production deployment** before the tag, release and website publish. Local
-coordinating agents publish validated work branches through `make git.dry` then
+Maintainers or explicitly authorized agents merge PRs through branch protection;
+the owner approves the final **production deployment** before the tag, release,
+container and website publish. Local coordinating agents publish validated work branches through `make git.dry` then
 `make git` and open PRs; direct `main`/`develop` writes are forbidden. Copilot's
 managed PR authoring and reviewer eligibility are explained in [Gitflow](GITFLOW.md).
 
@@ -91,22 +112,31 @@ PR checks; Linux and Windows jobs build the artifacts without repeating tests
 or security scans. The combined publication
 job then waits for **consciontologic** to approve the `production` environment.
 A dispatch input, PR comment or agent action cannot replace that approval.
-The controller dispatches
-publication explicitly; it does not rely on a tag created by `GITHUB_TOKEN`
-triggering another workflow.
+A maintainer explicitly dispatches publication; labels, completed checks and
+tag pushes do not start it.
 
-The dispatch targets **`main`** and supplies `version` (for example `1.0.0`),
-`release_sha` (the exact current `main` commit) and `release_pr` (the merged
-same-repository release or hotfix PR number). Copilot hotfix PRs can target
-`main` directly; their task receipt/work-kind label identifies the hotfix, and
+Open **Actions → 📦 Packages and release → Run workflow**, select **`main`**,
+and enter all three inputs:
+
+| Input | Value |
+|---|---|
+| `version` | Plain SemVer matching root `pubspec.yaml`, for example `1.0.0` |
+| `release_sha` | Full 40-character SHA of the exact current `main` commit |
+| `release_pr` | Number of the merged same-repository promotion or hotfix PR |
+
+Leaving all three inputs empty builds downloadable artifacts only; it cannot
+publish. A partially filled publication request fails validation.
+
+Copilot hotfix PRs can target `main` directly; the `work:hotfix` label identifies
+the hotfix, and
 the merged root `pubspec.yaml` supplies its release version.
 Tag pushes trigger no quality or package jobs and cannot publish a release or website.
 
 Tags must match the root version and the validated source commit.
 The single **Approve and publish release** job waits for Linux and Windows
 packages and the human approval. It creates the tag and GitHub Release from that version's
-emoji changelog and verified packages, then deploys the website. Use GitHub's
-**Re-run failed jobs** on the **original dispatched run** after fixing a failure.
+emoji changelog and verified packages, publishes the container, then deploys the
+website. Use GitHub's **Re-run failed jobs** on the **original dispatched run** after fixing a failure.
 GitHub may require a new environment approval for the retry. Publication
 resumes a draft using that run's exact artifacts; byte-identical existing assets
 are reused. A different tag target or asset stops the run. Re-running every job
@@ -145,103 +175,46 @@ failures fail the job. Empty findings mean no known matches at scan time, not a
 security guarantee. These open-source tools can run locally; GitHub-hosted
 runner usage follows GitHub's account limits. Copilot billing is separate.
 
-## One-time automation setup
+## One-time release setup
 
-Do this in the **source repository**, `consciontologic/wfform`. Use environment
-secrets, not repository-wide secrets: **Settings → Environments**. Create
-`automation` and `production`; for each select **Selected branches and tags**
-and add exactly one **Branch** rule, `main`. Do not allow PR refs, work branches
-or tags. Leave `automation` without a required reviewer. In `production`, add
-**consciontologic** under **Required reviewers**, disable administrator bypass,
-and leave **Prevent self-review** off. This intentionally lets the sole owner
-approve a run they dispatched; it does not let an agent approve it. This is the
-one human release gate. See [GitHub's environment
-setup](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+In **consciontologic/wfform → Settings → Environments**, restrict `production`
+to exactly one **Branch** rule, `main`, under **Selected branches and tags**.
+Do not permit PR refs, work branches or tags. Add **consciontologic** as the
+required reviewer, disable administrator bypass and leave **Prevent self-review**
+off so the sole owner can approve a run they dispatched. This is the final human
+release gate. See [GitHub's environment setup](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
 
-The native administrator-bypass checkbox may still be available until it is
-disabled in GitHub's UI. The publisher independently verifies this run's actual
-approval by the configured human before release writes and again before website
-deployment; a bypassed job without that receipt stops. Agents never submit an
-approval or use the bypass.
+The publisher checks the run's actual human approval receipt before publication;
+a bypassed job without that receipt stops. Agents must not approve deployments
+or bypass this gate.
 
 | Where | Name | Value and minimum access |
 |---|---|---|
-| `automation` → Environment secrets | `WFFORM_AUTOMATION_TOKEN` | A dedicated, renewable fine-grained **user** token for only `consciontologic/wfform`: **Agent tasks: Read and write**, **Contents: Read and write**, **Pull requests: Read and write** |
-| `automation` → Environment variables | `WFFORM_DELIVERY_APP_ID` | Optional delivery GitHub App's ID, installed only on `wfform` |
-| `automation` → Environment secrets | `WFFORM_DELIVERY_APP_PRIVATE_KEY` | That App's private key; grant the App **Contents: Read and write**, **Pull requests: Read and write** |
 | `production` → Environment secrets | `WFFORM_DEPLOY_TOKEN` | Website token for only `consciontologic/wfform.com`, **Contents: Read and write** |
 
-The Copilot token belongs to an account with Copilot access and permission to
-start tasks. Its owner is the task requester for GitHub's review rules. The
-[Agent tasks API](https://docs.github.com/en/rest/agent-tasks/agent-tasks) accepts
-user credentials; an App installation token and built-in `GITHUB_TOKEN` cannot
-replace it. Set an expiration you can maintain and renew it in the environment.
-Do not reuse the temporary testing token as the permanent automation credential.
+Verify the secret's name and environment restriction without printing its value.
+Remove a repository-level duplicate after confirming the environment copy.
+The removed Routine delivery workflow no longer uses the `automation` environment,
+`WFFORM_AUTOMATION_TOKEN`, `WFFORM_DELIVERY_APP_ID` or
+`WFFORM_DELIVERY_APP_PRIVATE_KEY`. They are not required for checks or releases;
+retire unused credentials after confirming no other integration depends on them.
+Manual Copilot API tasks use a process-scoped user token with Agent tasks access,
+as described in [Gitflow](GITFLOW.md#2-give-copilot-one-concrete-task). Do not store
+a temporary chat token as a permanent credential. The explicit MAI model policy
+still applies; no workflow starts paid tasks or repairs automatically.
 
-The user token starts Copilot tasks, creates work branches and ordinary PRs,
-updates unprotected work branches, and arms native auto-merge. Its pull-request permission lets their checks start without the extra
-workflow approval associated with `GITHUB_TOKEN`-created PRs. The optional App
-can author those PRs instead; it does not approve deployments or start paid
-Copilot tasks. Without either credential, `GITHUB_TOKEN` is the fallback and
-GitHub may require **Approve workflows to run**. The built-in token still
-handles permitted source metadata and release assets.
-See [GitHub's workflow trigger rules](https://docs.github.com/en/actions/concepts/security/github_token)
-and [creating an App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
+On `main` and `develop`, require PRs, the four checks with strict updates and
+resolved conversations, with **0** configured human PR approvals. Keep force
+pushes, deletion and protection bypass disabled. Normal main promotions skip
+quality jobs; preserve the exact tested develop tree. Publication verifies that
+evidence independently. Release preparation targets `develop`.
 
-Finish in this order:
-
-1. Add the secrets above. Verify their **names and environment restrictions**;
-   never print their values. Add `WFFORM_DEPLOY_TOKEN` to `production`, verify
-   that environment's copy, then remove the old repository-level copy of the
-   same secret **before enabling automatic workflow runs**. Leaving both copies
-   makes the token available outside the protected environment. Keep the
-   domain/Pages settings unchanged.
-2. Enable **Settings → General → Pull Requests → Allow auto-merge**. On `main`
-   and `develop`, require PRs, the four checks with strict updates and resolved
-   conversations; set required human PR approvals to **0**. Apply the same gates
-   to eligible integration/hotfix PRs. Quality jobs are skipped on normal main
-   promotions; the delivery controller verifies prior successful develop evidence
-   for the exact source tree before auto-merge, and publication verifies it again. Release preparation
-   targets `develop`, never a release branch with no validation workflow.
-   Keep force-push,
-   deletion and protection bypass disabled. Final human approval is enforced
-   by `production`, so PR authorship does not disqualify the owner from release
-   approval.
-   If using the built-in token to create PRs, also enable **Settings → Actions →
-   General → Allow GitHub Actions to create and approve pull requests**. The
-   workflow only creates PRs; it never submits an approval.
-3. Once credentials are isolated and the trusted workflow is merged, open
-   **Settings → Copilot → Cloud agent → Actions workflow approval** and turn off
-   **Require approval for workflow runs**. This allows eligible routine Copilot checks;
-   it does not waive any native platform constraint or deployment approval.
-   Keep existing validation/review tools enabled.
-   [GitHub documents this setting](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings).
-4. On `main`, run **🤖 Routine delivery** with action `reconcile`, inspect its
-   summary, then try one small labeled issue. Confirm the actual Copilot model,
-   task result, PR checks and the waiting `production` approval before calling
-   the setup operational. The release workflow must first reach `main` through
-   a PR with successful checks.
-
-Missing secrets, native platform requirements or checks remain visible gates.
-The cost budget is one accepted initial Copilot task plus at most one managed CI
-repair per issue, with the same selected model. The primary is MAI-Code-1.1-Flash;
-[model policy](../../.github/copilot-model-policy.json) lists the owner's ordered
-alternatives. Only a definitive HTTP 422 response containing exclusively
-`model`/`invalid` validation errors advances to the next candidate. Each model is
-reserved before POST and tried at most once. Uncertain, authentication,
-rate-limit or asynchronous task failures never advance the chain. The task API
-does not promise this model-specific error shape; the conditional adapter stays
-inactive for opaque errors. The repair
-requires a completed first task and failing CI on its current head, and continues
-the existing branch.
-The controller reserves and records each submission before proceeding; it never
-repeats uncertain submissions or loops through paid repairs. Exhausted attempts
-remain visible for inspection. It marks a managed draft ready only after the
-verified task finishes and all four checks pass. Unmanaged drafts stay drafts;
-new promotion/back-merge PRs are created ready. PR checks are read-only
-and have no automation/website credential. No OpenRouter key is needed for CI;
-visitors supply their own. Public builds exclude local configuration and reject
-recognizable keys. See [GitHub's token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+After merging a reviewed change, dispatch **Packages and release** with the
+[three publication inputs](#publication-and-recovery). Inspect the package results,
+then approve the waiting production deployment. Verify the tag, downloads,
+container and destination Pages run before reporting publication complete.
+PR jobs receive no website credential. No OpenRouter key is needed for CI;
+public builds exclude local configuration and reject recognizable keys.
 
 ## Custom domain on GitHub Pages
 
@@ -273,8 +246,9 @@ CI/Pages runs, HTTPS redirects and actual browser/catalog/cache evidence.
 3. After GitHub provisions its certificate, select **Enforce HTTPS**. GitHub
    redirects `www` to the configured apex domain. DNS/certificate propagation
    can take up to 24 hours. See [GitHub's HTTPS guide](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https).
-4. After the release PR's protected merge into `main`, routine delivery requests
-   publication of the matching plain SemVer version (for example `1.0.0`).
+4. After the release PR's protected merge into `main`, manually dispatch
+   **Packages and release** for the matching plain SemVer version (for example
+   `1.0.0`), merged PR and current main SHA.
    Approve its waiting **production deployment**. **📦 Packages and release** publishes verified files
    after native Linux and Windows checks; the destination
    **pages build and deployment** run serves them.

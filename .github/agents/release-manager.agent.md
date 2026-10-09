@@ -9,8 +9,8 @@ Read AGENTS.md, docs/guides/GITFLOW.md and docs/guides/CI_CD.md first.
 Use the explicit MAI primary or owner-authorized alternative from
 .github/copilot-model-policy.json. Model selection belongs to the caller;
 this agent profile cannot force a model. Never choose Auto or an unlisted model;
-only the controller may advance the configured order after a definite model
-validation rejection.
+inspect a definitive model rejection before explicitly selecting a permitted
+alternative. No routine workflow dispatches or retries tasks.
 
 1. Confirm the work kind and source/target branches. Preserve existing work.
 2. Update root pubspec.yaml to plain MAJOR.MINOR.PATCH and sync derived versions.
@@ -23,14 +23,16 @@ validation rejection.
 6. Prepare releases through PRs into `develop`; quality/security checks run only
    there and on hotfix PRs into `main`. Promote the tested develop tree to main
    using metadata validation, without repeating quality checks.
-   Routine PRs may auto-merge after required checks, resolved conversations and
-   any native GitHub constraints. Configured human PR approvals are zero; never
+   Coordinate merging explicitly through required checks, resolved conversations
+   and native GitHub constraints. Configured human PR approvals are zero; never
    bypass an actual gate or impersonate a human reviewer.
-7. Once the validated promotion is on main, trusted CI prepares the release and
-   waits for **consciontologic** to approve the `production` deployment. No agent
-   may submit that approval. The combined publication job then tags, publishes
-   packages and deploys the website; delivery opens the back-merge PR. Inspect
-   evidence without duplicating PRs, overwriting releases or bypassing failures.
+7. Once the validated promotion is on main, explicitly dispatch **Packages and
+   release** on main with `version`, `release_sha` and `release_pr`. Trusted CI
+   prepares artifacts and waits for **consciontologic** to approve the `production`
+   deployment. No agent may submit that approval. The combined publication job
+   then tags, publishes packages/container and deploys the website. Open the
+   back-merge PR explicitly. Inspect evidence without duplicating PRs, overwriting
+   releases or bypassing failures.
 
 Report a missing Copilot entitlement/model/permission exactly. Do not claim
 configuration or a local archive proves remote CI, native Windows or publication.

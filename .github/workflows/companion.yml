@@ -94,6 +94,48 @@ jobs:
       # Web checks runs the full Linux test suite once; this job proves the package.
       - name: Build Linux companion and public web bundle
         run: bash tool/ci-step.sh "📦 Versioned packages" make release.package
+      - name: Prepare credential-free container context and identity
+        id: container
+        env:
+          WFFORM_CONTAINER_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          dart run deploy/package.dart build/publish-web build/docker-context
+          python3 xops/agent/container_package.py prepare
+      - name: Set up container builder
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build static web container without registry credentials
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: build/docker-context
+          platforms: linux/amd64
+          push: false
+          # Keep compiled web/image layers out of shared dependency caches.
+          outputs: type=docker,dest=build/container/wfform.tar
+          tags: ${{ steps.container.outputs.image }}
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/consciontologic/wfform
+            org.opencontainers.image.description=wfform static web application
+            org.opencontainers.image.version=${{ steps.container.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.container.outputs.source_sha }}
+      - name: Verify container archive
+        env:
+          WFFORM_CONTAINER_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WFFORM_CONTAINER_SMOKE: ${{ github.event_name == 'pull_request' }}
+        run: |
+          if test "$WFFORM_CONTAINER_SMOKE" = true; then
+            python3 xops/agent/container_package.py seal --smoke
+          else
+            python3 xops/agent/container_package.py seal
+          fi
+      - name: Retain verified container for this run's human-approved publication
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: container-linux-amd64
+          path: |
+            build/container/wfform.tar
+            build/container/container.json
+          if-no-files-found: error
       - name: Test the extracted Linux package
         if: github.event_name == 'pull_request'
         run: |
@@ -212,6 +254,9 @@ jobs:
     name: Approve and publish release
     # One eligible human approval unlocks this combined release and website job.
     environment: production
+    concurrency:
+      group: wfform-publication
+      cancel-in-progress: false
     needs: [linux, windows]
     # Tags never grant release authority. Dispatch explicitly because a tag made
     # by GITHUB_TOKEN does not trigger another push workflow.
@@ -219,6 +264,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      packages: write
       pull-requests: read
       checks: read
       actions: read
@@ -243,6 +289,11 @@ jobs:
         with:
           name: web-release
           path: build/release
+      - name: Download this run's verified container
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: container-linux-amd64
+          path: build/container
       - name: Check production website credentials before publication
         env:
           WFFORM_DEPLOY_TOKEN: ${{ secrets.WFFORM_DEPLOY_TOKEN }}
@@ -255,6 +306,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 xops/agent/release_delivery.py publish
+      - name: 📦 Publish immutable versioned container to GitHub Packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 xops/agent/release_delivery.py approval
+          python3 xops/agent/container_package.py publish
       - name: 🎉 Release summary
         run: |
           printf '## 🎉 Released %s\n\n📦 Web · 🐧 Linux x64 · 🪟 Windows x64\n\nHuman-approved source: `%s` · PR #%s. SHA-256 checksums accompany every download. macOS remains planned.\n' "$WFFORM_RELEASE_VERSION" "$WFFORM_RELEASE_SHA" "$WFFORM_RELEASE_PR" >> "$GITHUB_STEP_SUMMARY"

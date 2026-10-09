@@ -11,8 +11,9 @@ void main() {
         contains('  pull_request:\n    branches: [develop, main]'),
       );
       expect(workflow, contains('labeled, unlabeled'));
-      expect(workflow, isNot(contains('  push:')));
-      expect(workflow, isNot(contains('  schedule:')));
+      // Match event keys, not a Docker action's more deeply nested push input.
+      expect(workflow, isNot(contains('\n  push:')));
+      expect(workflow, isNot(contains('\n  schedule:')));
       if (file != 'companion') {
         expect(workflow, isNot(contains('  workflow_dispatch:')));
       }

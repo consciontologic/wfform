@@ -501,16 +501,16 @@ class DeliverySafetyTest(unittest.TestCase):
         delivery.repair_once(api, {'number': 9}, saved, pull, failures, 'test', submit)
         self.assertEqual(len(calls), 1)
 
-    def test_controller_workflow_checks_out_only_default_branch(self):
-        workflow = (ROOT / '.github/workflows/delivery.yml').read_text()
-        self.assertIn('ref: main', workflow)
-        self.assertNotIn('pull_request_target:', workflow)
-        self.assertNotIn('pull_request:', workflow)
-        self.assertNotIn('download-artifact', workflow)
-        self.assertIn('environment: automation', workflow)
-        self.assertIn('persist-credentials: false', workflow)
-        self.assertIn('cancel-in-progress: false', workflow)
-        self.assertIn('WFFORM_DELIVERY_TOKEN', workflow)
+    def test_routine_delivery_has_no_actions_entry_point(self):
+        self.assertFalse((ROOT / '.github/workflows/delivery.yml').exists())
+        for path in (ROOT / '.github/workflows').glob('*.y*ml'):
+            workflow = path.read_text()
+            self.assertNotIn('xops/agent/delivery.py', workflow)
+            self.assertNotIn('WFFORM_AUTOMATION_TOKEN', workflow)
+            self.assertNotIn('WFFORM_DELIVERY_APP_PRIVATE_KEY', workflow)
+        policy = json.loads((ROOT / '.github/gitflow.json').read_text())
+        self.assertFalse(policy['automation']['enabled'])
+        self.assertIsNone(policy['automation']['workflow'])
 
     def test_real_agent_artifact_database_id_resolves_to_visible_pr_number(self):
         from urllib.parse import urlencode

@@ -2,9 +2,23 @@
 
 User-visible changes to wfform are recorded here, starting with 0.3.0.
 
+## [Unreleased]
+
+### ➖ Removed
+
+- 🤖 Routine delivery no longer starts AI tasks, merges PRs, opens promotions or
+  back-merges, or dispatches releases. Maintainers coordinate these steps
+  explicitly; protected PR checks and the final human deployment approval remain.
+
+### ✨ Added
+
+- 🐳 Approved releases can publish a Linux amd64 web container to GitHub Container
+  Registry under a plain SemVer tag, with cached dependencies/build tools, verified
+  public assets and no extra registry secret. Existing version tags cannot be replaced.
+
 ## [1.0.0] - 2026-10-09
 
-📦 Prepared for the reviewed release workflow; publication is a separate gate.
+📦 Published through the reviewed release workflow with human production approval.
 
 ### ✨ Added
 

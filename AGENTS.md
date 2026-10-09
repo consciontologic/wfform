@@ -97,16 +97,20 @@ Gitflow work branches through `make git`; never masquerade as Copilot. Use the
 explicit MAI primary and owner-authorized ordered alternatives in
 `.github/copilot-model-policy.json`; no Auto or unlisted model fallback. If
 Copilot is unavailable, prepare the handoff and report that limit honestly.
-Copilot prepares changes, tests and PR/release notes. Routine delivery may submit
-authorized tasks, follow checks, open promotion/back-merge PRs and enable GitHub
-auto-merge. The user chose **final deployment approval** on 2026-10-09: routine
-PRs into `develop` and hotfix PRs into `main` run the four quality checks.
-Other promotions into `main` reuse prior successful develop validation for the
-exact source tree inside the trusted delivery controller; never repeat quality or
-security pipelines on those promotions or ordinary pushes. Release preparation
-PRs target `develop`. Keep dependency/tool caches scoped by OS, version and
-lockfiles, excluding secrets and release artifacts. Resolved conversations and
-zero configured human PR approvals apply throughout. Respect any additional native GitHub/Copilot constraint.
+Copilot prepares changes, tests and PR/release notes only for explicitly assigned
+tasks. The **Routine delivery** workflow has been removed: labels and completed
+checks do not dispatch tasks, merge PRs, open promotions/back-merges or start
+releases. Maintainers or explicitly authorized agents coordinate those steps.
+The user chose **final deployment approval** on 2026-10-09: routine PRs into
+`develop` and hotfix PRs into `main` run the four quality checks. Other promotions
+into `main` must preserve the exact source tree already validated on develop;
+never repeat quality or security pipelines on those promotions or ordinary
+pushes. The release authorizer verifies prior source evidence before publication.
+Release preparation PRs target `develop`; publication requires an explicit
+**Packages and release** dispatch on `main`. Keep dependency/tool caches scoped
+by OS, version and lockfiles, excluding secrets and release artifacts. Resolved
+conversations and zero configured human PR approvals apply throughout. Respect
+any additional native GitHub/Copilot constraint.
 The `production` environment requires **consciontologic** to approve deployment
 before the combined tag/release/website job runs. This is the human release
 decision; no agent may call the approval API, approve through the UI or bypass it.
@@ -117,12 +121,11 @@ After approval,
 deterministic CI validates the exact source, creates the plain
 `MAJOR.MINOR.PATCH` tag and publishes verified artifacts. Never move an existing
 tag or replace its assets.
-Copilot automation is bounded to one accepted initial task and at most one
-managed CI repair, using the same selected model. Only a definitive model-field
-validation rejection may advance through the configured alternatives, each once;
-uncertain submissions and asynchronous task failures are never retried.
-Keep automation/deployment secrets in the `main`-restricted environments
-documented in [CI/CD](docs/guides/CI_CD.md#one-time-automation-setup).
+Manual Copilot delegation uses the explicit model policy. Inspect rejected or
+uncertain submissions before any new request; never retry ambiguous actions or
+switch to an unlisted model. No scheduled controller purchases tasks or repairs.
+Keep the deployment secret in the `main`-restricted `production` environment
+as documented in [CI/CD](docs/guides/CI_CD.md#one-time-release-setup).
 
 ### Local coordinating agents
 
