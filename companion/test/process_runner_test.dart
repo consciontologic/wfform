@@ -14,6 +14,11 @@ Future<void> main() async {
       ].any(isWindowsNativeExecutable)) {
     throw StateError('Windows batch wrappers could invoke an implicit shell.');
   }
+  if (!isWindowsDartSourceRuntime(r'C:\sdk\bin\dart.exe') ||
+      !isWindowsDartSourceRuntime(r'C:/sdk/bin/DARTVM.EXE') ||
+      isWindowsDartSourceRuntime(r'C:\tools\wfformcomp.exe')) {
+    throw StateError('Windows source runtime detection regressed.');
+  }
   if (Platform.isWindows) {
     final parent = Directory('.local/companion-tests')
       ..createSync(recursive: true);

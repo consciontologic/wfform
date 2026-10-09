@@ -9,6 +9,12 @@ import 'process_runner.dart' show isWindowsNativeExecutable;
 final _groups = Expando<bool>();
 final _jobs = Expando<WindowsJob>();
 
+bool isWindowsDartSourceRuntime(String path) {
+  final normalized = path.toLowerCase().replaceAll('/', r'\');
+  return normalized.endsWith(r'\dart.exe') ||
+      normalized.endsWith(r'\dartvm.exe');
+}
+
 /// On Linux, isolate the approved program and its descendants in a process
 /// group. Windows gates launch until an owning job can kill all descendants.
 Future<Process> startProgram(
@@ -25,9 +31,9 @@ Future<Process> startProgram(
         'Windows tools require a native .exe, not a batch or shell wrapper.',
       );
     }
-    final runningFromSource = Platform.resolvedExecutable
-        .toLowerCase()
-        .endsWith('\\dart.exe');
+    final runningFromSource = isWindowsDartSourceRuntime(
+      Platform.resolvedExecutable,
+    );
     final runner = runningFromSource
         ? (await Isolate.resolvePackageUri(
             Uri.parse('package:wfformcomp/process_runner.dart'),

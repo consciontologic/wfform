@@ -202,6 +202,10 @@ Future<void> main() async {
       ))['result'],
       'result',
     );
+    check(
+      echoed['isError'] == false,
+      'Echo tool failed before payload decode: ${((echoed['content'] as List).single as Map)['text']}',
+    );
     final payload =
         jsonDecode(
               ((echoed['content'] as List).single as Map)['text'] as String,

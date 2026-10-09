@@ -86,19 +86,19 @@ is separate from the free security and quality tools.
 
 Every PR needs a clear change description, matching tests and a changelog entry.
 Use **Web checks**, **Security checks**, **Linux package** and **Windows package**
-as required checks once the new workflows are present on GitHub. Do not require
-nonexistent checks before publishing the workflow change. No direct push to
-`main`/`develop`, no force push, no silent skip on failure.
+as required checks on `main` and `develop`, with strict/up-to-date checks
+enabled. Keep one independent approving review and resolved conversations; no
+direct push to `main`/`develop`, no force push, no silent skip on failure.
 
 **Repository setup verified on 2026-10-09:** `develop` was created from the
 existing `main`. Both branches require a PR, one approval and resolved
 conversations; stale approvals are dismissed and force-push/deletion disabled.
+Required contexts are now active on both branches with strict mode:
+**Web checks**, **Security checks**, **Linux package**, **Windows package**.
 Administrator bypass remains configured for human bootstrap/recovery; agents
 must not use it. The person who requested a Copilot PR cannot supply its
 required approving review; use another eligible reviewer. A PR author also
-cannot approve their own PR. CI is a manual
-merge gate until the new workflows run remotely and their actual check contexts
-are added to protection. The generated website repository is exempt from PR
+cannot approve their own PR. The generated website repository is exempt from PR
 rules so its dedicated publisher can update it normally.
 
 GitHub cloud Copilot cannot approve or merge its own PR. An eligible independent

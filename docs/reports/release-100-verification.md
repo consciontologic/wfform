@@ -111,11 +111,14 @@ one approval and resolved conversations; stale approvals are dismissed and
 force-push/deletion disabled. Administrators retain bootstrap/recovery bypass.
 Website main remains a generated-artifact publication branch.
 
-Required CI contexts remain a **manual merge gate** until these unpushed
-workflows run remotely; then configure their real names as required checks.
-At that configuration checkpoint, no source commit/push, PR, release tag or
-public package had been created. The following release-initiation follow-up
-records subsequent work separately.
+Historical note: this section captured an earlier pre-CI checkpoint. A later
+GitHub API read-back (by the coordinating parent) confirmed required checks are
+now active on both `main` and `develop` with strict/up-to-date mode:
+**Web checks**, **Security checks**, **Linux package**, **Windows package**,
+plus one independent approval.
+At the earlier checkpoint, no source commit/push, PR, release tag or public
+package had been created. The following release-initiation follow-up records
+subsequent work separately.
 The live website's physical legacy assets change only when the new publisher runs.
 
 ## Copilot and remaining release gates
@@ -203,24 +206,25 @@ It does not replace the historical local evidence above.
 - Fresh local `make version.check` and `make repository.check` could not run in
   this sandbox because `dart` is unavailable (`make: dart: No such file or directory`).
 
-GitHub Actions evidence available at this checkpoint:
+GitHub Actions evidence at this checkpoint (updated with final run outcomes):
 
 - `🛡️ Free security and package reports` run `37934431905`: **success**.
-- `📦 Packages and release` run `37934432076`: **failure**; `security` and
-  `Linux package` succeeded, but `Windows package` failed during
-  `Check and test native Windows runtime`, so no Windows artifact was produced.
+- `📦 Packages and release` run `37934432076`: **failure**. `security` and
+  `Linux package` succeeded; `Windows package` job
+  `113834460693` failed in `companion/test/server_test.dart` with a configured
+  child-start failure before package extraction/build steps, so no Windows
+  artifact was produced.
 - `🌐 Web quality` run `37934431743`: **success**.
 - Preparation PR #2 follow-up runs `37934772462`, `37934772488`, and
-  `37934772949` currently show **action_required** with zero jobs scheduled,
-  so no fresh PR #2 job outcome exists yet.
+  `37934772949` currently show **action_required** with zero jobs scheduled.
 
 Remaining gates before promotion from `release/1.0.0` to `main`:
 
-1. Let PR #2 complete review and merge into `release/1.0.0`.
-2. Observe green web/security/Linux/**native Windows** checks on the final
-   release-branch revision (do not infer Windows from Linux).
-3. Merge the release promotion PR (`release/1.0.0` → `main`) with eligible
-   independent approval and required checks.
+1. Fix the native Windows runtime failure and rerun PR #2 until **Windows package**
+   is green alongside web/security/Linux on the same release-branch revision.
+2. Merge PR #2 into `release/1.0.0` with an eligible independent approval.
+3. Merge the release promotion PR (`release/1.0.0` → `main`) with required
+   checks and independent approval.
 4. After reviewed main merge, publish plain tag `1.0.0`, then complete the
    required `develop` back-merge PR.
 
