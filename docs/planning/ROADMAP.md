@@ -79,6 +79,12 @@ contains every change, preserving the historical branches and commit ancestry.
 Successful native CI and protected PR integration remain required before
 automation becomes active on main.
 
+**Release completion requested 2026-10-09:** investigate the Windows gate
+exit 71 in run `37955507918`, fix and verify its root cause, run all PR quality
+pipelines on the repaired source, merge through develop and main, and publish
+1.0.0 through the existing final production approval. Preserve later remote
+commits and all native checks; no blind retries or skipped tests.
+
 **Risks:** privileged workflows must never execute unreviewed PR code or consume
 its artifacts; GitHub event suppression requires explicit release dispatch;
 duplicate events must not duplicate paid tasks or overwrite immutable releases.

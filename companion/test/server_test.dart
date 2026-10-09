@@ -32,8 +32,9 @@ Future<void> main() async {
   try {
     await direct.stdin.close();
     final code = await direct.exitCode.timeout(const Duration(seconds: 10));
-    check(code == 0, 'Direct startProgram launch exited with $code.');
-    check((await directErrors).isEmpty, 'Direct startProgram wrote stderr.');
+    final errors = await directErrors;
+    check(code == 0, 'Direct startProgram launch exited with $code: $errors');
+    check(errors.isEmpty, 'Direct startProgram wrote stderr: $errors');
     check(
       (jsonDecode(await directOutput) as List).single == literal,
       'Direct startProgram launch changed argv.',

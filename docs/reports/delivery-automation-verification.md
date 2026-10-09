@@ -179,6 +179,37 @@ fix and corrects two compile errors from that historical branch. The old audit
 is retained with a supersession note; its obsolete review/model policies are
 not reinstated.
 
+## Windows release gate investigation
+
+The owner requested completion through main and release 1.0.0 on 2026-10-09.
+The checkout was first fast-forwarded to `83d02a6`, preserving the intervening
+`8a3f5c8` delivery-routing fix and the fail-closed Linux process-group change.
+[Windows job 113905549228](https://github.com/consciontologic/wfform/actions/runs/37955507918/job/113905549228)
+passed analysis, then failed the direct `startProgram` test with exit 71. Web,
+security and Linux checks passed on that revision; Windows packaging did not run.
+
+Exit 71 is the helper's catch-all code. The pinned Dart Windows runtime creates
+an overlapped pipe for a spawned process's stdin, while synchronous
+`stdin.readByteSync` uses `ReadFile` without an OVERLAPPED structure. The helper
+must consume its launch gate asynchronously and preserve all bytes following
+that gate for the approved child. Its job assignment must still precede launch;
+configured children must retain explicit environments and shell-free arguments.
+Independent review also reproduced an inherited-pipe descendant delaying helper
+exit, so the relay must bound its post-exit drain and release the owning job.
+Regression coverage includes fragmented UTF-8 gates, queued MCP requests,
+interactive binary transfer, open parent stdin and private-error redaction.
+
+The full local gate passed 648 Flutter tests (four existing opt-in skips),
+formatting, analysis, repository checks, companion tests and five PWA tests:
+`/tmp/agent-runs/windows-release-full-verify--20261009T160910Z-492185.log`.
+All 103 Python operation tests passed separately. The final affected gate passed
+all 11 companion suites and fatal-info analysis after the lifecycle correction:
+`/tmp/agent-runs/windows-stream-companion-final--20261009T161429Z-500620.log`.
+The regression includes 256 KiB of unread input held by a descendant; a bounded
+post-exit drain reports incomplete output instead of hanging or claiming success.
+Independent security review approved the final source. Native Windows CI remains
+the acceptance gate before merging this correction.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

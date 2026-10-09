@@ -1,10 +1,28 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:wfformcomp/process_runner.dart' show isWindowsNativeExecutable;
+import 'package:wfformcomp/process_runner.dart'
+    show isWindowsNativeExecutable, readLaunchRequest;
 import 'package:wfformcomp/process_group.dart';
 
 Future<void> main(List<String> args) async {
+  if (args.contains('--orphan-child')) {
+    await Future<void>.delayed(const Duration(seconds: 20));
+    return;
+  }
+  if (args.contains('--orphan-parent')) {
+    final descendant = await Process.start(Platform.resolvedExecutable, [
+      Platform.script.toFilePath(),
+      '--orphan-child',
+    ], mode: ProcessStartMode.inheritStdio);
+    stdout.writeln(descendant.pid);
+    await stdout.flush();
+    exit(0);
+  }
+  if (args.contains('--stdio-child')) {
+    await stdout.addStream(stdin);
+    return;
+  }
   if (args.contains('--environment-child')) {
     stdout.write(
       jsonEncode({
@@ -34,6 +52,40 @@ Future<void> main(List<String> args) async {
     }
     return;
   }
+  final packets = StreamController<List<int>>();
+  final input = StreamIterator(packets.stream);
+  final gate = readLaunchRequest(input);
+  packets.add(utf8.encode('{"arguments":["caf'));
+  packets.add([0xc3]);
+  packets.add([0xa9, ...utf8.encode('"]}\r\nfirst request\n')]);
+  packets.add(utf8.encode('second request\n'));
+  unawaited(packets.close());
+  final request = await gate;
+  if (request == null ||
+      (request.message['arguments'] as List).single != 'café' ||
+      utf8.decode(request.remaining) != 'first request\n' ||
+      !await input.moveNext() ||
+      utf8.decode(input.current) != 'second request\n' ||
+      await input.moveNext()) {
+    throw StateError('Async launch gate changed fragmented or queued bytes.');
+  }
+  await input.cancel();
+  for (final bytes in [
+    utf8.encode('{"unfinished":'),
+    List<int>.filled(1024 * 1024 + 1, 32),
+  ]) {
+    final invalid = StreamIterator(Stream.value(bytes));
+    var refused = false;
+    try {
+      await readLaunchRequest(invalid);
+    } on FormatException {
+      refused = true;
+    } finally {
+      await invalid.cancel();
+    }
+    if (!refused) throw StateError('Incomplete or oversized gate accepted.');
+  }
+  stdout.writeln('PASS async gate framing, byte preservation and size limit');
   if (!isWindowsNativeExecutable(r'C:\Program Files\nodejs\node.EXE') ||
       [
         r'C:\tools\test.cmd',
@@ -130,14 +182,18 @@ Future<void> main(List<String> args) async {
       'environment': <String, String>{},
     }),
   );
+  await process.stdin.flush();
+  final echoCode = await process.exitCode.timeout(const Duration(seconds: 10));
   await process.stdin.close();
-  if (await process.exitCode != 0 ||
+  if (echoCode != 0 ||
       await errors != '' ||
       (jsonDecode(await output) as List).single !=
           r'a b & echo DO_NOT_EXECUTE; $(command)') {
     throw StateError('Runner changed argv, used a shell or lost output.');
   }
-  stdout.writeln('PASS child launch gate and literal argv/output forwarding');
+  stdout.writeln(
+    'PASS child launch gate, literal argv/output and exit with open parent stdin',
+  );
   final mcp = await Process.start(Platform.resolvedExecutable, [
     'companion/lib/process_runner.dart',
   ]);
@@ -169,4 +225,136 @@ Future<void> main(List<String> args) async {
     throw StateError('Runner consumed or changed queued MCP protocol bytes.');
   }
   stdout.writeln('PASS launch gate preserves queued MCP stdin messages');
+
+  final orphan = await startProgram(Platform.resolvedExecutable, [
+    File('companion/lib/process_runner.dart').absolute.path,
+  ], environment: {});
+  final orphanPid = Completer<int>();
+  final orphanOutput = utf8.decoder
+      .bind(orphan.stdout)
+      .transform(const LineSplitter())
+      .listen((line) => orphanPid.complete(int.parse(line)))
+      .asFuture<void>();
+  final orphanErrors = utf8.decoder.bind(orphan.stderr).join();
+  int? descendantPid;
+  try {
+    orphan.stdin.writeln(
+      jsonEncode({
+        'executable': Platform.resolvedExecutable,
+        'arguments': [Platform.script.toFilePath(), '--orphan-parent'],
+        'environment': <String, String>{},
+      }),
+    );
+    // The exited child's descendant retains stdin without reading it. Pending
+    // writes must not keep the helper alive and delay owning-job cleanup.
+    orphan.stdin.add(List<int>.filled(256 * 1024, 65));
+    final closedInput = (() async {
+      try {
+        await orphan.stdin.close();
+      } on IOException {
+        // The bounded helper exit closes this intentionally unread input.
+      }
+    })();
+    descendantPid = await orphanPid.future.timeout(const Duration(seconds: 10));
+    final orphanCode = await orphan.exitCode.timeout(
+      const Duration(seconds: 3),
+    );
+    if (!Platform.isWindows) stopProgram(orphan);
+    await orphanOutput;
+    await closedInput;
+    if (orphanCode != 71 ||
+        !(await orphanErrors).contains(
+          'child stream drain timed out; output may be incomplete.',
+        )) {
+      throw StateError('Exited child with inherited descendant pipes failed.');
+    }
+    if (Platform.isWindows) {
+      final tasklist = await Process.run(
+        '${Platform.environment['SystemRoot']}\\System32\\tasklist.exe',
+        ['/FI', 'PID eq $descendantPid', '/FO', 'CSV', '/NH'],
+      );
+      if (tasklist.exitCode != 0 ||
+          tasklist.stdout.toString().contains(',"$descendantPid",')) {
+        throw StateError(
+          'A descendant survived automatic Windows job cleanup.',
+        );
+      }
+    }
+  } finally {
+    stopProgram(orphan);
+    if (descendantPid != null) {
+      Process.killPid(descendantPid, ProcessSignal.sigkill);
+    }
+  }
+  stdout.writeln(
+    'PASS direct child exit drains promptly despite descendant pipes',
+  );
+
+  final relay = await Process.start(Platform.resolvedExecutable, [
+    'companion/lib/process_runner.dart',
+  ]);
+  final firstReply = Completer<void>();
+  final relayed = <int>[];
+  final relayErrors = utf8.decoder.bind(relay.stderr).join();
+  final relayOutput = relay.stdout.listen((chunk) {
+    relayed.addAll(chunk);
+    if (!firstReply.isCompleted) firstReply.complete();
+  }).asFuture<void>();
+  final binary = List<int>.generate(128 * 1024, (index) => index % 256);
+  relay.stdin.add([
+    ...utf8.encode(
+      '${jsonEncode({
+        'executable': Platform.resolvedExecutable,
+        'arguments': [Platform.script.toFilePath(), '--stdio-child'],
+        'environment': <String, String>{},
+      })}\n',
+    ),
+    ...binary,
+  ]);
+  await relay.stdin.flush();
+  await firstReply.future.timeout(const Duration(seconds: 10));
+  relay.stdin.add(binary);
+  await relay.stdin.close();
+  final relayCode = await relay.exitCode.timeout(const Duration(seconds: 10));
+  await relayOutput;
+  if (relayCode != 0 ||
+      await relayErrors != '' ||
+      relayed.length != binary.length * 2 ||
+      relayed.indexed.any((item) => item.$2 != item.$1 % 256)) {
+    throw StateError('Interactive child stream relay lost or changed bytes.');
+  }
+  stdout.writeln(
+    'PASS interactive binary relay with pipe backpressure and EOF',
+  );
+
+  for (final body in [
+    '{"private":"must-not-leak"',
+    jsonEncode({
+      'executable': File('.local/must-not-leak-missing.exe').absolute.path,
+      'arguments': ['must-not-leak'],
+      'environment': {'PRIVATE_VALUE': 'must-not-leak'},
+    }),
+  ]) {
+    final rejected = await Process.start(Platform.resolvedExecutable, [
+      'companion/lib/process_runner.dart',
+    ]);
+    final rejectedOutput = utf8.decoder.bind(rejected.stdout).join();
+    final rejectedErrors = utf8.decoder.bind(rejected.stderr).join();
+    rejected.stdin.writeln(body);
+    await rejected.stdin.close();
+    final rejectedCode = await rejected.exitCode.timeout(
+      const Duration(seconds: 10),
+    );
+    final diagnostic = await rejectedErrors;
+    if (rejectedCode != 71 ||
+        await rejectedOutput != '' ||
+        diagnostic.contains('must-not-leak') ||
+        !RegExp(
+          r'^wfformcomp: (launch gate|configured child launch) failed'
+          r'( \(OS error -?\d+\))?\.\r?\n$',
+        ).hasMatch(diagnostic)) {
+      throw StateError('Launch failure lacks a safe stage/code diagnostic.');
+    }
+  }
+  stdout.writeln('PASS launch failure diagnostics exclude private inputs');
 }

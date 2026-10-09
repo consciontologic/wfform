@@ -46,8 +46,9 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ### 🐛 Fixed
 
-- 🪟 Windows source launches recognize both Dart runtime executables. The trusted
-  process helper receives its runtime environment while configured tools retain
+- 🪟 Windows source launches recognize both Dart runtime executables and read
+  the launch gate asynchronously, preserving queued MCP bytes on Windows pipes.
+  The trusted helper keeps its runtime environment while configured tools retain
   explicit environment isolation and literal arguments.
 
 ## [0.3.0] - 2026-10-09
