@@ -11,6 +11,13 @@ Future<void> main() => runChild();
 bool isWindowsNativeExecutable(String path) =>
     path.toLowerCase().endsWith('.exe');
 
+Map<String, String> windowsChildEnvironment(Map<String, String> configured) {
+  // Dart 3.10.9 process_win.cc gives an empty map only one UTF-16 NUL;
+  // CreateProcessW requires two. A fixed marker makes the block valid without
+  // inheriting host credentials or changing any explicitly configured value.
+  return configured.isEmpty ? const {'WFFORMCOMP_CHILD': '1'} : configured;
+}
+
 Future<({Map<String, Object?> message, List<int> remaining})?>
 readLaunchRequest(StreamIterator<List<int>> input) async {
   final bytes = BytesBuilder(copy: false);
@@ -101,11 +108,14 @@ Future<void> runChild() async {
       );
     }
     stage = 'configured child launch';
+    final environment = (message['environment'] as Map).cast<String, String>();
     child = await Process.start(
       message['executable'] as String,
       (message['arguments'] as List).cast<String>(),
       workingDirectory: message['workingDirectory'] as String?,
-      environment: (message['environment'] as Map).cast<String, String>(),
+      environment: Platform.isWindows
+          ? windowsChildEnvironment(environment)
+          : environment,
       includeParentEnvironment: false,
       runInShell: false,
     );

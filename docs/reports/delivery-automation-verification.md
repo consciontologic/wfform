@@ -210,6 +210,18 @@ post-exit drain reports incomplete output instead of hanging or claiming success
 Independent security review approved the final source. Native Windows CI remains
 the acceptance gate before merging this correction.
 
+The first repaired native run reached child creation and exposed OS error 87
+in [job 113913841155](https://github.com/consciontologic/wfform/actions/runs/37957948173/job/113913841155).
+The pinned [Dart Windows implementation](https://github.com/dart-lang/sdk/blob/3.10.9/runtime/bin/process_win.cc)
+allocates only one UTF-16 terminator for an empty environment; Microsoft's
+[CreateProcess contract](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa)
+requires two. A fixed `WFFORMCOMP_CHILD=1` entry is added only for an empty Windows
+map. Explicit nonempty maps and other platforms remain unchanged; the helper
+never copies parent variables into the configured tool. Native CI must confirm
+this compatibility correction before promotion. All 11 companion suites and
+analysis passed in `/tmp/agent-runs/windows-empty-env-companion--20261009T162245Z-507569.log`;
+independent review approved the narrow environment exception.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)

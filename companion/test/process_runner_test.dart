@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:wfformcomp/process_runner.dart'
-    show isWindowsNativeExecutable, readLaunchRequest;
+    show isWindowsNativeExecutable, readLaunchRequest, windowsChildEnvironment;
 import 'package:wfformcomp/process_group.dart';
 
 Future<void> main(List<String> args) async {
@@ -28,6 +28,7 @@ Future<void> main(List<String> args) async {
       jsonEncode({
         'parent': Platform.environment['WFFORMCOMP_TEST_PARENT'],
         'allowed': Platform.environment['WFFORMCOMP_TEST_ALLOWED'],
+        'compatibility': Platform.environment['WFFORMCOMP_CHILD'],
       }),
     );
     return;
@@ -36,7 +37,9 @@ Future<void> main(List<String> args) async {
     final child = await startProgram(
       Platform.resolvedExecutable,
       [Platform.script.toFilePath(), '--environment-child'],
-      environment: {'WFFORMCOMP_TEST_ALLOWED': 'explicit'},
+      environment: args.contains('--empty-environment')
+          ? {}
+          : {'WFFORMCOMP_TEST_ALLOWED': 'explicit'},
     );
     final output = utf8.decoder.bind(child.stdout).join();
     final errors = utf8.decoder.bind(child.stderr).join();
@@ -86,6 +89,23 @@ Future<void> main(List<String> args) async {
     if (!refused) throw StateError('Incomplete or oversized gate accepted.');
   }
   stdout.writeln('PASS async gate framing, byte preservation and size limit');
+  final emptyEnvironment = <String, String>{};
+  final windowsEmpty = windowsChildEnvironment(emptyEnvironment);
+  if (emptyEnvironment.isNotEmpty ||
+      windowsEmpty.length != 1 ||
+      windowsEmpty['WFFORMCOMP_CHILD'] != '1') {
+    throw StateError('Windows empty environment needs only a fixed marker.');
+  }
+  const configuredEnvironment = {
+    'WFFORMCOMP_CHILD': 'user-configured',
+    'WFFORMCOMP_TEST_ALLOWED': 'explicit',
+  };
+  if (!identical(
+    windowsChildEnvironment(configuredEnvironment),
+    configuredEnvironment,
+  )) {
+    throw StateError('Nonempty configured environment was changed.');
+  }
   if (!isWindowsNativeExecutable(r'C:\Program Files\nodejs\node.EXE') ||
       [
         r'C:\tools\test.cmd',
@@ -118,7 +138,10 @@ Future<void> main(List<String> args) async {
   final environmentProbe = await Process.run(
     Platform.resolvedExecutable,
     [Platform.script.toFilePath(), '--environment-parent'],
-    environment: {'WFFORMCOMP_TEST_PARENT': 'must-not-reach-user-program'},
+    environment: {
+      'WFFORMCOMP_TEST_PARENT': 'must-not-reach-user-program',
+      'WFFORMCOMP_CHILD': 'parent-marker-must-not-reach-user-program',
+    },
     runInShell: false,
   );
   if (environmentProbe.exitCode != 0 || environmentProbe.stderr != '') {
@@ -129,8 +152,33 @@ Future<void> main(List<String> args) async {
   final environmentResult =
       jsonDecode(environmentProbe.stdout as String) as Map;
   if (environmentResult['parent'] != null ||
-      environmentResult['allowed'] != 'explicit') {
+      environmentResult['allowed'] != 'explicit' ||
+      environmentResult['compatibility'] != null) {
     throw StateError('Configured program inherited its parent environment.');
+  }
+  final emptyProbe = await Process.run(
+    Platform.resolvedExecutable,
+    [
+      Platform.script.toFilePath(),
+      '--environment-parent',
+      '--empty-environment',
+    ],
+    environment: {
+      'WFFORMCOMP_TEST_PARENT': 'must-not-reach-user-program',
+      'WFFORMCOMP_CHILD': 'parent-marker-must-not-reach-user-program',
+    },
+    runInShell: false,
+  );
+  if (emptyProbe.exitCode != 0 || emptyProbe.stderr != '') {
+    throw StateError('Empty environment probe failed: ${emptyProbe.exitCode}.');
+  }
+  final emptyResult = jsonDecode(emptyProbe.stdout as String) as Map;
+  if (emptyResult['parent'] != null ||
+      emptyResult['allowed'] != null ||
+      emptyResult['compatibility'] != (Platform.isWindows ? '1' : null)) {
+    throw StateError(
+      'Empty environment inherited private or unexpected values.',
+    );
   }
   stdout.writeln(
     'PASS source runtime selection and explicit child environment',

@@ -103,7 +103,9 @@ On Windows, the equivalent paths in JSON might be `"C:\\Program Files\\Git\\cmd\
 
 An entire argument such as `"{query}"` can substitute a schema-validated scalar
 property. It remains one argv element; no shell parsing/interpolation occurs.
-Only explicitly configured environment values are inherited by the child.
+Children receive only explicitly configured environment values. On Windows, an
+empty configuration adds the fixed, non-secret `WFFORMCOMP_CHILD=1` marker to
+avoid a Dart runtime empty-environment bug; no parent variables are copied.
 Windows tools must point to a native `.exe`. Batch wrappers (`.bat`/`.cmd`)
 are rejected because Windows can interpret their arguments through a shell.
 For a Node MCP server, use the actual installed `node.exe` with its fixed
