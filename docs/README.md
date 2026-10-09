@@ -18,7 +18,7 @@ Start with the [application README](../README.md) to chat, the [simple tools gui
 | [CI/CD publishing](guides/CI_CD.md) | GitHub checks, web-artifact publication and required credentials/host settings |
 | [Native platform setup](native-platforms.md) | Android/iOS identifiers, host projects and remaining native adapter/build work |
 | [Performance/release measurement](performance.md) | Immutable release assembly, cache reuse and measurement limits |
-| [Docker/nginx guide](guides/DOCKER.md) | Container setup, runtime config, TLS and observable header checks |
+| [Docker/nginx guide](guides/DOCKER.md) | GHCR images, local container setup, runtime config, TLS and observable header checks |
 
 ## Project and engineering map
 

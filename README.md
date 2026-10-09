@@ -43,11 +43,13 @@ make verify        # format, analysis, deterministic tests, repository checks
 make build.public  # credential-free release in build/publish-web
 ```
 
-`make help` lists all targets. [Routine delivery](docs/guides/GITFLOW.md) handles
-authorized Copilot tasks, PR checks and release preparation. The owner approves
-the final **production deployment**; CI then publishes verified packages and
-the website. Follow the [one-time setup](docs/guides/CI_CD.md#one-time-automation-setup)
-to enable it. Docker/nginx hosting is covered in the [Docker guide](docs/guides/DOCKER.md).
+`make help` lists all targets. [Gitflow](docs/guides/GITFLOW.md) covers manual
+Copilot task assignment and protected PR promotion. Start a release explicitly
+from **Actions → Packages and release → Run workflow** on `main`; the owner
+approves the final **production deployment** before CI publishes verified
+packages and the website. Follow the [release setup](docs/guides/CI_CD.md#one-time-release-setup).
+Future approved releases can also publish a versioned GHCR web container. See the
+[Docker guide](docs/guides/DOCKER.md) for published-image usage and local builds.
 
 ## Learn more
 
@@ -67,6 +69,6 @@ Web is the verified release target. Android/iOS host identifiers are configured;
 - [Tools playground](examples/tools_playground/README.md): start a real example MCP server and local program, then try the sample prompts.
 - [Changelog](CHANGELOG.md): user-facing release notes.
 
-Version **1.0.0** is prepared in source; a download is available only after its
-GitHub release workflow succeeds. Tools require a desktop computer; normal
+Version **1.0.0** is available in [GitHub Releases](https://github.com/consciontologic/wfform/releases/tag/1.0.0).
+GHCR image publication begins with a future approved release. Tools require a desktop computer; normal
 chat remains available on phones and tablets.
