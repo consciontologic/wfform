@@ -124,7 +124,7 @@ Unit tests cover allowlisting, malformed/traversal manifests, damaged content pr
 
 Reviewed **2026-10-06**:
 
-- [Official nginx image](https://hub.docker.com/_/nginx): versioned official runtime, currently pinned to `nginx:1.30.5-alpine` and its checked digest in `Dockerfile`. Review upstream updates and replace the digest deliberately; a pin does not update itself.
+- [Official nginx image on ECR Public](https://gallery.ecr.aws/docker/library/nginx): the Docker Official Images mirror serves the same `1.30.5-alpine` image and checked digest in `Dockerfile`. Anonymous pulls require no AWS account or secret and avoid Docker Hub's shared-runner pull quota. [AWS documents this official mirror and anonymous access](https://aws.amazon.com/blogs/containers/docker-official-images-now-available-on-amazon-elastic-container-registry-public/). Review upstream updates and replace the digest deliberately; a pin does not update itself.
 - [nginx response-header module](https://nginx.org/en/docs/http/ngx_http_headers_module.html): `always` and inheritance behavior.
 - [nginx HTTPS server configuration](https://nginx.org/en/docs/http/configuring_https_servers.html) and [SSL module](https://nginx.org/en/docs/http/ngx_http_ssl_module.html): certificates, TLS policy and session settings.
 - [MDN script CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src) and [style CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/style-src): distinct WebAssembly and inline-style permissions.

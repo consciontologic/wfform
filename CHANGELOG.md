@@ -16,6 +16,11 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
   Registry under a plain SemVer tag, with cached dependencies/build tools, verified
   public assets and no extra registry secret. Existing version tags cannot be replaced.
 
+### 🩹 Fixed
+
+- 📦 Container builds pull the identical pinned nginx image from Docker's official
+  ECR Public mirror, avoiding Docker Hub's shared-runner anonymous pull limit.
+
 ## [1.0.0] - 2026-10-09
 
 📦 Published through the reviewed release workflow with human production approval.

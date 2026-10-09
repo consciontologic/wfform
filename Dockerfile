@@ -1,5 +1,6 @@
 # Generated allowlisted context only: make image. No repository/config COPY.
-FROM nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+# Docker Official Images mirror; anonymous CI avoids Docker Hub's shared-IP quota.
+FROM public.ecr.aws/docker/library/nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
 COPY nginx/ /etc/nginx/
 COPY site/ /usr/share/nginx/html/
 USER 101:101
