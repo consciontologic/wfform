@@ -66,7 +66,7 @@ String windowsAclFailureSummary(int exitCode, String standardError) {
 
 Future<void> _windowsFileSecurity(File file, {required bool protect}) async {
   // The encoded script is fixed. A user path goes through an environment value
-  // and LiteralPath, never PowerShell source interpolation or command flags.
+  // and .NET file APIs, never PowerShell interpolation or command flags.
   const script = r'''
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -76,10 +76,10 @@ try {
   $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
   if ($env:WFFORM_PROTECT_FILE -eq '1') {
     $stage = 11
-    $acl = New-Object System.Security.AccessControl.FileSecurity
+    $acl = [System.Security.AccessControl.FileSecurity]::new()
     $acl.SetOwner($user)
     $acl.SetAccessRuleProtection($true, $false)
-    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($user, 'FullControl', 'Allow')
+    $rule = [System.Security.AccessControl.FileSystemAccessRule]::new($user, 'FullControl', 'Allow')
     $acl.AddAccessRule($rule)
     $stage = 12
     # Persist only the owner and DACL changed above. Set-Acl rewrites every
@@ -87,7 +87,10 @@ try {
     [System.IO.File]::SetAccessControl($path, $acl)
   }
   $stage = 13
-  $acl = Get-Acl -LiteralPath $path
+  # A PowerShell 7 -> Dart -> Windows PowerShell launch inherits incompatible
+  # PSModulePath entries. Use .NET directly, without any module autoloading.
+  $sections = [System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner
+  $acl = [System.IO.File]::GetAccessControl($path, $sections)
   $stage = 14
   if (!$acl.AreAccessRulesProtected) { exit 30 }
   if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $user.Value) { exit 31 }

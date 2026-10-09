@@ -137,6 +137,117 @@ void main() {
   });
   tearDown(() => scratch.deleteSync(recursive: true));
 
+  test(
+    'Windows archive child rebuilds module paths and preserves packaging data',
+    () async {
+      final package = Directory('${scratch.path}/package with spaces')
+        ..createSync();
+      final archive = File('${scratch.path}/archive with spaces.zip');
+      final parent = {
+        'SYSTEMROOT': r'C:\Windows',
+        'Path': r'C:\Windows\System32',
+        'TEMP': 'preserved temporary directory',
+        'PSModulePath': 'incompatible PowerShell 7 modules',
+        'psmodulepath': 'another incompatible casing',
+        'PsMoDuLePaTh': 'mixed incompatible casing',
+        'WFFORM_PACKAGE_DIRECTORY': 'wrong inherited source',
+        'WFFORM_PACKAGE_ARCHIVE': 'wrong inherited archive',
+        'wfform_package_directory': 'wrong inherited source casing',
+        'wfform_package_archive': 'wrong inherited archive casing',
+      };
+      final before = Map<String, String>.of(parent);
+      var calls = 0;
+      await createWindowsCompanionArchive(
+        package,
+        archive,
+        parentEnvironment: parent,
+        runner:
+            (
+              executable,
+              arguments, {
+              required environment,
+              required includeParentEnvironment,
+              required runInShell,
+            }) async {
+              calls++;
+              expect(
+                executable,
+                r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',
+              );
+              expect(includeParentEnvironment, isFalse);
+              expect(runInShell, isFalse);
+              expect(
+                environment.keys.any(
+                  (key) => key.toUpperCase() == 'PSMODULEPATH',
+                ),
+                isFalse,
+              );
+              expect(environment['Path'], parent['Path']);
+              expect(environment['TEMP'], parent['TEMP']);
+              expect(environment['SYSTEMROOT'], parent['SYSTEMROOT']);
+              expect(
+                environment['WFFORM_PACKAGE_DIRECTORY'],
+                package.absolute.path,
+              );
+              expect(
+                environment['WFFORM_PACKAGE_ARCHIVE'],
+                archive.absolute.path,
+              );
+              expect(
+                environment.keys.where(
+                  (key) => key.toUpperCase().startsWith('WFFORM_PACKAGE_'),
+                ),
+                unorderedEquals([
+                  'WFFORM_PACKAGE_DIRECTORY',
+                  'WFFORM_PACKAGE_ARCHIVE',
+                ]),
+              );
+              expect(arguments.take(3), [
+                '-NoProfile',
+                '-NonInteractive',
+                '-Command',
+              ]);
+              expect(
+                arguments.last,
+                contains(r'$env:WFFORM_PACKAGE_DIRECTORY'),
+              );
+              expect(arguments.last, contains(r'$env:WFFORM_PACKAGE_ARCHIVE'));
+              expect(arguments.last, isNot(contains(package.path)));
+              return ProcessResult(1, 0, '', '');
+            },
+      );
+      expect(calls, 1);
+      expect(parent, before);
+    },
+  );
+
+  if (Platform.isWindows) {
+    test(
+      'Windows ZIP succeeds with incompatible inherited module path',
+      () async {
+        final package = Directory('${scratch.path}/native package')
+          ..createSync();
+        File(
+          '${package.path}/payload.txt',
+        ).writeAsStringSync('native ZIP fixture');
+        final archive = File('${scratch.path}/native archive.zip');
+        await createWindowsCompanionArchive(
+          package,
+          archive,
+          parentEnvironment: {
+            ...Platform.environment,
+            'PSModulePath': '${scratch.absolute.path}\\missing-ps7-modules',
+            'WFFORM_PACKAGE_DIRECTORY': 'wrong inherited source',
+            'WFFORM_PACKAGE_ARCHIVE': 'wrong inherited archive',
+          },
+        );
+        final bytes = archive.readAsBytesSync();
+        expect(bytes.take(4), [0x50, 0x4b, 0x03, 0x04]);
+        expect(latin1.decode(bytes), contains('payload.txt'));
+      },
+    );
+  }
+
   test('packages only active verified flat assets and required root files', () {
     copyCompanionWebBuild(source, target);
     final files = target

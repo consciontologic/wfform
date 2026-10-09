@@ -105,24 +105,7 @@ Future<void> main(List<String> args) async {
     final archive = File('${output.path}/${target.archiveName}');
     if (archive.existsSync()) archive.deleteSync();
     if (Platform.isWindows) {
-      // Fixed PowerShell program; paths are data, never interpolated into code.
-      final result = await Process.run(
-        '${Platform.environment['SystemRoot']}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          r'''$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory($env:WFFORM_PACKAGE_DIRECTORY, $env:WFFORM_PACKAGE_ARCHIVE)''',
-        ],
-        environment: {
-          'WFFORM_PACKAGE_DIRECTORY': package.absolute.path,
-          'WFFORM_PACKAGE_ARCHIVE': archive.absolute.path,
-        },
-        runInShell: false,
-      );
-      if (result.exitCode != 0) {
-        throw StateError('Could not create Windows archive: ${result.stderr}');
-      }
+      await createWindowsCompanionArchive(package, archive);
     } else {
       await run('tar', [
         '-czf',
@@ -150,6 +133,61 @@ Future<void> main(List<String> args) async {
     stdout.writeln('Companion package: ${archive.path}');
   } finally {
     package.deleteSync(recursive: true);
+  }
+}
+
+typedef CompanionArchiveRunner =
+    Future<ProcessResult> Function(
+      String executable,
+      List<String> arguments, {
+      required Map<String, String> environment,
+      required bool includeParentEnvironment,
+      required bool runInShell,
+    });
+
+Future<void> createWindowsCompanionArchive(
+  Directory package,
+  File archive, {
+  Map<String, String>? parentEnvironment,
+  CompanionArchiveRunner? runner,
+}) async {
+  final parent = parentEnvironment ?? Platform.environment;
+  final systemRoot = parent.entries
+      .firstWhere(
+        (entry) => entry.key.toUpperCase() == 'SYSTEMROOT',
+        orElse: () =>
+            throw StateError('Windows packaging requires SystemRoot.'),
+      )
+      .value;
+  // Dart inherits PowerShell 7's module search path, but Windows PowerShell
+  // cannot load those modules. Omit it so the child builds its own defaults.
+  final environment = Map<String, String>.of(parent)
+    ..removeWhere(
+      (key, _) => const {
+        'PSMODULEPATH',
+        'WFFORM_PACKAGE_DIRECTORY',
+        'WFFORM_PACKAGE_ARCHIVE',
+      }.contains(key.toUpperCase()),
+    )
+    ..addAll({
+      'WFFORM_PACKAGE_DIRECTORY': package.absolute.path,
+      'WFFORM_PACKAGE_ARCHIVE': archive.absolute.path,
+    });
+  // Fixed PowerShell program; paths are data, never interpolated into code.
+  final result = await (runner ?? Process.run)(
+    '$systemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      r'''$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory($env:WFFORM_PACKAGE_DIRECTORY, $env:WFFORM_PACKAGE_ARCHIVE)''',
+    ],
+    environment: environment,
+    includeParentEnvironment: false,
+    runInShell: false,
+  );
+  if (result.exitCode != 0) {
+    throw StateError('Could not create Windows archive: ${result.stderr}');
   }
 }
 

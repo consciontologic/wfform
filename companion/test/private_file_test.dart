@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:wfformcomp/private_file.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
   final diagnostic = windowsAclFailureSummary(
     12,
     'WFFORM_ACL_FAILURE:12:-2147024891\r\n',
@@ -31,8 +31,8 @@ Future<void> main() async {
   final parent = Directory('.local/companion-tests')
     ..createSync(recursive: true);
   final scratch = parent.createTempSync('private-');
-  // Both the .NET write and the PowerShell verification must treat the path
-  // literally, including characters significant to PowerShell and wildcards.
+  // The .NET write/read must treat the path literally, including characters
+  // significant to PowerShell and wildcards.
   const tokenName = r"private [token] $ ; '.txt";
   final token = File('${scratch.path}/$tokenName')..writeAsStringSync('');
   try {
@@ -65,6 +65,47 @@ Future<void> main() async {
     await requirePrivateFile(token);
     if (token.readAsStringSync() != 'fixture secret') {
       throw StateError('Permission update changed token contents.');
+    }
+    if (Platform.isWindows && arguments.isEmpty) {
+      // PowerShell 7 -> Dart -> Windows PowerShell retains PSModulePath, unlike
+      // a direct shell launch. An incompatible shared module must not affect
+      // the helper's .NET ACL operations or execute any module code.
+      final moduleRoot = Directory('${scratch.path}/modules');
+      final incompatible = Directory(
+        '${moduleRoot.path}/Microsoft.PowerShell.Security',
+      )..createSync(recursive: true);
+      File(
+        '${incompatible.path}/Microsoft.PowerShell.Security.psd1',
+      ).writeAsStringSync('''
+@{
+  RootModule = 'Microsoft.PowerShell.Security.psm1'
+  ModuleVersion = '7.0.0'
+  PowerShellVersion = '7.0'
+  FunctionsToExport = @('Get-Acl', 'Set-Acl')
+}
+''');
+      File(
+        '${incompatible.path}/Microsoft.PowerShell.Security.psm1',
+      ).writeAsStringSync("throw 'The ACL helper loaded a fixture module.'");
+      final isolated = await Process.run(
+        Platform.resolvedExecutable,
+        [Platform.script.toFilePath(), '--module-isolation'],
+        environment: {
+          for (final entry in Platform.environment.entries)
+            if (entry.key.toUpperCase() != 'PSMODULEPATH')
+              entry.key: entry.value,
+          'PSModulePath': moduleRoot.absolute.path,
+        },
+        includeParentEnvironment: false,
+        runInShell: false,
+      );
+      if (isolated.exitCode != 0) {
+        throw StateError(
+          'Private-file protection depended on inherited PowerShell modules '
+          '(exit ${isolated.exitCode}).',
+        );
+      }
+      stdout.writeln('PASS Windows ACL operations ignore incompatible modules');
     }
     stdout.writeln(
       'PASS private credentials and refusal of widened ${Platform.operatingSystem} permissions',

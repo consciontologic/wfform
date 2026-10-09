@@ -269,6 +269,31 @@ change; all 11 local companion suites and analysis passed in
 PowerShell parsing and repository checks also passed. Native Windows acceptance
 remains required before promotion.
 
+The [following Windows run](https://github.com/consciontologic/wfform/actions/runs/37962466321/job/113929044630)
+confirmed ACL application and isolated the remaining failure to reading the ACL
+through `Get-Acl`. [Microsoft documents an incompatible module-path inheritance
+case](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath?view=powershell-7.6#starting-windows-powershell-from-powershell-7)
+when PowerShell 7 launches Windows PowerShell through an intermediate process;
+the CI launch chain uses Dart as that intermediary. The numeric HRESULT alone
+does not identify the exception type, but the documented chain supports removing
+the helper's module dependency. Direct .NET constructors and owner/access reads
+preserve the same mandatory ACL validation without cmdlet autoload.
+The ZIP builder uses the same launch chain for `Add-Type`, so its trusted helper
+also removes the inherited `PSModulePath` key before starting Windows PowerShell,
+allowing Windows to reconstruct its own module defaults. This is limited to the
+packaging subprocess; host settings and user-tool environments are unchanged.
+The Windows ACL regression deliberately launches Dart with an incompatible
+PowerShell Security module path, then repeats protection, unsafe-access rejection,
+repair and content-preservation checks. All 11 local companion suites and analysis
+passed in `/tmp/agent-runs/windows-acl-read-companion--20261009T170229Z-546021.log`;
+PowerShell AST validation confirms the helper no longer invokes module cmdlets.
+ZIP subprocess regressions reproduce inherited module paths and case-insensitive
+Windows environment keys; 25 targeted deployment/package tests passed in
+`/tmp/agent-runs/windows-zip-final-green--20261009T170522Z-550728.log`, with fatal-info
+analysis also green. Native CI additionally exercises real ZIP creation under a
+poisoned module path and the extracted compiled executable. Independent review
+approved both source changes; those native acceptance checks remain mandatory.
+
 ## References
 
 - [GitHub task API and credential requirements](https://docs.github.com/en/rest/agent-tasks/agent-tasks)
