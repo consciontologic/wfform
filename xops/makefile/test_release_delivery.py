@@ -143,6 +143,15 @@ class PromotionEvidenceTest(unittest.TestCase):
         self.assertEqual(release.authorize(api, REPO, 3, SHA, '1.0.0')['number'], 3)
         self.assertEqual(api.writes, [])
 
+    def test_prefixed_release_branches_are_authorized_only_for_matching_version(self):
+        for branch in ('codex/release/1.0.0', 'claude/release/1.0.0'):
+            api = PromotionAPI()
+            api.pr['head']['ref'] = branch
+            with self.subTest(branch=branch):
+                self.assertEqual(release.authorize(api, REPO, 3, SHA, '1.0.0')['number'], 3)
+                with self.assertRaisesRegex(release.DeliveryError, 'version'):
+                    release.authorize(api, REPO, 3, SHA, '1.0.1')
+
     def test_later_skipped_promotion_checks_do_not_mask_prior_develop_quality(self):
         api = PromotionAPI()
         row = dict(api.checks[0], id=900, conclusion='skipped',

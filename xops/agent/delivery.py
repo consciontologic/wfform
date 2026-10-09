@@ -424,6 +424,15 @@ def event_gate(name, event, policy):
             raise DeliveryError('Untrusted or unsupported workflow source.')
 
 
+def release_completion_pr(event):
+    run = event.get('workflow_run', {})
+    if (run.get('path') != '.github/workflows/companion.yml'
+            or run.get('event') != 'workflow_dispatch' or run.get('status') != 'completed'):
+        return None
+    match = re.fullmatch(r'wfform-release:([1-9][0-9]*):' + SEMVER, run.get('display_title', ''))
+    return int(match.group(1)) if match else None
+
+
 def intake(api, name, event, policy):
     actor = event.get('sender', {})
     login = actor.get('login', '')
@@ -694,7 +703,7 @@ def ensure_label(api, name, color, description):
         api.request('POST', f'/repos/{REPO}/labels', {'name': name, 'color': color, 'description': description})
 
 
-def reconcile(api, creator, task_api, policy):
+def reconcile(api, creator, task_api, policy, completed_release_pr=None):
     managed_ready = task_followups(api, task_api, policy) if task_api else set()
     limit = policy['max_pull_requests']
     pulls = api.get(f'/repos/{REPO}/pulls?state=open&sort=updated&direction=desc&per_page={limit}')
@@ -710,9 +719,15 @@ def reconcile(api, creator, task_api, policy):
             raise
         except DeliveryError as error:
             print(f'⏳ PR #{pull["number"]}: {error}')
-    # Paginate the closed queue so pending publication/backmerge work cannot age
-    # out after thirty newer PRs. Exhaustion fails explicitly, never drops work.
-    closed = api.paged(f'/repos/{REPO}/pulls?state=closed&sort=updated&direction=desc', limit=1000)
+    # Release-completion runs carry their PR identity; routine scans remain
+    # paginated and fail explicitly rather than silently dropping older work.
+    if completed_release_pr is None:
+        closed = api.paged(f'/repos/{REPO}/pulls?state=closed&sort=updated&direction=desc', limit=1000)
+    else:
+        if type(completed_release_pr) is not int or completed_release_pr < 1:
+            raise DeliveryError('Release completion requires an exact promotion PR number.')
+        completed = api.get(f'/repos/{REPO}/pulls/{completed_release_pr}')
+        closed = [completed] if completed and completed.get('merged_at') else []
     for summary in closed or []:
         if not summary.get('merged_at'):
             continue
@@ -781,7 +796,8 @@ def main():
             raise DeliveryError('Unknown delivery action.')
         for label in policy['intake_labels']:
             ensure_label(api, label, '0969da', 'Trusted maintainer requests one Copilot task')
-        reconcile(api, creator, GitHub(task_token) if task_token else None, policy)
+        reconcile(api, creator, GitHub(task_token) if task_token else None, policy,
+                  release_completion_pr(event) if name == 'workflow_run' else None)
 
 
 if __name__ == '__main__':

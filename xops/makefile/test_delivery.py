@@ -180,7 +180,11 @@ class DeliverySafetyTest(unittest.TestCase):
         def submit(body, token):
             calls.append(body)
             return {'id': 'release-1', 'html_url': f'https://github.com/{REPO}/tasks/release-1'}
-        delivery.delegate(api, {'number': 9, 'title': 'Release 1.0.0'}, 'release', '1.0.0', 'maintainer', 'test', submit)
+        with patch.object(
+                delivery, 'ensure_release_branch',
+                side_effect=AssertionError('branch setup is unused')) as setup:
+            delivery.delegate(api, {'number': 9, 'title': 'Release 1.0.0'}, 'release', '1.0.0', 'maintainer', 'test', submit)
+            setup.assert_not_called()
         self.assertEqual(calls[0]['base_ref'], 'develop')
         self.assertFalse(any('/git/refs' in row[1] for row in api.writes))
 
@@ -192,6 +196,18 @@ class DeliverySafetyTest(unittest.TestCase):
         with self.assertRaises(delivery.DeliveryError):
             delivery.event_gate('workflow_run', event, policy())
         delivery.event_gate('schedule', event, policy())
+
+    def test_release_completion_identity_requires_completed_trusted_dispatch(self):
+        event = {'workflow_run': {'path': '.github/workflows/companion.yml',
+                                  'event': 'workflow_dispatch', 'status': 'completed',
+                                  'display_title': 'wfform-release:7:1.0.0'}}
+        self.assertEqual(delivery.release_completion_pr(event), 7)
+        event['workflow_run']['event'] = 'pull_request'
+        self.assertIsNone(delivery.release_completion_pr(event))
+        event['workflow_run'].update(event='workflow_dispatch', path='.github/workflows/web.yml')
+        self.assertIsNone(delivery.release_completion_pr(event))
+        event['workflow_run'].update(path='.github/workflows/companion.yml', display_title='wfform-release:0:1.0.0')
+        self.assertIsNone(delivery.release_completion_pr(event))
 
     def test_reservation_before_paid_task_and_duplicate_is_noop(self):
         api = FakeAPI()
@@ -682,6 +698,19 @@ class DeliverySafetyTest(unittest.TestCase):
                 delivery, 'dispatch_release', return_value={'state': 'dispatched'}) as dispatch:
             delivery.reconcile(api, creator, None, policy())
             dispatch.assert_called_once()
+
+    def test_release_completion_reconciles_its_promotion_without_scanning_recent_prs(self):
+        api, creator = FakeAPI(), FakeAPI()
+        api.reads[f'/repos/{REPO}/pulls?state=open&sort=updated&direction=desc&per_page=30'] = []
+        pull = pr('develop', 'main', state='closed', merged=True, merged_at='2026-10-09',
+                  merge_commit_sha=SHA)
+        api.reads[f'/repos/{REPO}/pulls/7'] = pull
+        api.reads[f'/repos/{REPO}/releases/tags/1.0.0'] = {'draft': False}
+        api.reads[f'/repos/{REPO}/git/ref/tags/1.0.0'] = {'object': {'sha': SHA}}
+        with patch.object(delivery, 'release_version', return_value='1.0.0'), patch.object(
+                delivery, 'prepare_backmerge', return_value={'number': 8}) as backmerge:
+            delivery.reconcile(api, creator, None, policy(), completed_release_pr=7)
+            backmerge.assert_called_once_with(api, creator, '1.0.0', SHA)
 
     def test_release_branch_never_overwrites_or_targets_protected_refs(self):
         api = FakeAPI()

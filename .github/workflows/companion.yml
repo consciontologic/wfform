@@ -1,5 +1,7 @@
 name: 📦 Packages and release
 
+run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_pr != '' && format('wfform-release:{0}:{1}', inputs.release_pr, inputs.version) || 'Packages and release' }}
+
 on:
   pull_request:
     branches: [develop, main]
