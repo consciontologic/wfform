@@ -167,6 +167,10 @@ Repository checks passed; Gitleaks found no leaks in the combined 36-commit
 history or the prospective source snapshot. The full 648-test application gate
 above remains applicable: companion/application code is unchanged by this merge.
 
+The single replacement [PR #5](https://github.com/consciontologic/wfform/pull/5)
+targets `develop` from `codex/feature/delivery-automation`. Consolidation commit
+`7430d08d820d6c84d02a9a89b57096932daef3a2` was published through `make git`;
+remote identity and ancestry of `f7966bc`, `b3ba414` and `01eb553` were verified.
 Superseded PRs #1, #2 and #4 were closed without deleting their branches.
 The latest feature branch preserves the original 1.0.0 preparation, all delivery
 and CI revisions, and the seven additional Copilot commits through a merge.

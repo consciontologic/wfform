@@ -31,7 +31,7 @@ Updated 2026-10-09. This is the authoritative current user scope, not a scaffold
 | Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
 | Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
 | Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
-| Routine delivery automation with human release approval | 8 | 6 | MAI verified live; requested alternatives and CI lanes/caches tested; one consolidated develop PR is being published |
+| Routine delivery automation with human release approval | 8 | 7 | MAI verified live; alternatives and CI lanes/caches tested; all history consolidated in PR #5 into develop; native CI and main activation pending |
 
 ## Phase 26 — Routine delivery automation with human release approval
 
@@ -66,16 +66,16 @@ from mocks. Publication remains pending human approval.
 - [x] Restrict security, quality and native tests to develop PRs and hotfix-to-main PRs; reuse exact-tree validation for promotion and release.
 - [x] Cache pinned SDK/dependencies/scanners safely and remove duplicate scans; verify workflow routing and source-provenance regressions.
 - [x] Try MAI-Code-1.1-Flash and configure supported, bounded fallback choices in the requested order without silent expensive substitution.
-- [ ] Preserve all earlier PR work and history on the latest feature branch, close superseded PRs, and open one clean PR into develop.
+- [x] Preserve all earlier PR work and history on the latest feature branch, close superseded PRs, and open one clean PR into develop.
 
 Local verification passed 643 Flutter tests and 78 Python ops tests, companion
 and PWA suites, workflow security and secret scans. GitHub's production reviewer
 and main-only environment credentials are configured and read back. Native
 Copilot auto-run remains an owner setting; see the
 [delivery verification report](../reports/delivery-automation-verification.md).
-The earlier bootstrap [PR #4](https://github.com/consciontologic/wfform/pull/4)
-was retargeted to `develop`. The user then requested closing all existing PRs
-and one replacement PR containing every change; consolidation is in progress.
+The earlier PRs #1, #2 and #4 are closed. The replacement
+[PR #5](https://github.com/consciontologic/wfform/pull/5) targets `develop` and
+contains every change, preserving the historical branches and commit ancestry.
 Successful native CI and protected PR integration remain required before
 automation becomes active on main.
 
