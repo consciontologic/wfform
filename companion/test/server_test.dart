@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:wfformcomp/process_group.dart';
 import 'package:wfformcomp/wfformcomp.dart';
 
 void check(bool condition, String message) {
@@ -9,6 +10,40 @@ void check(bool condition, String message) {
 
 Future<void> main() async {
   const token = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN';
+  const literal = r'hello; $(touch SHOULD_NOT_EXIST) " && echo injected';
+  final direct = await (() async {
+    try {
+      return await startProgram(
+        Platform.resolvedExecutable,
+        [
+          File('companion/test/command_fixture.dart').absolute.path,
+          'echo',
+          literal,
+        ],
+        environment: {},
+      );
+    } on ProcessException catch (error) {
+      final code = error.osError?.errorCode;
+      throw StateError(
+        'Direct startProgram launch failed: ${error.message}${code == null ? '' : ' (osError=$code)'}',
+      );
+    }
+  })();
+  try {
+    await direct.stdin.close();
+    final stdoutText = await utf8.decoder.bind(direct.stdout).join();
+    final stderrText = await utf8.decoder.bind(direct.stderr).join();
+    final code = await direct.exitCode;
+    check(code == 0, 'Direct startProgram launch exited with $code.');
+    check(stderrText.isEmpty, 'Direct startProgram launch wrote stderr.');
+    check(
+      (jsonDecode(stdoutText) as List).single == literal,
+      'Direct startProgram launch changed argv.',
+    );
+    pass('direct startProgram launch gate and argv forwarding');
+  } finally {
+    stopProgram(direct);
+  }
   final config = CompanionConfig.fromJson({
     'port': 0,
     'allowedOrigins': ['http://localhost:8080'],
@@ -191,7 +226,6 @@ Future<void> main() async {
     );
     check(extra['isError'] == true, 'Unexpected arguments accepted');
     pass('tool discovery and name/schema validation');
-    const literal = r'hello; $(touch SHOULD_NOT_EXIST) " && echo injected';
     final echoed = object(
       (await rpc(
         'tools/call',

@@ -42,7 +42,7 @@ Future<Process> startProgram(
     final process = await Process.start(
       Platform.resolvedExecutable,
       [runner],
-      includeParentEnvironment: false,
+      includeParentEnvironment: true,
       runInShell: false,
     );
     try {
