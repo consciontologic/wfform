@@ -38,6 +38,9 @@ session before doing real work.
   `xops/makefile/` is scaffold repository tooling, not application logic.
 - Read `docs/tracking/context.md`, `docs/code/ARCHITECTURE.md`, and the relevant
   feature guide before changes. Use `make help` for actual project commands.
+- Keep documentation concise and current. Update the existing guide for a topic;
+  reserve `docs/reports/` for useful research or analysis, not per-change logs.
+  Put routine verification evidence in PRs, CI artifacts and the tracking log.
 - Preserve free-only model eligibility, direct API transport, explicit retry,
   selectable text, stored conversations and drafts. Never silently select a
   paid route or execute uploaded/generated code, HTML or scripts.

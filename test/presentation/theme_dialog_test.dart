@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wfform/app/theme.dart';
 import 'package:wfform/presentation/brand_mark.dart';
@@ -13,59 +11,42 @@ import 'studio_test.dart' as fixtures;
 
 void main() {
   testWidgets(
-    'dialog header uses valid bundled color graphics for every emoji',
+    'dialog header paints each identity and keeps its controls accessible',
     (tester) async {
-      const assets = {
-        '🧭': 'assets/emoji/1f9ed.png',
-        '🔎': 'assets/emoji/1f50e.png',
-        '🩺': 'assets/emoji/1fa7a.png',
-        '🎨': 'assets/emoji/1f3a8.png',
-        '⚙️': 'assets/emoji/2699.png',
-        '🗂️': 'assets/emoji/1f5c2.png',
-      };
-      for (final asset in assets.entries) {
+      for (final glyph in BrandGlyph.values) {
+        var closed = false;
         await tester.pumpWidget(
           MaterialApp(
             theme: studioTheme(),
             home: Scaffold(
               body: StudioDialogHeader(
                 title: 'Header fixture',
-                emoji: asset.key,
+                glyph: glyph,
                 color: StudioPalette.light.modelDetails,
                 closeTooltip: 'Close fixture',
-                onClose: () {},
+                onClose: () => closed = true,
               ),
             ),
           ),
         );
         await tester.pumpAndSettle();
-        final imageFinder = find.descendant(
+        final iconFinder = find.descendant(
           of: find.byType(StudioDialogHeader),
-          matching: find.byType(Image),
+          matching: find.byType(BrandIcon),
         );
-        expect(imageFinder, findsOneWidget);
-        final image = tester.widget<Image>(imageFinder);
-        expect((image.image as AssetImage).assetName, asset.value);
-        expect(image.excludeFromSemantics, true);
+        expect(iconFinder, findsOneWidget);
+        expect(tester.widget<BrandIcon>(iconFinder).glyph, glyph);
+        expect(find.byType(Image), findsNothing);
         expect(
           find.ancestor(
-            of: imageFinder,
+            of: iconFinder,
             matching: find.byType(ExcludeSemantics),
           ),
           findsWidgets,
         );
-        expect(find.text(asset.key), findsNothing);
-        await tester.runAsync(() async {
-          final bytes = await rootBundle.load(asset.value);
-          final codec = await ui.instantiateImageCodec(
-            bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-          );
-          final frame = await codec.getNextFrame();
-          expect(frame.image.width, 72);
-          expect(frame.image.height, 72);
-          frame.image.dispose();
-          codec.dispose();
-        });
+        expect(find.text('Header fixture'), findsOneWidget);
+        await tester.tap(find.byTooltip('Close fixture'));
+        expect(closed, true);
         expect(tester.takeException(), null);
       }
     },
@@ -142,7 +123,7 @@ void main() {
           await tester.pumpAndSettle();
           final headerFinder = find.byType(StudioDialogHeader);
           final header = tester.widget<StudioDialogHeader>(headerFinder);
-          expect(header.glyph ?? header.emoji, popup.$2);
+          expect(header.glyph, popup.$2);
           expect(header.color, popup.$3);
           expect(
             Theme.of(tester.element(headerFinder)).brightness,

@@ -1,82 +1,58 @@
-# Conversation history
+# History and drafts
 
-wfform keeps conversation history in this browser using IndexedDB, an asynchronous transactional database suited to structured conversation records. There is no cloud synchronization or history server. Data belongs to the browser origin: changing the hostname, scheme or port opens a different history store. The history list shows the conversation title, selected model, last update time and message count, and supports search by title or model.
+History is browser-local IndexedDB data, scoped to scheme/host/port. There is no
+cloud sync. Export a conversation for a portable backup; import creates a separate
+copy including text, files and draft. Clearing/evicting site data can remove history.
 
-## Navigation and actions
+## User behavior
 
-On expanded layouts, history occupies the persistent sidebar, with Diagnostics and Settings at its bottom. Compact and medium layouts expose the same navigation in the header's menu drawer. Version, GitHub and an **Info** menu share a compact bottom row; Info contains About, Terms and conditions, and Liability. These layouts use a small header control with a visible **Models** label and icon to open the searchable picker; expanded layouts retain the selector above the conversation. Current implementation and checks are tracked in the [compact navigation report](reports/compact-navigation-verification.md).
-
-**New conversation** opens a writable workspace, resuming an existing unsent draft for the selected model when available. A blank workspace or model selection alone does not create a history row. **Drafts** lists unsent work, including text, files and attempts that failed before user content was dispatched. Drafts can be reopened, exported or deleted directly from their row, without selecting or archiving them first. They cannot be archived as chats. **Chats** lists conversations whose user content reached the request-dispatch boundary; a health probe alone does not qualify. The response indicator on the corresponding row spins while the request is active and stops on completion, failure or cancellation. Reduced-motion mode uses a static status icon with the same accessible label.
-
-Explicit parameter overrides and selected tools also make an unsent draft worth saving, even with an empty composer. They remain drafts until user content is dispatched. Complete assistant calls, matching tool-result IDs and opaque reasoning details are stored and exported with messages. Restore marks unfinished tool execution interrupted and never replays it; saved connections require explicit reconnection. See [connected tools](tools.md).
-
-Deleting the active draft removes its saved text and attachments and opens a new
-writable workspace for the current model. It waits for any already-running
-save, prevents another checkpoint from recreating that draft during deletion,
-and clears its local recovery marker after success. Repeated delete clicks share
-the same operation. A failed deletion leaves the current text, files and saved
-record intact for explicit retry. A draft being deleted is excluded from model
-selection's draft-resume search. Deleting a different draft preserves the active
-composition and allows its normal saving to continue.
-
-**Archived** lists conversations explicitly archived. Archiving the active chat returns to a writable draft; intentionally reopening an archived chat remains read-only. **Restore** returns it to ordinary history so it can be continued. The trash action on an archived row deletes it immediately, without first opening or selecting it and without a confirmation dialog. Deletion is permanent; export a backup first if needed. The row shows progress, deduplicates repeat clicks, and reports failures without removing the record.
-
-Conversation switches, new conversations and archive/restore actions are guarded while a response or history transition is active. Deleting a different draft or archived conversation does not switch or lock the active conversation, cancel its response, or disturb its draft and files.
-
-Choosing another model keeps unsent composer text and files visible. A workspace with no message history keeps its identity and changes model. When the current conversation has messages, a separate workspace carries the composer input to the new model; the original history and any existing destination-model draft remain intact. An empty composer resumes the destination model's draft when available. Retained files are not discarded if the new model cannot accept them; sending is blocked until a compatible model is chosen or those files are removed. History restoration does not automatically send an inference request or retry a previous turn. A stored model must still satisfy the current catalog's free-text-chat constraints before sending can resume. If it has disappeared, become paid or become incompatible, its conversation remains available but no substitute model is selected.
-
-About, Terms and Liability open in the same tab after the active draft and files have been saved. Navigation is refused during a response, file selection or history transition, and a failed checkpoint keeps the app open with an error. The information pages' **Open app** link and browser Back return through the same tab's active-conversation marker. GitHub opens separately. A deliberately opened independent tab still has its own active conversation; existing drafts remain accessible from history.
-
-An accepted send moves text and attached files into the saved user turn and immediately clears the ordinary composer. Subsequent failure preserves that turn and any partial response for retry; a newly written draft is independent. Edit and resend appends an updated copy, linked to its original message, while retaining the original conversation and current composer draft. Archive, restore and deletion include the conversation's sent and unsent attachments.
+- **Drafts** hold unsent text/files, parameter overrides and tool selections. Blank
+  workspaces create no row. Only user-content dispatch promotes a draft to **Chats**;
+  health probing alone does not. Drafts can be exported/deleted, not archived.
+- **New conversation** resumes an unsent workspace for the selected model. Model
+  changes preserve composer text/files and keep message-bearing histories separate.
+  Incompatible retained files block sending until explicitly removed or compatible.
+- **Archive** preserves read-only history; **Restore** permits continuation. Deletion
+  on draft/archived rows is immediate and permanent. Failures retain the record.
+- Switching history/model waits for active sends or history operations. Deleting a
+  different draft/archived record does not disturb the active composition/response.
+- About/Terms/Liability navigation waits for a successful checkpoint and returns to
+  the same tab's conversation. File selection or unsaved failures block navigation.
+- Accepted input clears its composer; failure retains the turn/partial output and
+  newer drafts. Reload never resends inference or replays tools.
 
 ## Persistence contract
 
-The browser adapter uses IndexedDB database `freeform-conversations`, version 2. `summaries` holds the small list metadata; `documents_v2` holds conversation metadata, draft text, retry state and attachment references; `messages_v2` holds individual messages; `attachments_v2` holds immutable binary bytes. Changes commit in one transaction. A streaming checkpoint writes the changed response message and small metadata, without rewriting earlier message rows or attachment bytes. Repeated references to the same attachment within a conversation share one stored payload. Only the most recently decoded checkpoint is retained by the repository, so visiting many histories does not retain all their media in memory.
+`freeform-conversations` database v2 contains `summaries`, `documents_v2`,
+`messages_v2` and `attachments_v2`. Changes commit atomically; checkpoints write only
+changed messages/metadata and new immutable binary files. Summaries load lazily.
+Legacy `records`/`meta` survive until a successful migration checkpoint. Database
+versioning is independent of export format; renaming the app does not rename stores.
 
-The original `records` and `meta` stores remain for migration. A version-1 conversation is read normally and migrated on its next successful checkpoint. The transaction writes every new record/message/media row and removes the old serialized record together. If validation, quota or transaction failure prevents the save, the original legacy record remains. Reading history alone does not delete the migration source. Application-level record export remains version 1 and independent of the IndexedDB layout.
+Changes coalesce around 800 ms; important lifecycle boundaries checkpoint immediately.
+Guarded navigation/updates await completed writes. The tab-local
+`freeform-conversations.active.v2` and `freeform.pendingDraft.v1` recover selection and
+newer unsent text for the matching record. Files never enter text recovery markers,
+localStorage or PWA caches. Damaged/unsupported records remain intact; storage errors
+stay visible, preserving in-memory work without pretending it was saved.
 
-Startup loads summaries and the active conversation; opening another conversation reads its body on demand rather than loading every conversation body. The last-opened ID is now in tab-local `sessionStorage` (`freeform-conversations.active.v2`); one tab navigating history does not navigate another tab. An initial tab can inherit the legacy active ID once. Local history readiness is independent of catalog refresh, runtime configuration and service-worker registration.
+Every save/delete checks the last-read revision in the transaction. Conflicting writes
+or deletion races create a **Recovered copy**, preserving both versions rather than
+silently merging/overwriting. Capacity failure retains local work and reports failure.
+`BroadcastChannel` refreshes IDs only; transactional safety does not depend on it.
 
-Draft and message changes are coalesced into roughly 800 ms checkpoints. Accepted turns, first content dispatch, completion and cancellation request immediate durable checkpoints, and guarded conversation switches, New conversation and accepted PWA updates wait for pending saves. Ordinary reload restores the last-opened conversation. A conversation-scoped tab-local text checkpoint, `freeform.pendingDraft.v1`, recovers edits made before the next IndexedDB checkpoint; it is applied only to the matching conversation when its timestamp is at least as recent as the record. Earlier localStorage draft checkpoints are read as migration sources. Malformed recovery metadata produces a content-free diagnostic. A response interrupted while in flight stays visible as interrupted and requires explicit retry; an already failed attempt retains its original failure category. A tab closed abruptly can still lose streamed output since its last completed transaction. The visible save state distinguishes pending, saving, saved and failed checkpoints.
+Limits: **200 records**, **32 MiB encoded per record**, **24 MiB base64 characters of
+sent attachment data** per conversation. Browser quota may be lower. No automatic
+history deletion; archive does not free storage. Tool call/result IDs and opaque
+reasoning details remain complete through save/export; reconnect tools explicitly.
 
-Draft and sent attachments are stored as IndexedDB byte arrays with references from messages/drafts, and are validated again when restored. Their payloads never enter the text-draft recovery checkpoint. A successful file addition requests an immediate history flush; a storage error remains visible with in-memory files available. An accepted PWA update waits for the IndexedDB save and uses that durable record under its original ID; it does not create a second legacy localStorage conversation snapshot. Updates also wait until file selection or reading has finished or been cancelled. Explicit deletion removes the conversation's metadata, message rows and binary attachment rows together.
-
-History is bounded to **200 saved records**, including drafts and archived entries, with a **32 MiB encoded limit per record**. Sent attachment data is also bounded to **24 MiB of base64 characters per conversation**; draft files must still fit the record limit. Each message accepts at most 4 files, 8 MiB each and 12 MiB of raw files in total. Browser quota can be lower. The app never automatically deletes older conversations or files to free space; archiving does not free storage. At the limit, explicitly delete an unneeded draft or archived entry to free room. Current configured message/response limits continue to govern chat and restored sessions. See [multimodal.md](multimodal.md) for formats and API behavior.
-
-Quota, permission, blocked-upgrade and damaged-record failures are surfaced as local storage errors. Current in-memory content remains available; guarded operations do not leave unsaved content behind when saving fails. The browser adapter does not silently switch to temporary in-memory history. The in-memory repository is for deterministic tests and non-web stubs. Unsupported or damaged stored records are retained unchanged for investigation.
-
-The previous `freeform.updateSession.v1` recovery snapshot is migrated only after a successful durable save. Comparison uses semantic JSON content and defaults for optional older fields, so a different object-key order from normalized storage does not create a duplicate. If an untimestamped legacy snapshot actually differs from the stored active conversation, both are retained and the recovered snapshot opens as a separate record. New safe updates retire these global legacy markers and use IndexedDB plus the tab-local text checkpoint. Model-less drafts preserve their conversation identity across an update and reload. Internal database, preference and cache namespaces intentionally retain their earlier names across the visible rename to wfform. Theme preference is stored as `freeform.themeMode`.
-
-Browser site storage is accessible to this browser's user. Clearing site data, storage eviction, private-browsing lifecycle and blocked/full storage can remove or prevent persisted history and attachments. Ordinary diagnostics do not include saved prompts, responses, reasoning or file payloads. The service worker does not cache history, attachments, authenticated chat responses or credentials.
-
-## Multiple tabs and recovery
-
-Every write compares the revision last read by this repository with the current revision inside the same IndexedDB transaction. A conflict preserves the already committed version and writes the local work as a separate **Recovered copy**. It does not silently merge or overwrite simultaneous responses. A deleted conversation with unsaved work is similarly recovered under a new identity. If capacity prevents creating the recovery copy, the operation reports failure and keeps the local work in memory; it does not claim a recovery was saved. Deleting a previously read conversation also checks for newer changes and requires reopening it before a stale deletion can proceed.
-
-`BroadcastChannel` announces changed/deleted IDs so other tabs refresh their history lists and show a notice for an open conversation. Notifications contain no conversation payload. An index refresh never advances an open conversation's expected revision. These notifications are a convenience; transactional revision checks still protect writes in browsers without `BroadcastChannel`. They are not cloud synchronization or automatic merging.
-
-Conversation export/import uses a versioned `wfform` JSON envelope including messages, drafts, partial responses and attachments. Import creates a separate conversation ID and does not replace a matching existing history. Exports are explicit backups and may be large because they include file data; archive remains an in-browser organization action, not a backup.
-
-## Storage verification
-
-On 2026-10-06, **35 deterministic VM history tests passed** with `flutter test test/history --reporter expanded`. These cover history lifecycle and attachment persistence, normalized encoding and unchanged-media reuse, changed-message detection, legacy round trips, malformed/missing media, independent-writer conflicts, recovery continuation, stale deletion, external-change notifications and capacity failures.
-
-**Six real Chromium IndexedDB checks passed** with the command below. These use generated `wfform-history-test-*` databases, not the application's user-history database, and delete their test data afterward. They exercise the real browser database upgrade/readback, binary media storage, changed-row persistence, message/media deletion, competing repository revisions, `BroadcastChannel`, and transaction rollback preserving earlier data and a legacy backup. Two additional fault tests suppress the later transaction-completion event while preserving real successful requests, and abort a transaction before its document request completes. The competing-writer test uses two independent repository instances; it does not claim a separate-window UX test or Safari/Firefox verification.
-
-Read-only restoration returns after every requested snapshot value has arrived and the record has passed validation. It has one bounded deadline, handles pending transaction aborts, and does not wait for a separate commit acknowledgment because it performs no mutations. Save/delete still wait for their atomic transaction to commit. Timeout diagnostics include the operation, phase, elapsed time, and read request counts/state without conversation content. This distinction follows the [IndexedDB request and transaction model](https://w3c.github.io/IndexedDB/). Two release-browser startup timeouts prompted this change; their former generic completion error did not establish whether request data had already arrived, so the exact original browser cause is not claimed as proven.
+## Checks
 
 ```sh
-CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome \
-  test/history/browser/indexeddb_checks.dart --reporter expanded
+flutter test test/history
+CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart
 ```
 
-For manual acceptance in each target browser: open one conversation in two tabs, edit/send in both, confirm the second conflicting write creates a recovered copy and both versions remain inspectable; reload both tabs and confirm independent active conversations; repeat with an external deletion; then export/import an attachment-bearing conversation and compare its messages, draft and preview. Also test insufficient storage and an interrupted migration. The deterministic/browser checks above do not simulate an actual browser quota exhaustion or process crash.
-
-The opt-in benchmark `flutter test tool/history_benchmark.dart --reporter expanded` uses two synthetic, decoder-validated 6 MiB PNG files and ten streamed-response checkpoints. The 2026-10-06 Dart VM run measured median preparation time of **105.5665 ms** for the retained legacy full-record encoder and **2.0725 ms** for normalized checkpoint preparation; the initial normalized preparation took **101.494 ms**. Modeled data queued by the ten checkpoints fell from **167,784,700 bytes** to **11,462 bytes**, after an initial **12,582,912 bytes** of attachment data stored once. These are fixture-specific VM timings and modeled payload sizes, not release-browser frame times or IndexedDB/disk latency. The reproducible tool writes its timings, runtime, raw samples and limitations to `outputs/history-performance.json`.
-
-## Sources
-
-Official browser documentation verified on **2026-10-06**:
-
-- [MDN IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API): asynchronous transactional storage for structured data and origin isolation.
-- [MDN browser storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria): browser-managed capacity, quota failures and possible eviction. Local history is not a cloud backup.
+Browser checks use isolated test databases. Manually test two-tab conflicts, reload,
+export/import with files, storage failure and interrupted migration in each target
+browser. [Performance](performance.md) describes the opt-in storage benchmark.

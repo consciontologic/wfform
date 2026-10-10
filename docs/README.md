@@ -1,44 +1,22 @@
-# wfform documentation
+# wfform docs
 
-Start with the [application README](../README.md) to chat, the [simple tools guide](tools.md) to connect an MCP server or local program, and the [setup guide](guides/README.md) for development configuration and optional checks. This index separates implemented project contracts, active work, historical evidence and reusable agent-framework references.
+Start with the [app README](../README.md). Read only the guide for your task.
 
-## Application contracts
-
-| Document | Owns |
+| Need | Guide |
 |---|---|
-| [Catalog](catalog.md) | Structured discovery, free-price eligibility, unresolved prices, quarantine, refresh/cache and selection |
-| [Chat and health](chat.md) | Request/streaming behavior, context/output budgets, health, allowance and failures |
-| [Tools quick start](tools.md) | Plain-language examples for chat, MCP, local programs, approval, reconnecting and parameters |
-| [wfformcomp](wfformcomp.md) | Optional local command/MCP companion and bundled web hosting |
-| [Multimodal input](multimodal.md) | Supported media, capability/price guards, formats and provider limits |
-| [File rendering](file-rendering.md) | Local document/source previews, Markdown/code rendering and text-file handling |
-| [History](history.md) | Persistence, migration, archive/restore/delete, export/import and conflicts |
-| [PWA](pwa.md) | Installability, offline operation and updates |
-| [Search metadata](seo.md) | Crawlable product information, canonical URLs, sharing and Search Console setup |
-| [CI/CD publishing](guides/CI_CD.md) | GitHub checks, web-artifact publication and required credentials/host settings |
-| [Native platform setup](native-platforms.md) | Android/iOS identifiers, host projects and remaining native adapter/build work |
-| [Performance/release measurement](performance.md) | Immutable release assembly, cache reuse and measurement limits |
-| [Docker/nginx guide](guides/DOCKER.md) | GHCR images, local container setup, runtime config, TLS and observable header checks |
+| Connect a tool or MCP server | [Tools quick start](tools.md) |
+| Run local programs with the companion | [wfformcomp](wfformcomp.md), [playground](../examples/tools_playground/README.md) |
+| Develop, configure or test | [Setup](guides/README.md) |
+| Publish a change or release | [Gitflow](guides/GITFLOW.md), [CI/CD](guides/CI_CD.md) |
+| Run a container | [Docker](guides/DOCKER.md) |
+| Understand the code | [Architecture](code/ARCHITECTURE.md), [API](code/API.md), [modules](code/MODULES.md) |
+| Understand app behavior | [Catalog](catalog.md), [chat](chat.md), [files](file-rendering.md), [media](multimodal.md), [history](history.md), [PWA](pwa.md) |
+| Review product decisions | [Charter](project/CHARTER.md), [decisions](project/DECISION_LOG.md), [design](design/README.md) |
+| Find planned work | [Roadmap](planning/ROADMAP.md) |
+| Work as an agent | [AGENTS.md](../AGENTS.md), [context](tracking/context.md), [tracking](tracking/README.md), [CodeGraph](guides/MCP_SETUP.md) |
+| Check platform or measurement limits | [Native hosts](native-platforms.md), [performance](performance.md), [search metadata](seo.md) |
 
-## Project and engineering map
-
-| Location | Contents |
-|---|---|
-| [Project](project/README.md) | Charter, scope decisions, migration provenance and glossary |
-| [Code](code/README.md) | Actual architecture, module maintenance and external/local contracts |
-| [Design](design/README.md) | Implemented UX/system design and accepted architecture decisions |
-| [Planning](planning/ROADMAP.md) | The authoritative active six-part scope and acceptance gates |
-| [Tracking](tracking/README.md) | Context pack, append-only action log and local recovery workflow |
-| [Guides](guides/README.md) | Deployment and agent-client operating references |
-| [Reports](reports/README.md) | Verification evidence, dates and provenance |
-| [Agent rules](../AGENTS.md) | Authoritative repository operating policy |
-| [Skills](../.agents/skills/README.md) | Reusable operating skills, loaded when applicable |
-| [xops](../xops/README.md) | Shell/Python repository operations, separate from Flutter runtime |
-
-The documents above describe this project. Update the owning document when a contract changes. Historical verification counts retain their original date and scope; a new build needs new evidence.
-
-## 🌱 Development
-
-- [Gitflow and Copilot handoff](guides/GITFLOW.md)
-- [Example MCP and companion playground](../examples/tools_playground/README.md)
-- [Release notes](../CHANGELOG.md)
+Keep each contract in its owning guide. Put release summaries in
+[CHANGELOG.md](../CHANGELOG.md), test evidence in PRs/CI and local ignored output,
+and research or comparative analysis in [reports](reports/README.md).
+Do not add a permanent report for each code change.

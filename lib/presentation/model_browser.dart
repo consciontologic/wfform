@@ -62,30 +62,15 @@ class StudioDialogHeader extends StatelessWidget {
   const StudioDialogHeader({
     super.key,
     required this.title,
-    this.emoji,
-    this.glyph,
+    required this.glyph,
     required this.color,
     required this.closeTooltip,
     required this.onClose,
-  }) : assert((emoji == null) != (glyph == null));
+  });
   final String title, closeTooltip;
-  final String? emoji;
-  final BrandGlyph? glyph;
+  final BrandGlyph glyph;
   final Color color;
   final VoidCallback onClose;
-
-  // Bundled color graphics avoid browser/font-dependent missing emoji glyphs.
-  // Twemoji v14.0.2 attribution and CC-BY-4.0 license ship beside these assets.
-  static const _emojiAssets = {
-    '🧭': 'assets/emoji/1f9ed.png',
-    '🔎': 'assets/emoji/1f50e.png',
-    '🩺': 'assets/emoji/1fa7a.png',
-    '🎨': 'assets/emoji/1f3a8.png',
-    '⚙️': 'assets/emoji/2699.png',
-    '⚙': 'assets/emoji/2699.png',
-    '🗂️': 'assets/emoji/1f5c2.png',
-    '🗂': 'assets/emoji/1f5c2.png',
-  };
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -106,28 +91,7 @@ class StudioDialogHeader extends StatelessWidget {
                 width: compact ? 36 : 44,
                 height: compact ? 36 : 44,
                 alignment: Alignment.center,
-                decoration: glyph == null
-                    ? BoxDecoration(
-                        color: palette.surface,
-                        border: Border.all(color: palette.border),
-                        borderRadius: BorderRadius.circular(10),
-                      )
-                    : null,
-                child: glyph != null
-                    ? BrandIcon(glyph!, size: compact ? 28 : 34)
-                    : _emojiAssets.containsKey(emoji)
-                    ? Image.asset(
-                        _emojiAssets[emoji]!,
-                        width: compact ? 24 : 30,
-                        height: compact ? 24 : 30,
-                        filterQuality: FilterQuality.medium,
-                        excludeFromSemantics: true,
-                      )
-                    : Icon(
-                        Icons.auto_awesome,
-                        color: palette.ink,
-                        size: compact ? 24 : 30,
-                      ),
+                child: BrandIcon(glyph, size: compact ? 28 : 34),
               ),
             ),
             const SizedBox(width: 12),

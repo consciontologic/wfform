@@ -1,60 +1,19 @@
-# 🤖 The agent operating model
+# Agent operating model
 
-> Why this framework exists and how to live inside it.
+The repository keeps policy and recovery outside an individual model's session.
+[AGENTS.md](../../AGENTS.md) is the shared rulebook; vendor entry points delegate to it.
 
-## The problem
+1. Read rules, [context](../tracking/context.md), roadmap and ignored recovery state.
+2. Use relevant [skills](../../.agents/skills/), preserve others' work and complete the
+   authorized scope with matching tests.
+3. Run risky commands through [safe-run](../../xops/agent/safe-run.sh); inspect its log,
+   diagnose and repair failures before retrying.
+4. The coordinating parent appends [tracking](../tracking/README.md), reviews/stages
+   validated changes, checks `make git.dry`, publishes a Gitflow work branch via
+   `make git`, and opens its PR. Delegates return evidence.
+5. Respect required checks and the owner's final production approval. No direct
+   main/develop writes, protection bypass or fabricated release claims.
 
-AI coding assistants (Copilot, Claude, Gemini, Codex, Cursor, ...) are
-useful but operate **statelessly across sessions**, **drift across vendors**,
-and **silently lose work** when a terminal or chat dies mid-task. Left to
-themselves they will:
-
-- commit half-finished work,
-- skip writing tests,
-- overwrite files they didn't read,
-- silently drop output when a command exits non-zero,
-- ask "should I continue?" instead of finishing.
-
-## The model
-
-We treat the agent as a **fast, narrow-context junior engineer** with full
-access to the repo. To survive that, the repo owns the operating policy:
-
-1. **One rulebook** at the top — [`AGENTS.md`](../../AGENTS.md). Every
-   vendor-specific entry point (`CLAUDE.md`, `CONVENTIONS.md`,
-   `.github/copilot-instructions.md`) delegates to it.
-
-2. **Tracking layer** — [`docs/tracking/tracking.csv`](../tracking/tracking.csv) is
-   the agent's external memory. Every action that *would* be committed,
-   reverted, or noted appears as a row first. Coordinating agents publish
-   validated Gitflow work branches through `make git`; `main`/`develop` change
-   through reviewed PRs only.
-
-3. **Crash-safe execution** — [`xops/agent/safe-run.sh`](../../xops/agent/safe-run.sh)
-   wraps anything risky so the log + exit code survive a killed terminal.
-   [`docs/tracking/state/last_failure.json`](../tracking/state/) is the breadcrumb
-   the next session reads.
-
-4. **Skills library** — [`.agents/skills/`](../../.agents/skills/) holds short,
-   model-agnostic procedures. Agents load the relevant one *before* the
-   matching work; nothing is reinvented per-task.
-
-5. **Phase persistence** — when implementing a named scope, the agent
-   drains every `[ ]` bullet before handing back. "Should I continue?" is
-   a failure mode, not engineering.
-
-## What this is NOT
-
-- **Not a CI tool.** Local gates only; project-specific CI lives elsewhere.
-- **Not a model.** The framework works with any agent — vendor-specific
-  calibrations in [`MODEL_PROFILES.md`](MODEL_PROFILES.md).
-- **Not magic.** Every behaviour is a script under [`xops/`](../../xops/)
-  you can `cat` and audit.
-
-## The five-line policy
-
-1. Read [`AGENTS.md`](../../AGENTS.md) at session start.
-2. Wrap risky commands in [`safe-run.sh`](../../xops/agent/safe-run.sh).
-3. Append a tracking row whenever you'd want a commit / decision visible.
-4. Review `git add -A` / `make git.dry`, publish the work branch with `make git`, and open its PR.
-5. Tests move with code in the same commit, always.
+Keep operational evidence in PR/CI/local logs, current contracts in concise guides,
+and unfinished work in the [roadmap](../planning/ROADMAP.md). For client mechanics see
+[Codex](CODEX_SETUP.md) and [client notes](MODEL_PROFILES.md).
