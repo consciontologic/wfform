@@ -1,35 +1,38 @@
-# Native platform setup
+# Native platform status
 
-Updated 2026-10-06 with Flutter 3.38.5 / Dart 3.10.4. Web/PWA remains the verified release target. Android and iOS host projects now record the user's requested application identifier; their presence does not establish native feature parity or a signed native release.
+Web/PWA is the application release target. Android/iOS host projects are configured,
+but native adapters, signed builds and device acceptance remain pending.
 
-## Identifiers
+| Identity | Value |
+|---|---|
+| Dart package/imports | `wfform` / `package:wfform/…` |
+| Android namespace/application ID | `com.wfform` |
+| Android activity package | `com.wfform` |
+| iOS Runner bundle ID | `com.wfform` |
+| iOS tests | `com.wfform.RunnerTests` |
+| PWA manifest ID | `./` (preserved) |
 
-| Purpose | Value | Configuration |
-|---|---|---|
-| Dart package/imports | `wfform` / `package:wfform/…` | [pubspec.yaml](../pubspec.yaml) |
-| Android namespace/application ID | `com.wfform` | [app/build.gradle.kts](../android/app/build.gradle.kts) |
-| Android activity package | `com.wfform` | [MainActivity.kt](../android/app/src/main/kotlin/com/wfform/MainActivity.kt) |
-| iOS Runner bundle identifier | `com.wfform`, Debug/Profile/Release | [project.pbxproj](../ios/Runner.xcodeproj/project.pbxproj) |
-| iOS test bundle | `com.wfform.RunnerTests` | Same Xcode project |
-| Installed PWA identity | `./`, unchanged | [manifest.json](../web/manifest.json) |
+Configuration lives in [Android Gradle](../android/app/build.gradle.kts),
+[Xcode project](../ios/Runner.xcodeproj/project.pbxproj) and [manifest](../web/manifest.json).
+Do not regenerate hosts for ordinary development.
 
-`Info.plist` resolves `CFBundleIdentifier` from `PRODUCT_BUNDLE_IDENTIFIER`. The iOS Flutter embedded framework keeps its own generated framework identifier; it is not the Runner application ID. Both native display names are `wfform`.
+## Remaining work
 
-The hosts were generated without overwriting application files using Flutter's `create` command with `--platforms=android,ios,web --org=com --project-name=wfform --no-pub .`. Flutter metadata retains all three platforms. Android's main manifest includes Internet permission for release networking as well as development builds. Re-running generation is not needed for normal development.
+- Replace non-web in-memory history/preferences with durable native adapters.
+- Add native file picking/export and durable credential/config storage. Browser
+  `config/local.json` loading and PWA operations are not native implementations.
+- Complete Android toolchain/license/signing and iOS macOS/Xcode/signing setup.
+- Validate launcher artwork, transparent appearance variants and store acceptance;
+  generated icons alone do not establish native support.
+- Run the app on actual devices and verify storage, files, networking and lifecycle.
 
-## Remaining native work
-
-- Non-web history and preference adapters currently use memory. They do not provide the browser's durable history/settings behavior.
-- Native attachment selection and file export need adapters. PWA install/update operations are browser features; the native bridge is a stub.
-- Loading `config/local.json` is web-only; it is not bundled into native assets. Non-web startup uses typed defaults and existing `API_BASE_URL`/`API_KEY` Dart defines; Settings can accept a key, but the native LocalStore is an in-memory stub; durable native credential/configuration storage still needs a platform implementation. Browser key persistence is verified separately.
-- Native launcher PNGs use the approved Open Cradle artwork, generated alongside the PWA icons by `tool/icons.dart`. Android provides transparent default/night resources. The iOS catalog retains legacy sizes and includes universal Any/Dark entries: both default and dark artwork use RGBA transparency, as explicitly requested by the user. All launcher sources contain only the mark with no colored backing plate. These transparent source variants have not been validated for Xcode/store acceptance or on an Android/iOS device. Splash assets and Android debug signing remain development defaults. iOS has no configured signing team. Matching launcher artwork does not establish native builds, store signing or device acceptance.
-
-On this Linux workstation, `flutter doctor -v` reports unaccepted Android SDK licenses. No license acceptance or system changes were made. iOS requires macOS and Xcode. Neither APK/AAB nor iOS builds/device runs were executed; the native configuration was checked structurally and reviewed separately.
-
-For future native validation, after the required toolchain and adapters are ready, start from this repository and use `flutter pub get`, `flutter doctor -v`, `flutter devices`, then `flutter run -d <device-id>`. Android packaging uses `flutter build apk`; an iOS simulator build uses `flutter build ios --simulator` on macOS. These are follow-up commands, not claims of checks executed here. The [README](../README.md) documents the verified web workflow.
-
-Official references checked 2026-10-06: [Flutter Android deployment](https://docs.flutter.dev/deployment/android) and [Flutter iOS deployment](https://docs.flutter.dev/deployment/ios).
+After those prerequisites, use `flutter doctor -v`, `flutter devices` and
+`flutter run -d <device-id>`; Android packaging uses `flutter build apk`, iOS simulator
+builds use `flutter build ios --simulator` on macOS. These are future checks, not
+claims of completed native releases.
 
 ## Desktop companion versus a native Flutter app
 
-[wfformcomp](wfformcomp.md) is a separate command-line companion with native Linux and Windows build support. Its portable archive can serve the existing Flutter **web** app in the browser and expose configured local tools. It does not establish native Flutter Windows/Linux UI or adapter parity. Windows packaging and runtime checks run on Windows in the companion workflow; their successful execution is required before publishing a Windows download. Graphical installers remain planned, and the macOS companion is deferred.
+[wfformcomp](wfformcomp.md) is a separate Linux/Windows executable serving the existing
+web UI and configured local tools. Its native process tests do not prove Flutter
+Windows/Linux UI parity. Graphical installers and the macOS companion remain planned.

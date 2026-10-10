@@ -1,112 +1,74 @@
-# Setup and engineering guides
+# Development setup
 
-| Guide | Scope |
-|---|---|
-| [DOCKER.md](DOCKER.md) | wfform container/nginx setup, make commands, runtime config, TLS and header verification |
-| [CI_CD.md](CI_CD.md) | Source checks and automated web publishing to consciontologic/wfform.com; required token and Pages/DNS setup |
-| [AGENT_OPERATING_MODEL.md](AGENT_OPERATING_MODEL.md) | Reusable framework workflow and recovery rationale |
-| [CODEX_SETUP.md](CODEX_SETUP.md) | Codex role/skill translation and client setup |
-| [MODEL_PROFILES.md](MODEL_PROFILES.md) | Framework guidance on assistant behavior; not OpenRouter catalog model documentation |
-| [MCP_SETUP.md](MCP_SETUP.md) | Enabled CodeGraph integration, local runtime/index setup and real MCP verification |
-
-The [project context](../tracking/context.md) and [AGENTS.md](../../AGENTS.md) govern this repository. Generic framework setup examples do not authorize installing MCP, changing global settings or replacing the Flutter application stack. End-user application behavior is indexed in [docs/README.md](../README.md).
-
-## Local release setup
-
-Run these commands from the repository root with **Flutter 3.38.10 / Dart 3.10.9**:
-
-Make targets use an SDK at ignored `.local/flutter-sdk` when present; otherwise
-they use `PATH`. This allows a project-only SDK upgrade without changing a shared
-installation. For direct `flutter`/`dart` commands with that local SDK, first run
-`export PATH="$PWD/.local/flutter-sdk/bin:$PATH"`. The package's SDK constraints
-reject the older runtime that contains the Android keyboard regression.
+Use Flutter **3.38.10 / Dart 3.10.9**. Make targets prefer ignored
+`.local/flutter-sdk`; for direct commands, add that SDK's `bin` to your process PATH.
+Run `make help` for project commands.
 
 ```sh
-flutter pub get
-# For a fresh checkout only; do not overwrite an existing local configuration:
+make deps
+# Fresh checkout only; preserve an existing config:
 cp -n config/example.json config/local.json
-# Edit config/local.json and set apiKey, or save a key in Settings.
+# Set your own key locally, or save it in Settings.
 dart run tool/build.dart
 dart run tool/serve.dart --port=8765
 ```
 
-Open **http://localhost:8765**. Use the same origin to retain access to local history; changing the port opens a separate browser store. Keep the development credential in ignored `config/local.json` or save a key in Settings; never put it in source fixtures. Do not publish that file or a release config copy with a shared credential. Credentials delivered to a browser are accessible to that browser's user. This is a development demo, not a production secret-management design.
-
-The helper runs exactly:
-
-```sh
-flutter build web --release --no-web-resources-cdn --pwa-strategy=none
-```
-
-It then generates the versioned shell worker. Use the helper for a complete PWA; the raw Flutter build alone does not populate the worker's release asset list. The Dart loopback host serves static files only, with appropriate WASM/font MIME types. It never forwards OpenRouter requests.
-
-Development UI iteration:
-
-```sh
-flutter run -d chrome --web-port=8080
-```
-
-Flutter's development server does not map the ignored runtime configuration. Save a key in Settings; it is remembered in this browser. Test PWA behavior on the release build.
+Open **http://localhost:8765**. Keep the same origin to retain browser history.
+For UI iteration use `flutter run -d chrome --web-port=8080`; save the key in Settings
+because Flutter's development server does not serve ignored runtime configuration.
+Test offline/update behavior on a release build, not the development server.
 
 ## Checks
 
-Run `make verify` for formatting, analysis, deterministic tests and repository hygiene. The individual commands and opt-in checks are:
-
 ```sh
-dart format --output=none --set-exit-if-changed lib test tool deploy
-flutter analyze
-flutter test --reporter=expanded
-dart run tool/build.dart
-```
-
-Optional bounded **live public catalog** check:
-
-```sh
+make verify
+make repository.check
+# Real Chromium storage checks, using isolated databases:
+CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome test/history/browser/indexeddb_checks.dart
+# Optional public catalog request, no credentials or inference:
 flutter test --dart-define=RUN_LIVE_CATALOG=true test/models/catalog_test.dart --plain-name 'opt-in live public catalog adapter check'
 ```
 
-Optional **real browser storage** checks and synthetic **history checkpoint benchmark**:
-
-```sh
-CHROME_EXECUTABLE=/path/to/chrome flutter test --platform chrome \
-  test/history/browser/indexeddb_checks.dart --reporter expanded
-flutter test tool/history_benchmark.dart --reporter expanded
-```
-
-The seven Chromium storage checks passed against isolated generated databases and a namespaced credential preference. They exercise real IndexedDB migration, binary media, incremental rows, rollback, competing repository revisions, `BroadcastChannel`, reads with suppressed transaction-completion delivery, pending-read aborts, and real localStorage credential save/restore/clear; they do not send API requests or establish Safari/Firefox behavior. The benchmark uses two synthetic decoder-validated PNG files totaling 12 MiB and ten response checkpoints. It writes `outputs/history-performance.json`: VM codec preparation and modeled write-payload sizes, **not** browser frame time, disk throughput or IndexedDB latency. See [history](../history.md) for results and scope.
-
-The ordinary API/widget tests use fixtures, controlled clients or fake clocks. No automated test silently sends user content or embeds a credential. For live chat, select a current text-compatible model in the running app and send a short message; stale selected-model health triggers a small probe before the conversation is submitted. The [reports index](../reports/README.md) preserves dated release evidence; it does not certify every later build.
+`make verify` includes format, analyzer, deterministic app/companion/PWA tests and
+repository hygiene. Wrap long/risky commands in `xops/agent/safe-run.sh TAG -- COMMAND`;
+read its log before retrying failure. Live keyed inference, real browser behavior,
+native Windows execution and public publication are separate evidence.
 
 ## Configuration
 
-[`config/example.json`](../../config/example.json) documents every option; `config/local.json` is ignored. The runtime file is network-only and excluded from service-worker caching. A key explicitly saved in Settings is stored in browser localStorage and restored after reload or browser restart. It takes precedence over the runtime file; clearing the saved key persists an empty override so the runtime file cannot silently restore it. Failed writes stay visible in Settings. If the saved preference cannot be read, the connection stays disabled until a key can be saved successfully. The browser key remains until replaced, explicitly cleared or site data is removed. Other already-open tabs pick up replacements on their next reload. Catalog, small preferences and bounded health/endpoint observations use localStorage. The immediate text recovery draft and active-conversation ID use tab-local sessionStorage; earlier localStorage recovery values are read only as migration sources. Conversation metadata and individual messages use IndexedDB, with immutable attachment bytes stored separately and referenced by ID. These are application-managed data, never service-worker cached. An explicit update waits for a durable history save under the existing conversation ID; it does not create a separate legacy localStorage session snapshot. Clearing browser site data can remove both history and offline assets.
+[config/example.json](../../config/example.json) lists defaults and
+[AppConfig](../../lib/config/app_config.dart) owns validation. `config/local.json`
+is ignored/network-only and must not enter public packages, images or PWA caches.
+Credentials served to a browser are visible to its user.
 
-| Key | Default | Meaning |
-|---|---:|---|
-| `apiBaseUrl` | `https://openrouter.ai/api/v1` | HTTPS API base; HTTP permitted only on localhost |
-| `apiKey` | empty | Bearer credential for endpoint checks and inference |
-| `requestTimeoutSeconds` | 90 | Total deadline for ordinary requests such as catalog and allowance checks; chat uses the separate stream phase policy below |
-| `probeTimeoutSeconds` | 25 | Deadline per metadata/probe request |
-| `healthTtlSeconds` | 300 | Successful observation freshness |
-| `endpointTtlSeconds` | 1800 | Provider/endpoint metadata freshness, independent of inference health |
-| `quotaTtlSeconds` | 300 | Advisory allowance observation freshness |
-| `firstResponseTimeoutSeconds` | 90 | Chat deadline until first useful text or reasoning, including response startup |
-| `streamIdleTimeoutSeconds` | 45 | Chat deadline between useful text/reasoning events; heartbeat bytes do not reset it |
-| `streamOverallTimeoutSeconds` | 300 | Absolute chat request/stream deadline |
-| `maxOutputTokens` | 2048 | Default response-token reserve and supported `max_tokens` request limit; per-conversation Context settings can override it |
-| `cooldownSeconds` | 15 | Minimum interval between checks |
-| `maxBackoffSeconds` | 300 | Exponential local cap; longer Retry-After is honored |
-| `cacheTtlSeconds` | 86400 | Catalog age considered stale |
-| `maxDiagnostics` | 100 | Maximum retained records |
-| `maxDetailChars` | 2000 | Per-field diagnostic truncation |
-| `maxMessages` | 80 | Conversation count bound; explicit new chat at limit |
-| `maxResponseChars` | 120000 | Answer + reasoning limit |
-| `maxCatalogBytes` | 8000000 | Total catalog/cache byte limit |
+An explicitly saved Settings key overrides runtime config; clearing it stores an empty
+override. Failed persistence is visible, and failed reads keep the connection disabled
+until the key can be saved. MCP bearer tokens are session-only. Browser preferences,
+catalog and bounded health metadata use localStorage; [history](../history.md) owns
+IndexedDB and tab-local draft recovery.
 
-Durations must be 1 second–30 days, backoff must be at least the cooldown, and the overall stream timeout must cover both its first-response and idle timeouts. `maxOutputTokens` must be 16–32768. Other validation ranges are explicit in [`AppConfig.validate()`](../../lib/config/app_config.dart). Probes use their shorter probe deadline. Automatic content retries remain **zero**; health concurrency is capped at **two**. Catalog refreshes, endpoint checks and health probes are deduplicated. Cached health observations are scoped to API/key/policy and invalidated when meaningful model metadata changes. Catalog pagination, saved entries, message input and SSE frames also have bounds. Extra harmless configuration fields are ignored; wrong types produce a visible configuration diagnostic.
+| Setting group | Defaults |
+|---|---|
+| API | `https://openrouter.ai/api/v1`, empty key; HTTPS except loopback HTTP |
+| Ordinary/probe deadlines | 90 / 25 seconds |
+| Chat first/idle/overall deadlines | 90 / 45 / 300 seconds |
+| Health/endpoint/allowance TTL | 300 / 1800 / 300 seconds |
+| Cooldown/backoff | 15 / 300 seconds; longer server waits win |
+| Catalog TTL/size | 86400 seconds / 8,000,000 bytes |
+| Context reserve | 2048 tokens; local estimate until explicitly overridden |
+| Content bounds | 80 messages, 120,000 response characters |
+| Diagnostics | 100 records, 2,000 characters per detail field |
 
-## Troubleshooting
+Durations must be 1 second–30 days; overall stream timeout covers first/idle limits.
+Output reserve is 16–32768; other ranges are in `AppConfig.validate()`. No automatic
+content retries. Refreshes/probes deduplicate; health concurrency is two.
 
-On authentication or account errors, update the key or account settings. Rate limits show cooldown/retry information; use explicit retry after it expires. A provider failure does not switch models. A failed catalog refresh retains the last valid catalog and refresh time. Schema diagnostics identify the field, expected type and observed type; adapter changes stay localized.
+## Other guides
 
-A browser reporting online does not prove API reachability. Opaque fetch failures remain network errors until the browser network panel identifies their cause. The app adds no proxy. HTTPS or localhost and a cached first release load are required for offline startup. If storage is blocked or full, the app continues in memory and reports reduced reload recovery. See [PWA behavior](../pwa.md), [catalog policy](../catalog.md) and [chat/health](../chat.md).
+[Gitflow](GITFLOW.md) · [CI/CD](CI_CD.md) · [Docker](DOCKER.md) ·
+[CodeGraph](MCP_SETUP.md) · [Codex](CODEX_SETUP.md) ·
+[Agent workflow](AGENT_OPERATING_MODEL.md) · [Client notes](MODEL_PROFILES.md)
+
+For network failure, inspect the browser before asserting CORS. No proxy is added.
+Storage failures preserve in-memory work but do not claim durable recovery; see
+[PWA](../pwa.md), [catalog](../catalog.md) and [chat](../chat.md).

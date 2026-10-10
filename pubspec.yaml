@@ -34,7 +34,6 @@ flutter:
   assets:
     - docs/tools.md
     - docs/wfformcomp.md
-    - assets/emoji/
     - assets/fonts/Roboto_LICENSE.txt
     - assets/fonts/RobotoMono_LICENSE.txt
   fonts:

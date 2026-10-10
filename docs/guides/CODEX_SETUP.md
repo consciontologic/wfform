@@ -1,148 +1,35 @@
-# Codex Setup
+# Codex setup
 
-> wfform: open the repository checkout as the project.
-> Flutter/Dart commands are in `make help`; run `make verify` before staging.
-> CodeGraph is enabled through `.codex/config.toml`; see [MCP setup](MCP_SETUP.md).
-> The remaining sections describe the shared agent workflow, not app runtime dependencies.
+Open this checkout as a trusted Codex project after reviewing its configuration.
+The scaffold is already installed; do not rerun an upstream installer or change
+global trust/configuration to start normal work.
 
+| Surface | Use |
+|---|---|
+| `AGENTS.md`, `CONVENTIONS.md` | Repository rules |
+| `docs/tracking/context.md` | Current project context |
+| `.github/instructions/` | Read relevant `applyTo` scopes explicitly |
+| `.agents/skills/` | Task procedures; Copilot prompt adapters when installed |
+| `.codex/agents/` | Native planner, implementer, reviewer, verifier roles |
+| `.codex/config.toml` | Project runtime guidance and CodeGraph MCP |
 
-Use a current local Codex client: Codex in the ChatGPT desktop app, the CLI,
-or the IDE extension. Ordinary ChatGPT chats do not automatically load a local
-repository. Open the scaffolded folder in Codex and approve project trust after
-reviewing its configuration. The installer never changes global settings or
-grants trust, and it does not install ChatGPT or Codex.
+Use native Codex editing, shell, search and delegation tools. Copilot YAML tool names,
+handoffs and slash commands are not Codex APIs. Roles/model effort inherit the user's
+choices unless explicitly overridden. The parent owns combined tracking/staging and
+`make git` publication; children return evidence and preserve concurrent edits.
+Review the complete current diff, then staged contents and tracking before publishing.
 
-## Install
+CodeGraph resolves the current Git root through the pinned launcher. Run `make codeg`
+and inspect the actual advertised tools; configuration alone does not prove connection.
+Reopen/restart MCP after configuration changes. [MCP setup](MCP_SETUP.md) provides
+commands and fallbacks. Do not add unrelated/global integrations.
 
-From a local framework clone:
+A quick read-only client check: list loaded instructions, skills, roles and CodeGraph
+tools, then resolve `ChatController` and `send`. Report unavailable dependencies.
+Run `make help`/`make verify` for real project commands.
 
-```bash
-./install.sh --target /path/to/project --agents codex --no-vscode
-```
-
-The default agent selection also includes Codex alongside Copilot, Claude and
-local clients. Requires Bash, Git and Python 3.9+. wfform already has the
-scaffold and a pinned CodeGraph launcher: use `make codeg` to populate its
-repository-local cache and index. CodeGraph needs Node/npm for the package
-launcher; Flutter builds and the nginx runtime remain independent of it.
-
-## Installed Surfaces
-
-| Surface | Codex use |
-| --- | --- |
-| `AGENTS.md` | Native repository instruction discovery |
-| `CONVENTIONS.md`, `docs/tracking/context.md` | Explicitly loaded by project instructions |
-| `.github/instructions/*.instructions.md` | Read and apply their `applyTo` scopes; Codex does not use Copilot's automatic glob loader |
-| `.agents/instructions/` | Shared roadmap discipline |
-| `.agents/skills/` | Native skills, including supporting scripts and references |
-| `.codex/agents/*.toml` | Native planner, implementer, reviewer and verifier roles |
-| `.agents/skills/avb-*/` | Explicitly invoked adapters for every Copilot prompt |
-| `.codex/config.toml` | Runtime guidance, approval/sandbox defaults and CodeGraph MCP |
-
-The original `.github/agents/` and `.github/prompts/` documents are also installed
-as the authoritative workflow bodies. Native adapters reference them instead of
-duplicating their prose. Models and reasoning effort inherit the user's choices.
-
-## Runtime Translation
-
-Read the master rulebook, conventions, context pack and relevant scoped
-instructions before work. These adaptations change client mechanics only:
-
-- Ignore Copilot YAML `tools`, `agent`, and handoff metadata. Use native Codex
-  file-editing, shell, search and delegation tools with equivalent capabilities.
-- A request to switch to an agent means use the matching native Codex role.
-  The coordinating parent owns tracking, staging and guarded publication;
-  children return evidence and never append duplicate tracking rows, stage one
-  another's work or publish the combined work.
-  Use `--agent=codex` in tracking commands even when source examples say copilot.
-  Before final staging, reviewers and verifiers inspect the complete current
-  diff, including unstaged changes and new files supplied by the parent.
-  References to a staged diff in source workflows also accept this review set.
-  Children verify tests and scope first; the parent then appends the completion
-  row, stages, and checks the final staged diff and tracking metadata. After
-  `make git.dry`, it uses `make git` on the validated Gitflow work branch and
-  opens/updates its PR. `main`/`develop` remain PR-only; do not bypass protection.
-- `/plan`, `/implement`, `/review`, `/verify`, `/track`, `/self-review`,
-  `/session-bootstrap` and `/roadmap-status` refer to the corresponding
-  `$avb-*` skills in Codex. These are not installed as native slash commands.
-  Use the client's skill picker where its invocation syntax differs.
-- Replace references to VS Code edit tools with the available patch tool;
-  replace VS Code task runners with the documented shell commands. If a memory
-  tool is unavailable, use `docs/tracking/state/` for repository-local recovery.
-- Use only CodeGraph tools actually advertised by the connected server.
-  The generated configuration preserves its `env` settings, including tool
-  selection; do not assume a particular tool set is available. If the server is
-  unavailable or an index is missing, report it and use local reads/searches.
-  Never silently claim graph-backed results or bypass a required check.
-- Preserve explicitly disabled integrations. CodeGraph was explicitly enabled
-  for wfform; do not add unrelated servers. Source workflow documents remain
-  available when native skills are disabled.
-- Never discard human changes on a failed gate. Repair only the authorized
-  changes, and ask when ownership is ambiguous. Review the complete staging
-  set before applying the repository's staging policy.
-- Sandbox permissions are enforced by the client, not these documents. Do not
-  elevate permissions to avoid a failure. Ask for required approval, including
-  protected Git writes. Verifier test artifacts/logs are allowed, source edits
-  are not; the reviewer uses a read-only sandbox.
-
-## Verify In The Client
-
-After opening and trusting the folder, start a new session and ask:
-
-> Without changing files, list the loaded instructions, available avb skills,
-> custom agents and CodeGraph tools. Report any unavailable dependency.
-
-Try `$avb-plan` with a small task. Ask Codex to delegate a read-only review to
-`reviewer`. Verify project instructions and available roles, then ask CodeGraph
-to find `ChatController` and `send` in the Dart sources. MCP configuration
-loads at session startup; reopen the trusted repository or restart the server
-when enabling it in an existing session. `make codeg` and
-`xops/agent/codegraph.sh explore "ChatController send"` also verify real graph
-access independently of the client. Configuration parsing alone is insufficient.
-
-## Repeat Installs And Portability
-
-The framework repository itself contains the shared rules and skills; native
-`.codex/` roles and `avb-*` adapters are generated in the target by the installer.
-Cloning this framework alone is not the same as scaffolding a project.
-
-Shared anti-skills retain Copilot's `user-invocable: false` metadata. Codex
-discovered these six skills in the audit session, but its generic skill-creator
-validator rejects that extra field. This is a cross-client metadata difference;
-it does not hide the skills in Codex. Preserve the Copilot setting when sharing
-the same skill tree, and verify discovery in your actual client.
-
-Existing files are preserved unless `--force` is supplied. A kept configuration
-is not automatically merged: review it against a fresh scaffold before updating.
-`--no-mcp`, `--no-skills` and agent exclusions skip new files; they do not remove
-previously installed integrations. Back up customizations before using `--force`.
-
-wfform does not include the upstream configuration generator. Maintain the
-checked-in `.codex/config.toml` and `.codex/agents/*.toml` here. When importing
-regenerated files, preserve the current AGENTS.md Gitflow policy: only the
-coordinating parent publishes validated work branches through `make git`, and
-delegated roles never stage or publish combined work. Never restore the old
-blanket publishing prohibition or permit direct `main`/`develop` writes.
-
-wfform's MCP definitions resolve the current Git checkout root before invoking
-the pinned launcher. Root and nested working directories therefore use the same
-index, while clones and worktrees use their own checkout without editing tracked
-paths. Open the repository as the client's current project before starting MCP.
-Do not commit credentials or change user-level trust settings in a scaffold.
-
-## References
-
-- [Instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
-- [Native custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
-- [Skills and discovery](https://learn.chatgpt.com/docs/build-skills)
-- [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp)
-- [Project trust and configuration](https://learn.chatgpt.com/docs/config-file/config-basic)
-
-## 🌿 Gitflow delivery
-
-Read [the delivery workflow](GITFLOW.md) before starting a feature, bugfix,
-hotfix or release. Use the appropriate isolated work branch; keep main/develop
-free of direct implementation. Local coordinating agents publish validated work
-branches through `make git`; delegated agents return evidence without publishing.
-GitHub Copilot cloud may commit/push its assigned platform branch under AGENTS.md §2, with an explicit
-low-cost model; human review/merge and CI release gates still apply.
+Keep checked-in native role files aligned with current [Gitflow](GITFLOW.md): only
+coordinating agents publish validated work branches via `make git`; main/develop are
+PR-only and production approval belongs to the owner. Scaffold imports must preserve
+local adaptations, data and disabled integrations. Client permissions still apply;
+repository prose does not authorize bypassing them.

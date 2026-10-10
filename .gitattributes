@@ -5,5 +5,4 @@
 *.csv  text eol=lf
 *.json text eol=lf
 # Preserve verbatim upstream license files, including their trailing spaces.
-assets/emoji/LICENSE-GRAPHICS whitespace=-blank-at-eol
 assets/fonts/RobotoMono_LICENSE.txt whitespace=-blank-at-eol
