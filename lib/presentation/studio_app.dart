@@ -1275,6 +1275,50 @@ class _Message extends StatelessWidget {
   }
 }
 
+class _ComposerAction extends StatelessWidget {
+  const _ComposerAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.fontSize,
+    required this.dense,
+    this.details,
+  });
+
+  final Widget icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final double fontSize;
+  final bool dense;
+  final String? details;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        padding: EdgeInsets.symmetric(horizontal: dense ? 4 : 8),
+        visualDensity: VisualDensity.standard,
+        textStyle: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(fontSize: fontSize, letterSpacing: 0),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          icon,
+          SizedBox(width: dense ? 3 : 6),
+          Text(label, softWrap: false),
+        ],
+      ),
+    );
+    return details == null
+        ? button
+        : SelectableTooltip(message: details!, child: button);
+  }
+}
+
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.state,
@@ -1490,73 +1534,137 @@ class _Composer extends StatelessWidget {
                     ),
                   ),
                 ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final dense = minimalChrome || constraints.maxWidth < 600;
+                    final narrow = constraints.maxWidth < 340;
+                    final fontSize = dense ? (narrow ? 11.0 : 12.0) : 14.0;
+                    final iconSize = dense ? (narrow ? 14.0 : 16.0) : 18.0;
+                    // Keep the actions together. Larger accessibility text and
+                    // configured counts can scroll without shrinking labels.
+                    return SingleChildScrollView(
+                      key: const ValueKey('composer-actions'),
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _ComposerAction(
+                            dense: dense,
+                            fontSize: fontSize,
+                            onPressed: chat.busy || state.historyBusy
+                                ? null
+                                : () => openContextControls(context, state),
+                            icon: BrandIcon(BrandGlyph.context, size: iconSize),
+                            details: dense && chat.contextStartIndex > 0
+                                ? 'Context from message ${chat.contextStartIndex + 1}'
+                                : null,
+                            label: dense || chat.contextStartIndex == 0
+                                ? 'Context'
+                                : 'Context from #${chat.contextStartIndex + 1}',
+                          ),
+                          _ComposerAction(
+                            dense: dense,
+                            fontSize: fontSize,
+                            onPressed:
+                                chat.busy ||
+                                    state.historyBusy ||
+                                    state.activeConversationArchived ||
+                                    model == null
+                                ? null
+                                : () => openParameters(
+                                    context,
+                                    model: model,
+                                    overrides: chat.requestParameters,
+                                    toolsAvailable:
+                                        state.platform.toolsAvailable,
+                                    toolNames: chat.enabledTools.intersection(
+                                      state.toolConnections.registry.tools
+                                          .map((tool) => tool.name)
+                                          .toSet(),
+                                    ),
+                                    onApply: chat.setRequestParameters,
+                                    onOpenDocumentation: state.platform.openUrl,
+                                  ),
+                            icon: Icon(Icons.tune, size: iconSize),
+                            details: dense && chat.requestParameters.isNotEmpty
+                                ? '${chat.requestParameters.length} parameter overrides'
+                                : null,
+                            label: dense || chat.requestParameters.isEmpty
+                                ? 'Parameters'
+                                : 'Parameters (${chat.requestParameters.length})',
+                          ),
+                          Semantics(
+                            label: state.platform.toolsAvailable
+                                ? null
+                                : 'Tools unavailable on this device. Learn why.',
+                            child: Opacity(
+                              opacity: state.platform.toolsAvailable ? 1 : .45,
+                              child: _ComposerAction(
+                                dense: dense,
+                                fontSize: fontSize,
+                                onPressed: chat.busy || state.historyBusy
+                                    ? null
+                                    : () => openTools(context, state),
+                                icon: Icon(
+                                  state.platform.toolsAvailable
+                                      ? Icons.extension_outlined
+                                      : Icons.desktop_windows_outlined,
+                                  size: iconSize,
+                                ),
+                                details:
+                                    dense &&
+                                        state.platform.toolsAvailable &&
+                                        chat.enabledTools.isNotEmpty
+                                    ? '${chat.enabledTools.length} enabled tools'
+                                    : null,
+                                label:
+                                    dense ||
+                                        !state.platform.toolsAvailable ||
+                                        chat.enabledTools.isEmpty
+                                    ? 'Tools'
+                                    : 'Tools (${chat.enabledTools.length})',
+                              ),
+                            ),
+                          ),
+                          if (state.attachmentPicking)
+                            _ComposerAction(
+                              dense: dense,
+                              fontSize: fontSize,
+                              onPressed: state.cancelAttachmentPick,
+                              icon: Icon(Icons.close, size: iconSize),
+                              label: 'Cancel attachments',
+                            )
+                          else
+                            SelectableTooltip(
+                              message: mimeTypes.isEmpty
+                                  ? 'Choose a model with supported file inputs. Check Model details for capabilities.'
+                                  : 'Up to 4 files, 12 MiB total. UTF-8 text/source: 256 KiB each; supported media: 8 MiB each. Files are sent only when you send the message.',
+                              child: _ComposerAction(
+                                dense: dense,
+                                fontSize: fontSize,
+                                onPressed:
+                                    mimeTypes.isNotEmpty &&
+                                        !chat.busy &&
+                                        !state.historyBusy &&
+                                        !state.activeConversationArchived
+                                    ? () => state.pickAttachments(mimeTypes)
+                                    : null,
+                                icon: BrandIcon(
+                                  BrandGlyph.documents,
+                                  size: iconSize,
+                                ),
+                                label: 'Attachments',
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
                 Wrap(
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    TextButton.icon(
-                      onPressed:
-                          chat.busy ||
-                              state.historyBusy ||
-                              state.activeConversationArchived ||
-                              model == null
-                          ? null
-                          : () => openParameters(
-                              context,
-                              model: model,
-                              overrides: chat.requestParameters,
-                              toolsAvailable: state.platform.toolsAvailable,
-                              toolNames: chat.enabledTools.intersection(
-                                state.toolConnections.registry.tools
-                                    .map((tool) => tool.name)
-                                    .toSet(),
-                              ),
-                              onApply: chat.setRequestParameters,
-                              onOpenDocumentation: state.platform.openUrl,
-                            ),
-                      icon: const Icon(Icons.tune, size: 18),
-                      label: Text(
-                        chat.requestParameters.isEmpty
-                            ? 'Parameters'
-                            : 'Parameters (${chat.requestParameters.length})',
-                      ),
-                    ),
-                    Semantics(
-                      label: state.platform.toolsAvailable
-                          ? null
-                          : 'Tools unavailable on this device. Learn why.',
-                      child: Opacity(
-                        opacity: state.platform.toolsAvailable ? 1 : .45,
-                        child: TextButton.icon(
-                          onPressed: chat.busy || state.historyBusy
-                              ? null
-                              : () => openTools(context, state),
-                          icon: Icon(
-                            state.platform.toolsAvailable
-                                ? Icons.extension_outlined
-                                : Icons.desktop_windows_outlined,
-                            size: 18,
-                          ),
-                          label: Text(
-                            !state.platform.toolsAvailable ||
-                                    chat.enabledTools.isEmpty
-                                ? 'Tools'
-                                : 'Tools (${chat.enabledTools.length})',
-                          ),
-                        ),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: chat.busy || state.historyBusy
-                          ? null
-                          : () => openContextControls(context, state),
-                      icon: const BrandIcon(BrandGlyph.context),
-                      label: Text(
-                        minimalChrome || chat.contextStartIndex == 0
-                            ? 'Context'
-                            : 'Context from #${chat.contextStartIndex + 1}',
-                      ),
-                    ),
                     if (chat.messages.isNotEmpty &&
                         chat.messages.last.finishReason == 'length')
                       TextButton(
@@ -1588,29 +1696,6 @@ class _Composer extends StatelessWidget {
                                   : StudioPalette.of(context).muted,
                             ),
                           ),
-                        ),
-                      ),
-                    if (state.attachmentPicking)
-                      TextButton.icon(
-                        onPressed: state.cancelAttachmentPick,
-                        icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Cancel adding files'),
-                      )
-                    else
-                      SelectableTooltip(
-                        message: mimeTypes.isEmpty
-                            ? 'Choose a model with supported file inputs. Check Model details for capabilities.'
-                            : 'Up to 4 files, 12 MiB total. UTF-8 text/source: 256 KiB each; supported media: 8 MiB each. Files are sent only when you send the message.',
-                        child: TextButton.icon(
-                          onPressed:
-                              mimeTypes.isNotEmpty &&
-                                  !chat.busy &&
-                                  !state.historyBusy &&
-                                  !state.activeConversationArchived
-                              ? () => state.pickAttachments(mimeTypes)
-                              : null,
-                          icon: const BrandIcon(BrandGlyph.documents),
-                          label: const Text('Add files'),
                         ),
                       ),
                     if (model != null && !minimalChrome)

@@ -1,6 +1,6 @@
 name: wfformcomp
 description: Optional authenticated local MCP companion for wfform.
-version: 1.0.0
+version: 1.0.1
 publish_to: none
 environment:
   sdk: ^3.10.9

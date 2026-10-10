@@ -259,15 +259,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('release version is 1.0.0', () {
+  test('release version is 1.0.1', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    expect(appVersion, '1.0.0');
+    expect(appVersion, '1.0.1');
     expect(
       RegExp(r'^version: (.+)$', multiLine: true).firstMatch(pubspec)!.group(1),
       appVersion,
     );
     expect(
-      RegExp(r'^version: 1\.0\.0$', multiLine: true).hasMatch(pubspec),
+      RegExp(r'^version: 1\.0\.1$', multiLine: true).hasMatch(pubspec),
       isTrue,
     );
   });
@@ -277,7 +277,7 @@ void main() {
     (tester) async {
       final (state, platform) = await _mount(tester, const Size(1440, 900));
       expect(_footer, findsOneWidget);
-      expect(find.text('v1.0.0'), findsOneWidget);
+      expect(find.text('v1.0.1'), findsOneWidget);
       _expectAdjacentSourceLink(tester);
       await tester.enterText(composer, 'Keep my draft');
       for (final entry in {

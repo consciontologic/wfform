@@ -38,6 +38,7 @@ Finder _glyph(BrandGlyph glyph) => find.byWidgetPredicate(
 );
 
 void main() {
+  setUpAll(fixture.loadAppFonts);
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     for (final (size, scale) in [
       (const Size(320, 740), 2.0),
@@ -176,7 +177,7 @@ void main() {
       );
       expect(_glyph(BrandGlyph.chat), findsWidgets);
       final addFiles = find.ancestor(
-        of: find.text('Add files'),
+        of: find.text('Attachments'),
         matching: find.byWidgetPredicate((widget) => widget is TextButton),
       );
       expect(tester.widget<TextButton>(addFiles).onPressed, isNull);

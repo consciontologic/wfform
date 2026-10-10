@@ -76,14 +76,14 @@ void main() {
   );
   test('native package identity uses Windows exe and zip, Linux tar', () {
     final windows = CompanionPackageTarget('windows', 'x64');
-    expect(windows.binaryName, 'wfformcomp-1.0.0-windows-x64.exe');
+    expect(windows.binaryName, 'wfformcomp-1.0.1-windows-x64.exe');
     expect(windows.installedBinaryName, 'wfformcomp.exe');
-    expect(windows.archiveName, 'wfformcomp-1.0.0-windows-x64.zip');
-    expect(windows.metadataName, 'wfformcomp-1.0.0-windows-x64.json');
+    expect(windows.archiveName, 'wfformcomp-1.0.1-windows-x64.zip');
+    expect(windows.metadataName, 'wfformcomp-1.0.1-windows-x64.json');
     final linux = CompanionPackageTarget('linux', 'x64');
-    expect(linux.binaryName, 'wfformcomp-1.0.0-linux-x64');
+    expect(linux.binaryName, 'wfformcomp-1.0.1-linux-x64');
     expect(linux.installedBinaryName, 'wfformcomp');
-    expect(linux.archiveName, 'wfformcomp-1.0.0-linux-x64.tar.gz');
+    expect(linux.archiveName, 'wfformcomp-1.0.1-linux-x64.tar.gz');
     expect(
       () => CompanionPackageTarget('macos', 'arm64'),
       throwsUnsupportedError,

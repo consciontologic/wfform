@@ -11,6 +11,9 @@ The static app is at `https://wfform.com/`. Gitflow and the owner's final produc
 approval remain required. Routine delivery automation is removed. GHCR publication
 is configured for the next approved release; no 1.0.0 image was published.
 
+**1.0.1 is prepared** with compact, consistently ordered composer controls; publication
+still follows the protected PR and human-approved release process.
+
 ## Phase 28 — PR review fixes, asset cleanup and concise docs
 
 - [x] Fix every actionable open PR finding with appropriate regression coverage.
