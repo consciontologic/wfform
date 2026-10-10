@@ -1,563 +1,82 @@
-# wfform roadmap
-
-Updated 2026-10-10. This is the authoritative current user scope, not a scaffold example or a promise of unrelated future work. Application baseline behavior is documented below; only the requested extension has checkboxes.
-
-## Status snapshot
-
-| Phase | Deliverables | Done | Status |
-|---|---:|---:|---|
-| Workspace, documentation, deployment and rendering | 7 | 7 | Complete; verified evidence and limits in the current report |
-| Repository workflow and application identity | 4 | 4 | Complete; current report records live MCP and browser verification |
-| Native application identifier clarification | 1 | 1 | Complete; native configuration and web regression checks passed; native binaries unverified |
-| Search metadata, web publishing and brand mark | 3 | 3 | Complete locally; public hosting and search indexing remain separate |
-| GitHub account migration | 3 | 3 | Complete; fresh history and real compiled-artifact publication verified |
-| Free GitHub Pages hosting | 2 | 2 | Complete; verified public subpath hosting, later superseded by the custom domain |
-| Owned custom domain | 2 | 2 | Complete; HTTPS, redirects, catalog and PWA verified |
-| Sidebar resizing and model readability | 4 | 4 | Complete; adaptive and source-description checks recorded |
-| Public information and version 0.1.0 | 4 | 4 | Complete; public pages and deployment verified |
-| Sidebar and model passport patch 0.1.1 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
-| Footer, documentation and composer focus patch 0.1.2 | 4 | 4 | Complete; regression, browser and deployment checks recorded |
-| Sidebar surface and quiet startup patch 0.1.3 | 3 | 3 | Complete; regression, browser and deployment checks recorded |
-| Conversation drafts and saved connection 0.2.0 | 5 | 5 | Complete; local gates, browser/live API checks, CI and public Pages release verified |
-| Composer continuity patch 0.2.1 | 3 | 3 | Complete; regression, browser and public deployment evidence recorded |
-| Mobile keyboard recovery and efficiency patch 0.2.2 | 3 | 3 | Complete; patched-SDK gates, release browser update, CI and public assets verified; physical phone unverified |
-| Compact conversation controls patch 0.2.3 | 6 | 6 | Complete; combined gates, browser checks, CI, Pages and public asset integrity verified |
-| Compact navigation refinement 0.2.4 | 3 | 3 | Complete; regression gates, release-browser checks, CI, Pages, public asset integrity and PWA update verified |
-| Soft wrapper identity | 3 | 3 | Complete locally; artwork, favicon/public build and browser checks passed; remote/native releases separate |
-| Transparent icon family and appearance variants | 3 | 3 | Complete locally; 532 tests, public build and actual light/dark browser checks passed |
-| Version 0.3.0 publication | 3 | 2 | Local release gates and public artifact validation passed; publication in progress |
-| Model parameters and connected tools | 6 | 6 | Complete locally; two live model routes, browser MCP/CLI proof, Linux bundle and regression gates passed; public publication separate |
-| Companion platform downloads and easy installation | 8 | 0 | Graphical installation planned; Windows build support progresses in Phase 23; macOS deferred |
-| Readable data, tools quick start and Windows build support | 4 | 4 | Complete locally; 613 Flutter tests, Linux package and browser checks passed; native Windows execution pending CI, graphical installers separate |
-| Open Cradle identity | 3 | 3 | Complete locally; transparent light/dark family, all 40 fully transparent exports, 617 Flutter tests and actual PWA update/browser checks passed |
-| Desktop tools and 1.0.0 delivery workflow | 6 | 6 | Complete locally; 642 tests and browser migration passed; Copilot model verified; Windows/publication gates remain explicit |
-| Routine delivery automation with human release approval | 8 | 7 | Historical scope; routine orchestration superseded by Phase 27; final human release approval retained |
-| Manual delivery and GHCR container publishing | 3 | 3 | Complete locally; reviewed and verified configuration, Docker smoke and all local gates passed; registry publication remains a future approved-release gate |
-
-## Phase 27 — Manual delivery and GHCR container publishing
-
-Scope ID: manual-delivery-ghcr. Requested 2026-10-09, after checking out the
-latest `main`. This supersedes Phase 26's routine orchestration, without removing
-its release provenance checks or final human production approval.
-
-- [x] Remove the Routine delivery Actions workflow and update active agent/user guidance for explicit task assignment, protected PR promotion/back-merge and release dispatch.
-- [x] Add Linux amd64 GHCR publishing to the existing approved release path, using verified public assets, cached dependencies/build tools, a job-scoped registry token and immutable plain SemVer tags.
-- [x] Review and verify the changed workflows, registry safeguards and documentation; distinguish configured publication from an actually published, publicly pullable image.
-
-Quality and security remain limited to PRs into `develop` and hotfix PRs into
-`main`. GHCR publication waits for the same `production` approval as packages
-and the website. No existing tag, release asset or container version is replaced.
-First-time package visibility and live publication remain explicit evidence gates.
-
-## Phase 26 — Routine delivery automation with human release approval
-
-Scope ID: delivery-automation. Requested 2026-10-09.
-
-**Historical scope:** the later Phase 27 request removes the Routine delivery
-workflow. Its original implementation checklist and evidence remain below; the
-current workflow is documented in [Gitflow](../guides/GITFLOW.md).
-
-**Goal:** automate routine AI work, PR coordination and verified release delivery,
-while retaining the owner's final production deployment approval.
-
-**Non-goals:** bypassing GitHub reviews/protection, direct source pushes to
-main/develop, storing the temporary test credential, unapproved model
-fallback, or claiming unattended operation before its credentials and bootstrap
-PR are installed. The user explicitly chose zero routine human PR reviews and
-one final deployment approval; required checks and conversations stay enforced.
-
-**Touched files:** GitHub delivery/package workflows and policy; xops delivery
-and publication helpers/tests; agent instructions; Gitflow/CI guides and reports.
-This bootstrap branches from the published 1.0.0 preparation commit because
-develop still predates the new delivery system; it integrates through a PR.
-It also carries the reviewed correction to Copilot's Windows launch repair,
-preserving configured-program environment isolation and adding regressions.
-
-**Test plan:** deterministic fake-API regressions for authorization, stale heads,
-required checks, duplicate events/tasks, deployment approval identity, immutable tags/assets,
-release dispatch and back-merge PRs; ops suite, workflow security audit and
-repository checks; live configuration read-back and actual CI, reported apart
-from mocks. Publication remains pending human approval.
-
-- [x] Implement trusted routine PR coordination and bounded explicit-model Copilot delegation, with tests.
-- [x] Automate approved SemVer tagging, rerun-safe package publication and develop back-merge preparation, with tests.
-- [ ] Document and configure credential isolation, native Copilot automation and eligible-human release approval without bypasses.
-- [x] Review, verify and publish the bootstrap PR; record remaining activation or human approval requirements accurately.
-- [x] Restrict security, quality and native tests to develop PRs and hotfix-to-main PRs; reuse exact-tree validation for promotion and release.
-- [x] Cache pinned SDK/dependencies/scanners safely and remove duplicate scans; verify workflow routing and source-provenance regressions.
-- [x] Try MAI-Code-1.1-Flash and configure supported, bounded fallback choices in the requested order without silent expensive substitution.
-- [x] Preserve all earlier PR work and history on the latest feature branch, close superseded PRs, and open one clean PR into develop.
-
-Local verification passed 643 Flutter tests and 78 Python ops tests, companion
-and PWA suites, workflow security and secret scans. GitHub's production reviewer
-and main-only environment credentials are configured and read back. Native
-Copilot auto-run remains an owner setting; see the
-[delivery verification report](../reports/delivery-automation-verification.md).
-The earlier PRs #1, #2 and #4 are closed. The replacement
-[PR #5](https://github.com/consciontologic/wfform/pull/5) targets `develop` and
-contains every change, preserving the historical branches and commit ancestry.
-Successful native CI and protected PR integration remain required before
-automation becomes active on main.
-
-**Release completion requested 2026-10-09:** investigate the Windows gate
-exit 71 in run `37955507918`, fix and verify its root cause, run all PR quality
-pipelines on the repaired source, merge through develop and main, and publish
-1.0.0 through the existing final production approval. Preserve later remote
-commits and all native checks; no blind retries or skipped tests.
-
-**Risks:** privileged workflows must never execute unreviewed PR code or consume
-its artifacts; GitHub event suppression requires explicit release dispatch;
-duplicate events must not duplicate paid tasks or overwrite immutable releases.
-The production environment requires the owner as reviewer. A recorded human
-approval for the exact release run must precede publication, including on reruns.
-Durable credentials and bootstrap deployment remain activation requirements.
-
-## Established application baseline
-
-
-The app already provides Flutter web/PWA discovery and chat; validated free pricing; cached catalog and scoped health; streaming/cancellation/retry; local normalized history, archive/restore/delete and export/import; edit/resend and model-aware media; explicit context/output control; adaptive selectable UI with Light/Dark/System modes; and bounded diagnostics. Previous verification is preserved with its date in the [reports index](../reports/README.md). These are context, not newly completed items in this phase.
-
-## Phase 1 — Workspace, documentation, deployment and rendering
-
-Scope ID: workspace-adaptation. The following six groups correspond to the user's current six bullets. All application work remains Flutter/Dart; Python/shell xops are operations only.
-
-### 1. Move the project
-
-- [x] Move application files to the project repository, preserve existing destination main/origin and unrelated files, retain historical outputs at their documented original location, and verify commands from the new working directory.
-
-### 2. Apply the agentic-workspace scaffold
-
-- [x] Apply the agentic-workspace scaffold using the full preset without forced replacement or automatic MCP setup; verify installed operating surfaces and the preserved application.
-
-### 3. Ignore the local API key
-
-- [x] Verify local credential configuration and generated copies remain ignored, absent from the staged set, and excluded from Docker context/image; keep the checked-in example credential-free.
-
-### 4. Fill documentation and adapt agent configuration
-
-- [x] Populate actual project/architecture/module/API/design/ADR/context documents and correct their indexes/links while preserving detailed and dated application documentation.
-- [x] Adapt agent instructions, client configurations and repository automation to Flutter, the moved paths, the real test gates, the unborn main branch and the explicit no-MCP choice.
-
-### 5. Containerized nginx workflow
-
-- [x] Provide documented make/xops commands for a containerized static Flutter PWA with nginx, runtime configuration handling, TLS/header checks and meaningful tests; report actual observed headers and any unverified external grade instead of claiming an unsupported A+++ rating.
-
-### 6. Common file and content rendering
-
-- [x] Implement and verify broad reasonable local file-extension handling, including Markdown, JSON, YAML, JavaScript and C/source text, with built-in readable rendering/previews and corresponding input/history behavior; preserve model capability and zero-price request guards.
-
-## Acceptance gates for the whole phase
-
-Run commands that exist in the final Makefile and document their exact results. Required evidence includes formatting/analysis, relevant deterministic regression tests, release PWA build, repository/scaffold/config checks, container/header checks where Docker is available, and release-browser verification of the changed rendering/deployment path. Tests using fake transports or generated storage databases must remain distinguished from live service/browser checks. External blockers identify the specific skipped check, not a blanket success.
-
-Documentation-only work requires current source review and local link/placeholder checks; it does not manufacture a new live API or security-grade result. The parent coordinates the final full gate, updates this snapshot/checklist, appends tracking and applies the repository's staging policy. Agents never commit or push.
-
-Completed evidence: [workspace, nginx and rendering verification](../reports/workspace-rendering-verification.md). This records the final release identities, deterministic/real-browser distinction, current Docker header checks and unverified external/native scope.
-
-## Phase 2 — Repository workflow and application identity
-
-Scope ID: workflow-identity. Requested 2026-10-06 after Phase 1.
-
-- [x] Consolidate all repository and application targets into one root Makefile; preserve help, defaults and command behavior.
-- [x] Enable CodeGraph for this repository, replace active no-MCP instructions, build the index and verify real graph queries; document supported languages and actual client-connection limits.
-- [x] Use a bundled gear emoji in the Settings window; verify light/dark, narrow text scaling and the running release.
-- [x] Replace the old Dart package identity with a valid form of the requested `com.wfform`, update imports and documentation, preserve installed PWA/storage identity, and verify dependency resolution, analysis, tests and release builds.
-
-This phase initially interpreted the request as a Dart package rename to `com_wfform`, reserving `com.wfform` for future native setup. The user's subsequent clarification is implemented in Phase 3 below. Historical verification records remain unchanged.
-
-Completed evidence: [workflow and identity verification](../reports/workflow-identity-verification.md).
-
-## Phase 3 — Native application identifier clarification
-
-Scope ID: native-identity. Requested 2026-10-06: `com.wfform` means the Android/iOS application identifier.
-
-- [x] Configure actual Android/iOS host projects with `com.wfform`, use `wfform` for the Dart package/imports, preserve the web application and installed identity, verify native configuration and web regression gates, and document native build/adapter limitations.
-
-Completed evidence: [native identity verification](../reports/native-identity-verification.md).
-
-## Phase 4 — Search metadata, web publishing and brand mark
-
-Scope ID: public-web. Requested 2026-10-07.
-
-- [x] Add truthful project/search/sharing metadata, public crawlable product information, canonical URLs and sitemap; preserve Flutter UI ownership and PWA identity, and verify release assets and browser startup.
-- [x] Add GitHub Actions CI and automatic verified web-artifact commits/pushes to `consciontologic/wfform.com` on source `main` pushes; document required token/host setup and test publishing without exposing local credentials or overwriting unrelated destination files.
-- [x] Replace the header arrow with a wrapper/conversation brand mark and matching web icons; verify adaptive layouts and light/dark rendering.
-
-Remote GitHub execution, custom-domain DNS and Google indexing require external setup and are reported separately from local checks. The workflow observes pushed commits, not unsaved local edits. No agent commits or pushes source changes.
-
-Completed evidence: [public web verification](../reports/public-web-verification.md).
-
-## Phase 5 — GitHub account migration
-
-Scope ID: repository-migration. Requested 2026-10-07; the user explicitly
-authorized a fresh Git history, source push and pipeline launch.
-
-- [x] Update active repository metadata, publishing target, instructions and guides to `consciontologic/wfform` and `consciontologic/wfform.com`; retain dated evidence and tracking records.
-- [x] Push the current application as a fresh history to the new source repository, retaining an ignored local backup of the old Git metadata.
-- [x] Start the new account's workflow and verify the compiled web files reach the new publication repository; report any external blocker precisely.
-
-Completed evidence: [account migration and real publication](../reports/account-migration-verification.md). Public Pages/DNS serving remains a separate hosting step.
-
-## Phase 6 — Free GitHub Pages hosting
-
-Scope ID: github-pages. Requested 2026-10-07; the user clarified that they do
-not own `wfform.com` and chose the free GitHub project URL.
-
-- [x] Adapt the public build, publishing ownership, metadata and guides for `https://consciontologic.github.io/wfform.com/`, keeping root local/Docker serving intact.
-- [x] Enable Pages with no custom domain, publish the release and verify live HTTPS, browser startup, catalog and PWA scope.
-
-Completed evidence: [live GitHub Pages verification](../reports/github-pages-verification.md).
-
-## Phase 7 — Owned custom domain
-
-Scope ID: custom-domain. Requested 2026-10-07 after the user purchased
-`wfform.com` and configured Namecheap DNS.
-
-- [x] Restore root public build paths, custom-domain publication and SEO metadata with regression coverage; update current guides.
-- [x] Configure GitHub Pages for `wfform.com`, publish the verified release, enforce managed HTTPS and verify the public browser, live catalog and PWA scope.
-
-Completed evidence: [custom-domain verification](../reports/custom-domain-verification.md).
-
-## Phase 8 — Sidebar resizing and model readability
-
-Scope ID: sidebar-readability. Requested 2026-10-07.
-
-- [x] Add a bounded resizable history sidebar with keyboard/touch access, remembered width and preserved state across responsive layouts.
-- [x] Add a persistent 125% text option, retaining narrow and 200% text accessibility.
-- [x] Remove the repeated model hover instruction and keep complete supplied descriptions readable; explain descriptions shortened by the upstream catalog without inventing missing text.
-- [x] Run regression gates, release build and browser checks for the changed controls and layouts.
-
-Completed evidence: [sidebar and readability verification](../reports/sidebar-readability-verification.md).
-
-## Phase 9 — Public information and version 0.1.0
-
-Scope ID: public-information. Requested 2026-10-07.
-
-- [x] Add the supplied Google tag exactly once immediately after each HTML head and keep hosting/CSP/PWA packaging compatible.
-- [x] Publish accessible About, Terms and conditions, and Liability pages with contextual copy, a GitHub doodle, and app/page version 0.1.0.
-- [x] Replace tracked personal machine paths/usernames with portable documentation and shorten the visitor README.
-- [x] Verify deterministic gates, release build, responsive browser behavior and the deployed public pages.
-
-## Phase 10 — Sidebar and model passport patch 0.1.1
-
-Scope ID: sidebar-passport-patch. Requested 2026-10-07.
-
-- [x] Replace resize grip with a plain divider; support collapse, edge reveal and default-width restoration on sidebar actions without losing drafts or requests.
-- [x] Present a concise, readable model passport with full source descriptions and technical details available on demand.
-- [x] Delete an archived row directly without requiring selection; preserve unrelated active conversations and report failures.
-- [x] Publish patch 0.1.1 with concise Open app labels; verify regressions, release build, responsive browser behavior and deployment.
-
-Completed patch evidence: [0.1.1 verification](../reports/sidebar-passport-patch-verification.md).
-
-## Phase 11 — Footer, documentation and composer focus patch 0.1.2
-
-Scope ID: footer-focus-patch. Requested 2026-10-07.
-
-- [x] Remove GitHub artwork everywhere and place a plain source link beside the left-aligned app version, preserving responsive navigation.
-- [x] Remove unused documentation templates and repair their active links/instructions.
-- [x] Fix the composer's stale blinking caret when focus moves elsewhere; preserve draft, selection, keyboard/touch behavior and resize continuity.
-- [x] Verify and publish version 0.1.2 with tests, release build and browser evidence.
-
-Completed patch evidence: [0.1.2 verification](../reports/footer-focus-patch-verification.md).
-
-## Phase 12 — Sidebar surface and quiet startup patch 0.1.3
-
-Scope ID: sidebar-startup-patch. Requested 2026-10-07.
-
-- [x] Extend the sidebar surface to its resize divider without changing accessible drag or collapse behavior.
-- [x] Remove the brief introductory startup screen while preserving failure recovery, metadata and public information pages.
-- [x] Verify and publish version 0.1.3 with regression tests, release build and browser evidence.
-
-Completed patch evidence: [0.1.3 verification](../reports/sidebar-startup-patch-verification.md).
-
-## Phase 13 — Conversation drafts and saved connection 0.2.0
-
-Scope ID: conversation-drafts. Requested 2026-10-07.
-
-- [x] Show response activity on the corresponding sidebar conversation row.
-- [x] Separate unsent drafts from sent conversations, with durable text and attachment recovery across navigation and reload.
-- [x] Return to a writable draft after archiving the active conversation, preserving archived history.
-- [x] Remember the explicitly saved OpenRouter key across browser restarts, including replacement and removal, with visible storage failures.
-- [x] Verify and publish version 0.2.0 with regression tests, a release build and browser evidence.
-
-## Phase 14 — Composer continuity patch 0.2.1
-
-Scope ID: composer-continuity-patch. Requested 2026-10-07.
-
-- [x] Keep unsent text and files visible when changing models, without mixing existing message histories or overwriting a destination draft.
-- [x] Preserve the current workspace through About, Terms and Liability navigation by saving first and returning within the same tab; refuse unsafe navigation and expose failures.
-- [x] Verify version 0.2.1 with regression tests, release build and actual browser return/reload checks before publication.
-
-Current findings and verification status: [0.2.1 composer continuity](../reports/composer-continuity-verification.md).
-
-Local evidence: 488 deterministic tests passed with one opt-in skip; formatting,
-analysis, repository checks, seven Chromium storage checks, 14 operation tests,
-CodeGraph and the final public build passed. Actual browser checks retained typed
-text and Markdown/PNG attachments through model changes, same-tab About → Open
-app, Save & update, browser Back and reload. File previews reopened and live
-resizing passed at 390×844, 820×1180 and 1440×900. CI run 37675339117 and Pages
-run 37675720016 passed; public release and checked asset hashes match the local build.
-
-## Phase 15 — Mobile keyboard recovery and efficiency patch 0.2.2
-
-Scope ID: mobile-keyboard-patch. Requested 2026-10-08.
-
-- [x] Restore the available app height after dismissing the mobile software keyboard, preserving composer text, attachments, focus behavior and responsive layouts.
-- [x] Reduce measured unnecessary mobile UI work without changing chat, history, model selection or draft persistence behavior; document the scope and limits of performance evidence.
-- [x] Verify and publish version 0.2.2 with regression tests, a release build and browser checks, explicitly distinguishing browser simulation from the user's installed Android PWA.
-
-Current findings and verification status: [0.2.2 mobile keyboard recovery](../reports/mobile-keyboard-verification.md).
-
-Local gates passed on Flutter 3.38.10 / Dart 3.10.9: 493 tests with one opt-in
-live skip, formatting, analysis, repository checks, seven Chromium storage
-checks, 14 operation tests and CodeGraph. The public release build contains
-40 assets / 18,274,364 bytes. Three keyboard-metrics regressions cover repeated
-show/dismiss at 100%, 125% and 200% text; these test app geometry and composition
-continuity, not a physical Android keyboard. Controlled highlight-tree work
-dropped from 21 to four for 20 updates; phone frame rate remains unmeasured.
-CI run 37737229068 and Pages run 37737509800 passed. Public release and selected
-asset hashes match the local build. Actual public Save & update from 0.2.1 to
-0.2.2 preserved a typed draft, source attachment and model selection.
-
-## Phase 16 — Compact conversation controls patch 0.2.3
-
-Scope ID: compact-conversation-controls. Requested 2026-10-08.
-
-- [x] Reclaim phone/tablet conversation space by removing routine bottom status and explanatory copy while retaining the composer, Context, Add files, send/cancel and actionable failures/progress.
-- [x] Move version, GitHub, About, Terms and conditions, and Liability into the left navigation drawer for compact and medium layouts; retain desktop footer navigation and draft-safe information-page navigation.
-- [x] Replace the full model selection strip on compact and medium layouts with a small recognizable control that opens the searchable picker, preserving selection, details access and live resize continuity.
-- [x] Allow direct deletion of an unsent draft from its row without first selecting or archiving it; preserve other drafts and a writable editor after deleting the active draft.
-- [x] Improve phone/tablet footer-link alignment while preserving readable version/source labels, reachable information links and enlarged-text behavior.
-- [x] Verify and publish version 0.2.3 with regression coverage, a release build and browser checks for narrow/medium/expanded layouts, large text, direct draft deletion and footer alignment.
-
-Current findings and verification status: [0.2.3 compact conversation controls](../reports/compact-controls-verification.md).
-
-## Phase 17 — Compact navigation refinement 0.2.4
-
-Scope ID: compact-navigation-refinement. Requested 2026-10-08.
-
-- [x] Keep the visible Models label beside its header icon on phone/tablet layouts, including narrow widths and enlarged text, while preserving picker access and composition state.
-- [x] Replace the drawer's separate link panel with a compact bottom row containing version, GitHub and an Info menu for About, Terms and conditions, and Liability; use smaller typography, the sidebar surface and proportionate drawer sizing.
-- [x] Verify and publish version 0.2.4 with regression tests, a release build and browser checks for model selection, information navigation, narrow/medium layouts and enlarged text.
-
-Current findings and verification status: [0.2.4 compact navigation refinement](../reports/compact-navigation-verification.md).
-
-## Phase 18 — Soft wrapper identity
-
-Scope ID: soft-wrapper-branding. Requested 2026-10-09 after visual concept approval.
-
-- [x] Replace the bracketed mark with the approved rounded W wrapping a lavender module, and add matching Models, Chat, History and Documents icons without changing labels, control behavior or the global theme.
-- [x] Replace PWA and native launcher artwork and browser-tab favicons; retain installed-app identity and include all favicon sizes in public and offline releases.
-- [x] Verify artwork, control continuity, light/dark rendering, compact/expanded layouts and the actual local release browser; run repository gates and record public/native release limits.
-
-Current evidence: [soft wrapper branding verification](../reports/soft-wrapper-branding-verification.md).
-
-## Phase 19 — Transparent icon family and appearance variants
-
-Scope ID: transparent-icon-family. Requested 2026-10-09.
-
-- [x] Add matching Settings, Diagnostics, Context, Chats, Drafts and Archived icons across controls and dialogs while preserving labels, selected states and behavior.
-- [x] Remove white backgrounds from existing and new artwork; adapt all app icons for light/dark themes and provide transparent favicon/public logo variants, with tinted platform-required launcher surfaces.
-- [x] Verify transparency, contrast, theme selection, responsive layouts and release publication assets; run local gates and inspect the actual updated browser.
-
-## Phase 20 — Version 0.3.0 publication
-
-Scope ID: release-030. Requested 2026-10-09; the user explicitly authorized committing and pushing the accumulated branding work and version bump.
-
-- [x] Set package version 0.3.0+10, synchronize app/static-page versions and add release notes.
-- [x] Run local release gates, real browser storage checks and the credential-free public build.
-- [ ] Commit and push through the existing workflow, verify CI/Pages and confirm the public PWA update and published assets.
-
-## Phase 21 — Model parameters and connected tools
-
-Scope ID: parameters-connected-tools. Requested 2026-10-09. Live feasibility is
-the first acceptance gate; catalog capability labels alone are not evidence.
-The optional local companion is named **wfformcomp**. User-supplied temporary
-test credentials stay in ignored local storage and are removed after testing.
-
-- [x] Prove ordinary chat, an actual MCP tool round trip, and an actual compiled wfformcomp command-tool round trip with tool-capable, zero-price OpenRouter models; record model/provider, request IDs, outcomes and limits without credentials.
-- [x] Add model-aware parameter controls, official explanatory references, absent-by-default overrides, validation and conversation persistence; keep routing/payment safeguards app-managed.
-- [x] Implement streamed tool calls, preserved reasoning/tool messages, bounded execution, user authorization, cancellation and recovery without replaying completed actions.
-- [x] Add user-supplied HTTP MCP connections and per-conversation tool selection, including compatible loopback servers, isolated credentials and actionable errors.
-- [x] Deliver the optional Dart wfformcomp binary, authenticated browser pairing, fixed configured command tools and local MCP reuse, with build/download documentation and release packaging.
-- [x] Verify regression gates, public web build, actual browser chat/MCP/companion use, persistence and failure handling; record native/public-release limitations separately and stage the completed source slice.
-
-The requested companion deliberately extends the static web application's
-boundary with a user-installed local process. The website and nginx remain
-static, and OpenRouter inference remains direct. Ordinary chat does not execute
-uploaded or generated code. Companion commands require explicit local
-configuration and user authorization; supplied credentials do not authorize
-source commits or pushes.
-
-Evidence: [parameters, MCP and wfformcomp verification](../reports/connected-tools-verification.md).
-Final local gates passed 596 tests (four opt-in skips), eight companion suite
-programs, seven Chromium storage checks and 14 operations tests. Actual Liquid
-and Cohere runs each passed ordinary chat, HTTP MCP and compiled companion tool
-loops. The 16.3 MB Linux x64 archive includes the current public web build;
-publication, other operating systems and third-party hosted MCP remain separate.
+# Roadmap
+
+This is the current checklist. Completed implementation detail lives in Git history,
+[CHANGELOG.md](../../CHANGELOG.md) and the maintained [guides](../README.md), not
+per-change reports. Do not infer native/browser/public-release success from mock tests.
+
+## Current status
+
+**1.0.0 is published** with web, Linux and Windows portable companion downloads.
+The static app is at `https://wfform.com/`. Gitflow and the owner's final production
+approval remain required. Routine delivery automation is removed. GHCR publication
+is configured for the next approved release; no 1.0.0 image was published.
+
+**1.0.1 is prepared** with compact, consistently ordered composer controls; publication
+still follows the protected PR and human-approved release process.
+
+## Phase 28 — PR review fixes, asset cleanup and concise docs
+
+- [x] Fix every actionable open PR finding with appropriate regression coverage.
+- [x] Remove unused emoji assets, code/docs references and tests of removed behavior;
+  retain fonts and licenses because the interface/public pages/code still use them.
+- [x] Replace per-change reports and repeated long docs with concise current contracts,
+  examples, operations and research guidance; remove obsolete media and repair links.
+- [x] Pass `make verify`, affected ops/docs/package checks and independent review;
+  prepare the Gitflow bugfix branch for publication into `develop` through `make git`.
+
+Acceptance: no lost prior work, no broken local documentation references, no credential
+leak, preserved app/font behavior and unchanged production-approval policy.
+The PR and tracking log record publication and remote CI; local checks do not imply merge.
 
 ## Phase 22 — Companion platform downloads and easy installation
 
-Scope ID: companion-installation. Requested 2026-10-09. **Graphical installation
-remains planned.** Phase 23 adds the Windows build/package path; native Windows
-artifact execution is still required before advertising downloads. This plan
-does not claim that graphical installers or macOS binaries exist.
+Portable Linux/Windows packages already exist. The remaining goal is
+**download → install/open → launch wfform**, without developer SDKs, terminal setup,
+manual token copying or JSON editing. Ordinary chat stays usable without tools.
 
-### Goal
+- [ ] Define supported Linux distributions/minimum OS/architectures and choose the
+  graphical package format plus clean-machine acceptance environments.
+- [ ] Add Linux graphical install, launcher and uninstall with bundled runtime/web UI.
+- [ ] Add a per-user Windows graphical installer, Start-menu shortcut and uninstall;
+  report signing status and test the actual downloaded installer.
+- [ ] Verify native process-tree cancellation, private settings/token permissions and
+  paths with spaces/Unicode in clean installed Linux/Windows environments.
+- [ ] Add first-run private setup, stable loopback address, browser launch and explicit
+  pairing approval without long-lived tokens in URLs/logs. Reuse an existing instance;
+  an occupied port must not silently move users to a new history origin.
+- [ ] Add graphical tool/MCP setup, dependency errors and status/quit. Keep autostart
+  opt-in; preserve settings/history through upgrades; ask before removing user data.
+- [ ] Validate graphical download/install/pair/CLI/MCP/upgrade/uninstall and bounded
+  opt-in live tool loops per advertised OS/architecture, including no-SDK machines.
+- [ ] **Deferred macOS:** obtain native build/test/signing/notarization access; produce
+  and validate each advertised Apple Silicon/Intel variant through the same journey.
 
-Provide a separate wfformcomp download for each supported operating system and
-architecture, with a normal **download → install/open → launch wfform** flow.
-First launch creates private settings automatically, starts the companion and
-opens the bundled wfform UI in the default browser. Pairing requires one clear
-approval, without copying tokens, entering ports, editing JSON, running terminal
-commands or installing Dart/Flutter. Configuring tools is a separate optional
-step in the UI; ordinary chat works without it.
+Keep exact-origin/bearer checks, per-tool approval, explicit reconnect and no replay.
+Tools stay disabled until chosen; installation must not import credentials or grant
+whole-PC access. Do not advise disabling OS protections to bypass signing warnings.
+A successful build is not installer acceptance. Implementation belongs in companion,
+existing setup UI, build helper and their native/browser/package tests.
 
-| Platform | Planned distribution | Release order and availability gate |
-|---|---|---|
-| Linux | Graphical package installation and an application-menu launcher; retain the portable archive as an advanced option | First; initially x64 on explicitly named, tested distributions. Choose the primary package format against those environments; no required chmod/terminal steps. |
-| Windows | Per-user graphical installer, Start-menu shortcut and normal uninstall entry | Alongside Linux installation work; initially x64, built and exercised on Windows before download availability. |
-| macOS | Signed/notarized application bundle with a familiar graphical install flow | Deferred until a macOS build/test environment and signing/notarization access are available. Label as planned, with no placeholder download. Validate Apple Silicon and Intel separately before advertising either. |
+## Other open acceptance work
 
-### Non-goals
+- [ ] First future approved GHCR publication: verify pushed version/digest, configure
+  Public visibility and test anonymous pulls. Never overwrite existing versions.
+- [ ] Android/iOS durable adapters, file handling, credential storage, signed builds
+  and actual device acceptance; see [native status](../native-platforms.md).
+- [ ] Installed-PWA keyboard/install/update checks on physical target phones and
+  additional browser engines; viewport emulation is not equivalent evidence.
 
-This planning task does not build/publish installers, provision signing accounts,
-change this workstation, enable background startup by default, or promise every
-Linux distribution/CPU. The existing advanced CLI remains supported. Installation
-must not silently discover/import credentials, enable tools or execute commands.
+## Completed milestones
 
-### Touched files
+| Scope | Result |
+|---|---|
+| Phases 1–7 | Existing Flutter app integrated with project operations, CodeGraph, safe file rendering, static containers, native host identity and custom-domain Pages. |
+| Phases 8–17 | Responsive model/history controls, public information, durable drafts/keys, composer continuity and compact navigation through 0.2.4. |
+| Phases 18–20, 24 | Transparent light/dark identity evolved into current Open Cradle artwork. Earlier publication tracking is superseded by published 1.0.0. |
+| Phases 21, 23 | Advertised parameter overrides, approved MCP/CLI loops, readable structured data, simple guides and native Windows packaging. |
+| Phase 25 | Desktop-only tools, example playground, SemVer/Gitflow and free quality/security gates. |
+| Phase 26 | Final human production approval retained. Routine task/merge/release orchestration was subsequently removed. |
+| Phase 27 | Explicit delivery plus guarded future GHCR publishing; native packages and container smoke validated. |
 
-Implementation will extend the existing `companion/bin/`, `companion/lib/`,
-Flutter connection/setup UI, `tool/build_companion.dart`, companion workflow,
-companion/package/UI tests, `docs/wfformcomp.md` and `docs/guides/CI_CD.md`.
-Search for existing platform packaging conventions before adding installer files;
-keep this roadmap the canonical plan.
-
-### Test plan
-
-Use clean Linux and Windows environments without a developer SDK. Starting from
-each downloaded artifact, use only the graphical install/launch flow, approve
-pairing, add an explicit fixture CLI/MCP connection and complete a model tool
-round trip. Verify a second launch, cancellation of descendants, quit/restart,
-upgrade, uninstall and storage preservation; repeat the same acceptance suite on
-macOS when that phase is enabled. Record actual OS/architecture and distinguish
-native tests, browser fixtures and opt-in live model evidence. Do not call a
-platform supported based only on compilation or CI configuration.
-
-### Phase 22 checklist — Companion installation
-
-- [ ] Define supported Linux distributions, minimum OS versions and architecture labels; choose the primary Linux installer/package and document clean-machine acceptance environments.
-- [ ] Add Linux graphical installation, application launcher and uninstall behavior; bundle the runtime/web assets so first use requires no developer tools or shell commands.
-- [ ] Add a native Windows build/package job and graphical per-user installer, shortcuts and uninstall entry; report signing status honestly and test the downloaded installer.
-- [ ] Implement Windows process-tree cancellation, private app-data/token permissions, and paths containing spaces/Unicode; run equivalent auth, session, CLI and stdio tests on Windows.
-- [ ] Add first-run setup that creates private settings, selects a stable loopback address, opens the bundled browser UI and pairs after explicit approval without exposing a long-lived token in URLs or logs.
-- [ ] Add graphical tool/MCP configuration with actionable missing-dependency messages and status/quit controls; keep autostart opt-in, preserve settings/history across upgrades, and ask explicitly before removing user data during uninstall.
-- [ ] Provide distinct OS/architecture download choices, checksums and release metadata; verify the installed Linux/Windows user journey and bounded ordinary-chat/MCP/CLI live proof before marking downloads available.
-- [ ] **Deferred macOS:** obtain a native build/test environment and signing access, produce the signed/notarized app, and pass the same install/pair/tool/upgrade/uninstall checks for each advertised architecture.
-
-### Risks and release gates
-
-Pairing convenience must preserve bearer authentication, exact-origin checks,
-user tool approval and explicit reconnect/no replay after reload. Define the
-local approval handshake before implementing automatic setup. Keep the hosted
-website and loopback history origins separate and explain transfer through
-export/import; keep the local origin stable across launches and upgrades.
-Repeated launch should reuse the running instance; occupied ports need visible
-recovery without silently moving users to an empty browser-history origin.
-Windows process-tree and file-permission behavior needs native verification,
-including the implementation added in Phase 23. Installer signing/OS warnings must be tested,
-never addressed by instructing users to disable protection. macOS deferral is a
-build, signing and verification dependency, not a claim that Dart lacks support:
-[Dart's compiler documentation](https://dart.dev/tools/dart-compile#exe) describes
-native Windows/macOS/Linux executables and currently limits cross-OS targets to
-Linux; [Apple's distribution guidance](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
-covers notarization. Linux/Windows work need not wait for macOS.
-
-## Phase 23 — Readable data, tools quick start and Windows build support
-
-Scope ID: readable-tools-windows. Requested 2026-10-09.
-
-**Goal:** make displayed structured data easy to read, explain tools with usable
-examples, and add the Windows companion build/package path.
-
-**Non-goals:** executing displayed content, changing exact copied/exported data,
-publishing source or releases, and claiming a native Windows/macOS run from Linux.
-The full graphical installer and automatic pairing journey remains Phase 22.
-
-**Touched files:** shared document/presentation renderers and tests, connection
-help, user guides, companion runtime/tests, build tooling and companion CI.
-
-**Test plan:** regression tests for JSON/YAML and nested source strings across
-dialogs, tool history, diagnostics and previews; exact-copy and malformed/large
-input cases; compact browser checks and bundled help; Linux companion packaging
-and process tests, plus a native Windows CI job covering its compiled artifact.
-
-- [x] Share bounded readable data rendering across approvals, tool messages, diagnostics, response code blocks and file previews, preserving originals and safe fallback.
-- [x] Add a plain-language tools/MCP/companion quick start with concrete examples and make it available from the app.
-- [x] Implement Windows executable/archive packaging, native CI checks and platform-specific companion safeguards while preserving Linux and deferring macOS.
-- [x] Pass local regression/build/repository gates, inspect the actual preview, document Windows execution limits and stage the reviewed change.
-
-**Risks:** content reformatting must not alter requests or stored data; nested
-outputs must stay bounded and must never run scripts. Windows packaging and
-process cleanup require native execution evidence before a supported download
-is advertised. Preserve existing conversations, tool approvals and local secrets.
-
-Evidence: [Phase 23 verification](../reports/readable-tools-windows-verification.md).
-Native Windows build/runtime acceptance is still pending its CI runner; no
-Windows download or graphical installer is claimed complete by this phase.
-
-## Phase 24 — Open Cradle identity
-
-Scope ID: open-cradle-branding. Requested 2026-10-09 after approval of the Open Cradle concept.
-
-- [x] Replace the W mark with the approved open folded band and linked AI nodes, and update all ten companion glyphs to the same rounded visual language without changing labels or controls.
-- [x] Regenerate every favicon, public/PWA and native launcher variant from shared geometry; preserve transparent exterior/interior artwork and light/dark variants, with no colored backing plate in any export, including iOS and legacy maskable files.
-- [x] Verify artwork at small sizes, alpha/contrast, theme and responsive controls, release assets and the actual local browser; preserve the separately staged tools/companion work and stage the reviewed branding changes.
-
-**Test plan:** focused rendered-artwork/transparency/PNG and integration regressions; full `make verify`, CodeGraph sync/check, public build and local browser checks in both appearances. Native binaries and public publication are separate from this artwork update.
-
-Evidence: [Open Cradle verification](../reports/open-cradle-branding-verification.md).
-
-**Transparency clarification (2026-10-09):** the user requires only the artwork in both themes, with no opaque platform exception. All 40 PNGs must carry alpha, and the manifest must select general-purpose icons without requesting maskable background compositing. The full follow-up gate passed 617 Flutter tests, ten companion suites, independent alpha/HTTP audits and the actual local PWA update.
-
-## Phase 25 — Desktop tools and 1.0.0 delivery workflow
-
-Scope ID: release-100. Requested 2026-10-09.
-
-**Goal:** make tool access desktop-only, simplify copying, and prepare a tested
-1.0.0 with Gitflow, standard release packages, free quality checks and playable
-developer examples.
-
-**Non-goals:** a VS Code extension implementation (opinion requested), macOS or
-graphical installers, bypassing GitHub's review controls, paid security services,
-and direct source publication to main/develop outside reviewed PRs.
-
-**Touched files:** Flutter tools/presentation and tests; web PWA/build/deploy
-scripts and tests; GitHub workflows; agent entrypoints; examples; release docs
-and changelog; both repositories' public descriptions/topics.
-
-**Test plan:** platform and resumed-chat tool guards; focused copy-control tests;
-actual example MCP/CLI calls; PWA migration and offline/update checks; strict
-SemVer/package gates; free scanner reports; full verify, browser and package
-acceptance; authenticated metadata read-back and Copilot capability discovery.
-
-- [x] Fade tools on phones/tablets with a clear explanation; enforce desktop-only dispatch and preserve ordinary chat/history.
-- [x] Keep essential copy actions and remove redundant copies across nested displays.
-- [x] Add runnable example MCP/programs with a short developer walkthrough and real protocol tests.
-- [x] Prepare 1.0.0, flat PWA assets, versioned Linux/Windows packages and gated GitHub Releases with free quality/security reports.
-- [x] Configure Gitflow and Copilot delegation guidance, update both repository descriptions/topics and document actual permission/cost limits.
-- [x] Verify the combined change, record evidence, stage it, and provide the VS Code extension recommendation.
-
-**Risks:** old service workers need a tested migration from hashed directories;
-mobile saved tool exchanges must not block normal chat; existing staged branding
-and tool work must survive. Copilot availability/prices and native Windows runs
-must be verified separately from local configuration. Phase 26 supersedes the
-original model selection with the owner-authorized MAI policy.
-
-**Evidence:** [1.0.0 verification](../reports/release-100-verification.md). Remaining
-remote gates: publish this reviewed source through guarded `make git`, run native
-Windows CI, require the actual CI check contexts and publish the reviewed SemVer
-tag. The earlier GPT-5.3-Codex success and failed GPT-6 Luna trial are historical
-evidence; Phase 26 selects MAI after its successful live trial. These remote
-release gates are not claimed by local completion.
+Operational tests and release claims remain tied to the source/run that produced them.
+Future work does not retroactively extend prior verification to new platforms.

@@ -1,73 +1,50 @@
-# Text files and rendered responses
+# Readable files and responses
 
-wfform renders assistant responses and local text attachments using Flutter widgets. Assistant replies support GitHub-flavored Markdown: headings, emphasis, lists, tables, block quotes, inline code and fenced code. A **Source** toggle preserves access to the original Markdown; the message’s copy action copies the full response, and **Copy code** copies a fenced code block. Reasoning remains separate and collapsible. Ordinary user prompts remain literal text; complete JSON objects/arrays in messages or reasoning receive the same readable data preview as other structured output.
+Assistant replies render selectable Markdown: headings, lists, tables, quotes and
+highlighted code. Source/Raw keeps the original text. User prompts remain literal;
+complete JSON objects/arrays can receive a readable preview. Copy shortcuts are kept
+for full messages, fenced code, full-file source and complete diagnostic/cache reports.
 
-Select **Add files** with a text-compatible free model, choose a UTF-8 file, then tap its filename chip to preview it. The dialog shows its original filename (including extension), detected format and size. Markdown files have rendered/source modes; code and configuration files show source with named syntax highlighting. Unknown extensions and extensionless UTF-8 files remain usable as plain text. Filename detection controls presentation, not content execution or API modality.
+The same viewer serves tool approvals/results, diagnostics, parameter previews and
+file dialogs. JSON/JSON Lines indentation preserves exact number spelling, key order,
+duplicate keys and escapes. YAML/source retains comments and indentation with syntax
+highlighting. Decoded nested strings show labeled multiline source sections; display
+formatting never changes requests, stored messages or exports.
 
-## Readable data throughout the app
+## Files and limits
 
-Tool approval popups, tool requests/results, expanded diagnostic records, offline
-cache reports, JSON parameter previews, response code fences and file previews
-share one safe viewer. Valid JSON is indented automatically; JSON Lines displays
-each record separately. Whitespace-only formatting preserves number spelling,
-key order, duplicate keys and string escapes. YAML and other source grammars
-retain their original indentation, comments and block scalars with highlighting.
-There is no promise of a formatter for every possible binary/file format.
+Add a nonempty strict UTF-8 file up to **256 KiB**, then click its filename to preview.
+Known Markdown, source/config, JSON/YAML/TOML, logs, CSV, shell, HTML/XML/SVG and common
+extensionless names get appropriate views. Unknown names remain plain text. Named
+fence aliases select a registered grammar; there is no expensive language guessing.
+The registry is [document_format.dart](../lib/features/documents/document_format.dart).
 
-Nested JSON string values containing code, multiline stdout or MCP text appear
-in additional labeled sections with real line breaks. Nested JSON can receive
-its own formatted view; code uses an explicit language/filename hint when one
-is supplied. Decoded strings remain source text, never executable HTML or
-Markdown. **Source**/**Raw** retains the original content;
-display formatting never changes requests, saved conversations or exports.
-Structured parameter editors keep the text being typed and offer a separate
-**Readable preview**. Copy buttons are reserved for full messages, fenced code,
-one full-file source action and complete diagnostic/cache reports. Data and
-decoded previews remain selectable without a second row of copy shortcuts.
+Text files use named ordinary text message parts, without a PDF parser or native-file
+capability. Full source contributes to the context estimate. Shared attachment limits
+and normalized history apply; [media](multimodal.md) has separate capability checks.
 
-Formatting and decoded extraction are limited to 64,000 characters, nesting
-depth 32 and 12 decoded sections. Malformed or over-budget data falls back to
-source; large decoded sections page independently. Visible source pages have
-explicit screen-reader labels and remain selectable. Ordinary prose is not
-guessed to be YAML or code.
+| Work | Bound/fallback |
+|---|---|
+| Rich Markdown | 24,000 UTF-16 units, then paged source |
+| Syntax block | 12,000 units, then plain source |
+| Source page | About 12,000 units, preserving surrogate pairs |
+| Structured formatting | 64,000 characters, depth 32, 12 decoded sections |
+| Stream previews | At most once per 180 ms; immediate terminal flush |
 
-## Formats
+Malformed/over-budget input falls back to source. Preview limits never truncate saved
+output or full copying. Page labels remain accessible and source selectable.
 
-The registry in `lib/features/documents/document_format.dart` recognizes:
+## Safety and fonts
 
-- Markdown (`md`, `markdown`, `mdown`), text/log/CSV/TSV, reStructuredText.
-- JSON/JSON Lines, YAML, TOML, INI/configuration, SQL, GraphQL, Protocol Buffers.
-- JavaScript/JSX, TypeScript/TSX, C/C++/headers, C#, Dart, Python, Java, Kotlin, Swift, Go, Rust, Ruby, PHP, Lua and R.
-- Shell/Bash/Zsh, PowerShell, HTML/XML/SVG source, CSS/SCSS, LaTeX source, diff/patch.
-- `Dockerfile` (including suffixed names), `Makefile`/`GNUmakefile`, `.env` variants, `.gitignore`, `.dockerignore`, `README` and `LICENSE`.
+Markdown images show alt text/address without fetching. Links show a copyable address
+dialog. HTML, SVG, scripts, LaTeX and generated code are never executed; there is no
+WebView or renderer-based code runner. Tool execution uses the separate approved
+[tools flow](tools.md).
 
-The syntax highlighter registers 30 named grammars explicitly. Fence aliases such as `js`, `py`, `c`, `yml` and `sh` map to their grammar. Unknown or unsupported fence languages retain their label and display unchanged plain source. There is no expensive language auto-detection. Syntax colors do not constitute code validation.
+Roboto Mono supplies code/source text and Roboto supplies the interface/public pages;
+retain their files and licenses in [assets/fonts](../assets/fonts/). Arbitrary Unicode
+may still require Flutter's remote fallback font and is not guaranteed offline.
 
-## Validation, requests and history
-
-Text/source files must be nonempty, strictly valid UTF-8 and at most **256 KiB each**. Binary/NUL and unsupported control data are rejected. Existing limits still apply: four attachments per message, 12 MiB total, and 8 MiB per supported media attachment. Metadata is checked before browser file reads; bytes are checked again at the domain boundary. The browser chooser permits arbitrary extensions because valid source files often lack a browser MIME type. The app validates its returned files rather than treating the chooser as validation.
-
-Text content is sent using OpenRouter's ordinary `{ "type": "text", "text": "..." }` message part, preceded by the original filename and format. It does not require native file-input capability or a PDF parser plugin. Its full content counts toward the local context estimate, which remains an estimate rather than an exact provider tokenizer. Decoded source and its estimate are cached on the immutable attachment. Text support requires text-compatible output and the existing free-price checks and zero-price provider routing limits. Media support and its stricter per-modality pricing checks are unchanged.
-
-Text attachments share the existing attachment ID, history/export format and normalized IndexedDB binary store. Each immutable file is stored once, with message/draft references. Existing media records remain readable. Source attachments persist through draft recovery, reload, editing/resending and export/import. No server or additional upload service was added.
-
-## Rendering limits and boundaries
-
-- Rich Markdown rendering is limited to 24,000 UTF-16 code units. Larger documents automatically use paged source; a page contains approximately 12,000 code units, preserving surrogate pairs.
-- Syntax highlighting is limited to 12,000 code units per code block; longer blocks retain plain source. Full-source/code copying never copies just a truncated preview.
-- Streaming Markdown previews update at most once per 180 ms; completion or failure flushes the final content immediately. Timers are cancelled on disposal. Persisted model output is never truncated by rendering limits.
-- Images embedded in Markdown appear as selectable alt text and an address. They are not fetched. Links open a copyable address dialog; this version does not navigate to them. HTML, SVG, scripts and LaTeX source are never executed. There is no WebView, HTML injection, diagram execution, shell or code runner.
-- Code uses bundled Roboto Mono (SIL Open Font License, supplied beside the font). The app does not promise offline glyph coverage for every language; Flutter may request fallback fonts for unbundled Unicode glyphs.
-
-## Dependencies and verification
-
-Package/API documentation was checked on **2026-10-06**: [flutter_markdown_plus 1.0.12](https://pub.dev/packages/flutter_markdown_plus), [MarkdownBody](https://pub.dev/documentation/flutter_markdown_plus/latest/flutter_markdown_plus/MarkdownBody-class.html), [markdown](https://pub.dev/packages/markdown), [highlight 0.7.0](https://pub.dev/packages/highlight), and [Google Fonts Roboto Mono](https://github.com/google/fonts/tree/main/ofl/robotomono). The Markdown dependency supplies its AST for custom fenced-code widgets. Highlight produces Dart spans, not rendered HTML. These packages replace a custom Markdown parser rather than introducing another application stack.
-
-Deterministic tests are in `test/documents/` and `test/presentation/document_rendering_test.dart`. They cover format/MIME handling, binary/UTF-8/size rejection, unchanged free-price guards, context estimation, mocked request payloads, history round trips, edit/resend, exact clipboard contents, named highlighting/source fallback, streaming lifecycle, and a 320-pixel preview at 200% text scaling. Live API sends are not part of these tests.
-
-```sh
-pwd
-xops/agent/safe-run.sh file-rendering -- flutter test test/documents test/presentation/document_rendering_test.dart
-```
-
-For release-browser verification, import a synthetic conversation containing Markdown and fenced code, verify preview/source/copy actions at compact, medium and expanded widths, attach a local Markdown/JSON/source file, reload and reopen its preview, and check that network inspection shows no request for embedded Markdown images. Keep live sending opt-in. Browser/release observations are recorded separately from deterministic widget results.
+Run `flutter test test/documents test/presentation/document_rendering_test.dart`.
+Release-browser checks cover source/copy, compact layouts at 200% text, file reload
+and no network fetch for embedded images. These checks do not send live inference.

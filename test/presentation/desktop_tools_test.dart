@@ -59,6 +59,7 @@ void main() {
           find.bySemanticsLabel(RegExp('Tools unavailable on this device')),
           findsWidgets,
         );
+        await tester.ensureVisible(find.text('Tools'));
         await tester.tap(find.text('Tools'));
         await tester.pumpAndSettle();
         expect(find.text('Tools need a desktop computer'), findsOneWidget);

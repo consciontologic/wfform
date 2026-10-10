@@ -3,6 +3,38 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // The workflow owns the reviewed version. Assert immutable pinning here so
+  // dependency updates do not need to duplicate their SHA in this test.
+  final pinnedCacheAction = matches(
+    RegExp(
+      r'^ *uses: actions/cache@[0-9a-f]{40}(?: +#[^\r\n]*)?$',
+      multiLine: true,
+    ),
+  );
+
+  test(
+    'cache contract accepts full pins and rejects mutable or wrong actions',
+    () {
+      for (final ref in ['a' * 40, 'b' * 40]) {
+        expect(
+          '        uses: actions/cache@$ref # reviewed release',
+          pinnedCacheAction,
+        );
+      }
+      for (final ref in ['v6', 'main', '55cc834', '${'a' * 40}extra']) {
+        expect('        uses: actions/cache@$ref', isNot(pinnedCacheAction));
+      }
+      for (final use in [
+        '',
+        '        uses: actions/cache',
+        '        # uses: actions/cache@${'a' * 40}',
+        '        uses: untrusted/cache@${'a' * 40}',
+      ]) {
+        expect(use, isNot(pinnedCacheAction));
+      }
+    },
+  );
+
   test('quality workflows only listen for develop and main pull requests', () {
     for (final file in ['web', 'security', 'companion']) {
       final workflow = File('.github/workflows/$file.yml').readAsStringSync();
@@ -113,10 +145,7 @@ void main() {
       final security = File(
         '.github/workflows/security.yml',
       ).readAsStringSync();
-      expect(
-        security,
-        contains('actions/cache@5a3ec84eff668545956fd18022155c47e93e2684'),
-      );
+      expect(security, pinnedCacheAction);
       expect(
         security,
         contains('security-downloads-gitleaks-8.30.1-zizmor-1.30.1-v1'),

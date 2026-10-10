@@ -50,7 +50,7 @@ void main() {
     expect(() => hostedPackages([{}]), throwsFormatException);
   });
   test('release tags and package versions use plain semantic versions', () {
-    expect(readReleaseVersion(), '1.0.0');
+    expect(readReleaseVersion(), '1.0.1');
     for (final value in ['v1.0.0', '1.0', '01.0.0', '1.0.0+10', '1.0.0-rc1']) {
       expect(semanticVersion.hasMatch(value), isFalse, reason: value);
     }

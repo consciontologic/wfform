@@ -1,35 +1,30 @@
-# ADR-0004: Adopt agent operations without changing the application stack
+# ADR-0004: Repository operations stay outside the application
 
-- Status: accepted for the scaffold boundary; task completion remains in the roadmap.
-- Date: 2026-10-06.
-- Decision basis: explicit move/scaffold/documentation/container/rendering request.
-
-## Amendment: CodeGraph explicitly required
-
-Later on 2026-10-06, the user required CodeGraph for this repository. The original MCP opt-out below is superseded: enable the pinned project-local CodeGraph runner and client configuration, index Dart and supported operations sources, and verify real graph queries. CodeGraph's Node runtime is repository tooling, not part of the Flutter application or nginx image. See [MCP setup](../guides/MCP_SETUP.md). No global settings or software installation is required.
-
-## Context
-
-The application was developed in a generated chat workspace. The user requested a named Git project with the agentic-workspace operating framework, populated documentation and container commands. Application code, local data, credentials, existing Git metadata and prior verification evidence must remain distinguishable.
+- Status: accepted, with current operating-policy amendments below.
+- Date: 2026-10-06; delivery amendments 2026-10-09/10.
 
 ## Decision
 
-Move application sources into the existing wfform repository and adopt the full agentic-workspace scaffold with --no-mcp and no --force, keeping repository operations separate from Flutter runtime code.
+Adopt agentic-workspace rules, skills, roles and tracking in the existing repository,
+preserving application code and local adaptations. Flutter/Dart remains the app;
+Python/Bash and CodeGraph's Node runtime are development operations only.
 
-## Consequences
+## Consequences and amendments
 
-- AGENTS.md, vendor entry points, native roles/skills and tracking form the repository workflow; project context, architecture and roadmap replace template examples.
-- The destination's existing empty main branch and origin remain intact. Agents do not commit/push; the coordinating parent owns tracking/staging, and the human owns make git.
-- Python stdlib/shell operations are allowed in xops. They do not introduce Python/Node or a backend into the app.
-- MCP/CodeGraph is not installed or initialized automatically. Local search/read tools work without that integration; a future explicit opt-in can be reviewed separately.
-- Existing application docs retain dated evidence. Historical output files remain at the original chat workspace; new verification belongs to the project outputs directory.
-- Scaffold upgrades require review of local adaptations. Re-running --force can overwrite project choices and is not a routine update path.
+- The initial scaffold used `--no-mcp` without force-overwriting files. The user's
+  later explicit CodeGraph request supersedes that opt-out; use the pinned
+  [project-local launcher](../guides/MCP_SETUP.md), not a global installation.
+- Current [AGENTS.md](../../AGENTS.md) supersedes original publication restrictions:
+  coordinating agents publish validated Gitflow work branches through `make git`;
+  delegates return evidence and protected branches change only through PRs.
+- Routine delivery automation is removed. Task/PR/release coordination is explicit;
+  final production approval belongs to the owner and cannot be supplied by an agent.
+- Preserve dirty work, browser data, credentials and repository history. Scaffold
+  upgrades require review; `--force` is not a normal update mechanism.
+- Current guides hold contracts; PR/CI/local output holds per-change evidence.
 
-## Considered options
+## Alternatives
 
-- **Full scaffold without MCP, chosen:** supplies requested operating conventions without an unsolicited tool-server/dependency setup.
-- **Minimal scaffold:** would omit portions of the requested full agent workflow and documentation structure.
-- **Full scaffold with automatic CodeGraph/MCP:** adds integration/runtime assumptions unnecessary for this Flutter project at adoption time.
-- **Replace the destination repository or force overwrite:** risks its existing origin/branch and application customizations.
-
-Exact paths, source revision and invocation are recorded in the [project decision log](../project/DECISION_LOG.md).
+A minimal scaffold omitted requested workflow support. Replacing the repository or
+force-updating the scaffold risked existing work. Adding operations dependencies to
+the app would violate its stack boundary. See [provenance](../project/DECISION_LOG.md).
