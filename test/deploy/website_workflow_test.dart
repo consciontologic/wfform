@@ -115,7 +115,7 @@ void main() {
       ).readAsStringSync();
       expect(
         security,
-        contains('actions/cache@5a3ec84eff668545956fd18022155c47e93e2684'),
+        contains('actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'),
       );
       expect(
         security,
