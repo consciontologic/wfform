@@ -60,6 +60,8 @@ An author cannot approve their own PR; Copilot may impose independent-review rul
 ## 4. Publish a release
 
 1. Prepare plain `MAJOR.MINOR.PATCH` version/changelog changes in a PR to `develop`.
+   Give the version section a valid `YYYY-MM-DD` release date and retain the empty
+   `[Unreleased]` section for future changes; finalize the date before validation.
    Run `make version.sync`, `make verify` and the required native checks.
 2. Promote the validated tree to `main` through a PR. A conflict resolution changing
    that tree needs fresh validation through `develop`.

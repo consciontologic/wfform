@@ -343,6 +343,61 @@ class PromotionEvidenceTest(unittest.TestCase):
         api = FakeAPI(); api.check_runs['100']['event'] = 'workflow_dispatch'
         with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
 
+class ReleaseNotesTest(unittest.TestCase):
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        (self.root / 'pubspec.yaml').write_text('version: 1.0.1\n')
+
+    def notes(self, changelog):
+        (self.root / 'CHANGELOG.md').write_text(changelog)
+        return release.release_notes(self.root, '1.0.1')
+
+    def test_extracts_only_selected_dated_release_and_preserves_notes(self):
+        for date in ['2026-10-10', '2024-02-29']:
+            with self.subTest(date=date):
+                expected = f'## [1.0.1] - {date}\n\n### Fixed\n\n- Released tools.'
+                self.assertEqual(self.notes(
+                    '## [Unreleased]\n\n- Future work.\n\n' + expected +
+                    '\n\n## [1.0.0] - 2026-10-09\n\n- Older work.\n'), expected)
+
+    def test_rejects_unreleased_missing_malformed_or_invalid_date(self):
+        for suffix in ['', ' - Unreleased', ' - ', ' - 2026-1-10', ' - 2026-10-1',
+                       ' - 10/10/2026', ' - 2026-10-10 extra', ' - 2026-10-10 ',
+                       ' - 2026-02-29', ' - 2026-04-31', ' - 2026-13-01',
+                       ' - 2026-00-10', ' - 0000-01-01']:
+            with self.subTest(suffix=suffix):
+                with self.assertRaisesRegex(release.DeliveryError, 'valid YYYY-MM-DD release date'):
+                    self.notes(f'## [1.0.1]{suffix}\n\n- Released tools.\n')
+
+    def test_rejects_duplicate_selected_version_even_with_valid_date(self):
+        for second in ['2026-10-10', 'Unreleased']:
+            with self.subTest(second=second):
+                with self.assertRaisesRegex(release.DeliveryError, 'exactly one section'):
+                    self.notes('## [1.0.1] - 2026-10-10\n\n- Released tools.\n\n'
+                               f'## [1.0.1] - {second}\n\n- Conflicting notes.\n')
+
+    def test_still_requires_selected_version_and_substantive_notes(self):
+        for source in ['## [Unreleased]\n\n- Future work.\n',
+                       '## [1.0.1] - 2026-10-10\n\n']:
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(release.DeliveryError, 'substantive notes'):
+                    self.notes(source)
+
+    def test_still_requires_pubspec_version_match(self):
+        (self.root / 'pubspec.yaml').write_text('version: 1.0.0\n')
+        with self.assertRaisesRegex(release.DeliveryError, 'differs from pubspec'):
+            self.notes('## [1.0.1] - 2026-10-10\n\n- Released tools.\n')
+
+    def test_authorization_refuses_undated_notes_before_publication(self):
+        api = FakeAPI()
+        (self.root / 'CHANGELOG.md').write_text('## [1.0.1] - Unreleased\n\n- Released tools.\n')
+        with self.assertRaisesRegex(release.DeliveryError, 'valid YYYY-MM-DD release date'):
+            release.authorize(api, REPO, 3, SHA, '1.0.1', self.root)
+        self.assertEqual(api.writes, [])
+
+
 class ReleaseAuthorizationTest(unittest.TestCase):
     def setUp(self): self.api = FakeAPI()
     def authorize(self):
@@ -431,7 +486,7 @@ class ReleaseAuthorizationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'pubspec.yaml').write_text('version: 1.0.0\n')
-            (root / 'CHANGELOG.md').write_text('## [1.0.0]\n\nReleased tools.\n')
+            (root / 'CHANGELOG.md').write_text('## [1.0.0] - 2026-10-09\n\nReleased tools.\n')
             release.authorize(self.api, REPO, 3, SHA, '1.0.0', root)
             (root / 'pubspec.yaml').write_text('version: 1.0.1\n')
             with self.assertRaises(release.DeliveryError):

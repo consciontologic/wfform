@@ -9,10 +9,10 @@ per-change reports. Do not infer native/browser/public-release success from mock
 **1.0.0 is published** with web, Linux and Windows portable companion downloads.
 The static app is at `https://wfform.com/`. Gitflow and the owner's final production
 approval remain required. Routine delivery automation is removed. GHCR publication
-is configured for the next approved release; no 1.0.0 image was published.
+is configured for approved releases; no 1.0.0 image was published.
 
-**1.0.1 is prepared** with compact, consistently ordered composer controls; publication
-still follows the protected PR and human-approved release process.
+**1.0.1 was published on 2026-10-10** with compact, consistently ordered composer
+controls through the protected PR and human-approved release process.
 
 ## Phase 28 — PR review fixes, asset cleanup and concise docs
 
