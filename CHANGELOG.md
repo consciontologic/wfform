@@ -4,12 +4,20 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ## [Unreleased]
 
+## [1.0.1] - Unreleased
+
+### 🔄 Changed
+
+- 📱 Smaller composer labels and icons keep Context, Parameters, Tools and
+  Attachments in one row on phones and tablets, leaving more room for messages.
+- 📎 Composer actions use that order on every screen; “Add files” is now
+  “Attachments”.
+
 ### ➖ Removed
 
 - 🧹 Unused bundled emoji artwork and its legacy rendering fallback.
 - 📚 Per-change verification reports and redundant documentation; current guides
   retain the setup steps, contracts and decisions needed to use and maintain wfform.
-
 - 🤖 Routine delivery no longer starts AI tasks, merges PRs, opens promotions or
   back-merges, or dispatches releases. Maintainers coordinate these steps
   explicitly; protected PR checks and the final human deployment approval remain.

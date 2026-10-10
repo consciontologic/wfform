@@ -6,6 +6,7 @@ import 'composer_test.dart' show Picker, choose;
 import 'studio_test.dart' as fixture;
 
 void main() {
+  setUpAll(fixture.loadAppFonts);
   for (final size in [
     const Size(390, 844),
     const Size(820, 1180),
@@ -22,7 +23,7 @@ void main() {
       expect(find.byKey(const ValueKey('medium-rail')), findsNothing);
       expect(find.byTooltip('Open sidebar'), findsOneWidget);
       expect(find.text('Context'), findsOneWidget);
-      expect(find.text('Add files'), findsOneWidget);
+      expect(find.text('Attachments'), findsOneWidget);
       expect(find.text('Saved'), findsNothing);
       expect(find.text('Text & source files'), findsNothing);
       expect(find.textContaining('Estimated input:'), findsNothing);
@@ -107,7 +108,7 @@ void main() {
       await h.mount(tester, const Size(390, 844));
       await choose(h, tester);
       await tester.enterText(fixture.composer, 'Keep my draft');
-      await tester.tap(find.text('Add files'));
+      await tester.tap(find.text('Attachments'));
       await tester.pumpAndSettle();
       final file = h.state.draftAttachments.single;
       final editor = tester.widget<TextField>(fixture.composer);

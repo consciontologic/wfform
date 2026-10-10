@@ -32,7 +32,7 @@ void main() {
   tearDown(() => scratch.deleteSync(recursive: true));
 
   test(
-    '1.0.0 publishes a flat package and removes retired release folders',
+    '1.0.1 publishes a flat package and removes retired release folders',
     () {
       final release = build.prepareRelease(source, template);
       final target = Directory('${scratch.path}/flat');
@@ -43,7 +43,7 @@ void main() {
       build.publishRelease(release, target);
       expect(Directory('${target.path}/__releases').existsSync(), isFalse);
       expect(release.manifest['format'], 3);
-      expect(release.manifest['packageVersion'], '1.0.0');
+      expect(release.manifest['packageVersion'], '1.0.1');
       expect(File('${target.path}/main.dart.js').existsSync(), isTrue);
       expect(
         utf8.decode(release.assets['index.html']!),

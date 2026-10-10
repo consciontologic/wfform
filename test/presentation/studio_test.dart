@@ -193,6 +193,16 @@ class Harness {
 }
 
 Finder get composer => find.byKey(const ValueKey('composer'));
+
+Future<void> loadAppFonts() async {
+  // Tight layout checks must measure the shipped fonts, not Flutter's
+  // square-glyph Ahem fixture, whose character widths differ from the app.
+  await (FontLoader('Roboto')
+        ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))
+        ..addFont(rootBundle.load('assets/fonts/Roboto-Bold.ttf')))
+      .load();
+}
+
 Future<void> resize(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
   await tester.pump();

@@ -10,6 +10,9 @@ text scaling, keyboard navigation, touch and reduced motion.
   partial-output preservation and explicit Retry, Edit and resend, or Continue.
 - **Composer** keeps text/files/focus across resizing and model changes. Acceptance
   clears the submitted draft; new composition is independent of an active answer.
+  Its action row is **Context → Parameters → Tools → Attachments** on every screen.
+  Phone/tablet labels and icons are compact; enlarged text can scroll horizontally
+  without hiding labels or adding a second row.
 - **Context** explicitly chooses earlier turns to exclude and the output reserve.
   Estimates never silently delete or summarize history.
 - **History** separates Chats, Drafts and Archived. Archiving preserves read-only
