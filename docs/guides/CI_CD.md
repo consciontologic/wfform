@@ -45,6 +45,10 @@ Actions/cache/artifact limits are separate.
 
 ## Publication and recovery
 
+Finalize the numbered changelog heading as `## [MAJOR.MINOR.PATCH] - YYYY-MM-DD`
+in the release preparation PR. The authorizer rejects missing, invalid or
+`Unreleased` dates; it never rewrites the validated source during publication.
+
 Dispatch **Actions → Packages and release → Run workflow** on `main`:
 
 | Input | Required publication value |

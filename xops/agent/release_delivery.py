@@ -106,6 +106,17 @@ def release_notes(root, version):
     if not match or match[1] != version:
         raise DeliveryError('Release version differs from pubspec.yaml.')
     changelog = (root / 'CHANGELOG.md').read_text()
+    headings = list(re.finditer(r'^## \[' + re.escape(version) + r'\]([^\n]*)$', changelog, re.M))
+    if len(headings) > 1:
+        raise DeliveryError('CHANGELOG.md must contain exactly one section for this version.')
+    if headings:
+        date_match = re.fullmatch(r' - ([0-9]{4}-[0-9]{2}-[0-9]{2})', headings[0][1])
+        if not date_match:
+            raise DeliveryError('CHANGELOG.md needs a valid YYYY-MM-DD release date for this version.')
+        try:
+            datetime.strptime(date_match[1], '%Y-%m-%d')
+        except ValueError:
+            raise DeliveryError('CHANGELOG.md needs a valid YYYY-MM-DD release date for this version.') from None
     match = re.search(r'^## \[' + re.escape(version) + r'\][^\n]*\n(?:(?!^## ).)*',
                       changelog, re.M | re.S)
     if not match or len(match[0].strip().splitlines()) < 3:

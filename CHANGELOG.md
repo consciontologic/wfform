@@ -4,7 +4,11 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ## [Unreleased]
 
-## [1.0.1] - Unreleased
+### 🩹 Fixed
+
+- 📅 Release preparation now requires a valid changelog date before publication.
+
+## [1.0.1] - 2026-10-10
 
 ### 🔄 Changed
 
