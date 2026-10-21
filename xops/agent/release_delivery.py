@@ -100,6 +100,54 @@ def current_main(api, repo, sha):
         raise DeliveryError('Release revision is no longer the current main commit.')
 
 
+def resolve_release_pr(api, repo, sha, version):
+    """Derive provenance from the immutable workflow revision, never user inputs."""
+    if repo != REPOSITORY or not SHA.fullmatch(sha) or not SEMVER.fullmatch(version):
+        raise DeliveryError('Expected this repository, a full SHA and plain MAJOR.MINOR.PATCH.')
+    current_main(api, repo, sha)
+    candidates = pages(api, f'/repos/{repo}/commits/{sha}/pulls')
+    numbers = {pr.get('number') for pr in candidates
+               if pr.get('merged_at') and not pr.get('draft')
+               and pr.get('merge_commit_sha') == sha
+               and pr.get('base', {}).get('ref') == 'main'
+               and (is_promotion(pr) or is_hotfix(pr))
+               and all(pr.get(side, {}).get('repo', {}).get('full_name') == repo
+                       for side in ('head', 'base'))}
+    if len(numbers) != 1 or any(type(number) is not int or number <= 0 for number in numbers):
+        raise DeliveryError('Cannot resolve one merged release promotion/hotfix PR for current main.')
+    return numbers.pop()
+
+
+def develop_ready(api, repo, sha):
+    """Reject unpromoted content, not content-neutral backmerge history."""
+    ref = api.get(f'/repos/{repo}/git/ref/heads/develop') or {}
+    develop = ref.get('object', {}).get('sha', '')
+    if not SHA.fullmatch(develop):
+        raise DeliveryError('Cannot verify the develop branch before release.')
+    comparison = api.get(f'/repos/{repo}/compare/{sha}...{develop}') or {}
+    ahead = comparison.get('ahead_by')
+    if type(ahead) is not int or ahead < 0:
+        raise DeliveryError('Cannot verify whether develop has changes ahead of main.')
+    if ahead:
+        tree = git_tree(api, develop)
+        # A backmerge can add commits without adding content. Develop may also
+        # be unchanged since the common ancestor of a main-only hotfix.
+        if (tree != git_tree(api, sha)
+                and tree != git_tree(api, comparison.get('merge_base_commit', {}).get('sha'))):
+            raise DeliveryError('develop has changes ahead of main; promote them through a PR before releasing.')
+
+
+def version_progression(api, repo, sha, version):
+    requested = tuple(map(int, version.split('.')))
+    for item in pages(api, f'/repos/{repo}/releases'):
+        tag = item.get('tag_name', '')
+        if item.get('draft') or item.get('prerelease') or not SEMVER.fullmatch(tag):
+            continue
+        published = tuple(map(int, tag.split('.')))
+        if requested < published or (requested == published and item.get('target_commitish') != sha):
+            raise DeliveryError('Release version must exceed published versions; only the same source may resume.')
+
+
 def release_notes(root, version):
     root = Path(root)
     match = re.search(r'^version:\s*(\S+)\s*$', (root / 'pubspec.yaml').read_text(), re.M)
@@ -319,6 +367,8 @@ def authorize(api, repo, pr_number, sha, version, root=None):
     if re.fullmatch(r'(?:(?:codex|claude)/)?release/' + SEMVER.pattern, head.get('ref', '')) and head['ref'].rsplit('/', 1)[-1] != version:
         raise DeliveryError('Release branch version does not match the requested publication.')
     current_main(api, repo, sha)
+    develop_ready(api, repo, sha)
+    version_progression(api, repo, sha, version)
     production_environment(api, repo)
     if root is not None:
         release_notes(root, version)
@@ -488,15 +538,10 @@ def main():
             or os.environ.get('GITHUB_REF') != 'refs/heads/main'):
         raise DeliveryError('Release delivery only runs from a trusted main workflow dispatch.')
     repo = os.environ.get('GITHUB_REPOSITORY', '')
-    sha = os.environ.get('WFFORM_RELEASE_SHA', '')
-    if os.environ.get('GITHUB_SHA') != sha:
-        raise DeliveryError('Workflow revision must equal the selected release revision.')
+    sha = os.environ.get('GITHUB_SHA', '')
     version = os.environ.get('WFFORM_RELEASE_VERSION', '')
-    try:
-        pr = int(os.environ.get('WFFORM_RELEASE_PR', ''))
-    except ValueError as error:
-        raise DeliveryError('A release PR number is required.') from error
     api = API(os.environ.get('GH_TOKEN'))
+    pr = resolve_release_pr(api, repo, sha, version)
     root = Path.cwd()
     if args.command == 'authorize':
         authorize(api, repo, pr, sha, version, root)
@@ -509,6 +554,9 @@ def main():
         url = publish(api, repo, pr, sha, version, release_notes(root, version),
                       checked_assets(root, version), root, run_id=int(os.environ.get('GITHUB_RUN_ID', '')))
         print(f'🎉 Verified release: {url}')
+    if os.environ.get('GITHUB_ENV'):
+        with open(os.environ['GITHUB_ENV'], 'a') as environment:
+            environment.write(f'WFFORM_RELEASE_PR={pr}\n')
 
 
 if __name__ == '__main__':

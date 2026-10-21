@@ -4,6 +4,14 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-21
+
+### 🔄 Changed
+
+- Manual releases now need only a version. CI resolves the source commit and PR,
+  checks plain SemVer progression, and stops when develop has unpromoted changes;
+  content-neutral backmerges remain allowed and production still needs approval.
+
 ### 🩹 Fixed
 
 - 📅 Release preparation now requires a valid changelog date before publication.

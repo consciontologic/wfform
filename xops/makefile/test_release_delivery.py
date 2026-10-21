@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location(
     'release_delivery', Path(__file__).parents[1] / 'agent/release_delivery.py')
@@ -24,6 +25,10 @@ class FakeAPI:
         self.tag = None
         self.release = None
         self.main = SHA
+        self.develop = HEAD
+        self.comparison = {'ahead_by': 0, 'merge_base_commit': {'sha': HEAD}}
+        self.associated = None
+        self.previous_releases = []
         self.permission = 'write'
         self.environment = {'id': 7, 'name': 'production', 'can_admins_bypass': False,
                             'deployment_branch_policy': {'custom_branch_policies': True, 'protected_branches': False},
@@ -62,6 +67,10 @@ class FakeAPI:
 
     def get(self, path):
         clean = path.split('?')[0]
+        if clean == BASE + '/git/ref/heads/develop': return {'object': {'sha': self.develop}}
+        if clean.startswith(BASE + '/compare/'): return copy.deepcopy(self.comparison)
+        if clean == BASE + '/commits/' + SHA + '/pulls':
+            return copy.deepcopy(self.associated if self.associated is not None else [self.pr])
         if clean.startswith(BASE + '/git/commits/'):
             sha = clean.rsplit('/', 1)[1]
             return {'sha': sha, 'tree': {'sha': self.trees[sha]}}
@@ -80,7 +89,7 @@ class FakeAPI:
         if clean == BASE + '/collaborators/maintainer/permission':
             return {'permission': self.permission}
         if clean == BASE + '/releases/8/assets': return copy.deepcopy(self.assets)
-        if clean == BASE + '/releases': return [copy.deepcopy(self.release)] if self.release else []
+        if clean == BASE + '/releases': return copy.deepcopy(self.previous_releases) + ([copy.deepcopy(self.release)] if self.release else [])
         if clean == BASE + '/releases/tags/1.0.0':
             # GitHub documents this endpoint as published releases only.
             return copy.deepcopy(self.release) if self.release and not self.release['draft'] else None
@@ -343,6 +352,101 @@ class PromotionEvidenceTest(unittest.TestCase):
         api = FakeAPI(); api.check_runs['100']['event'] = 'workflow_dispatch'
         with self.assertRaises(release.DeliveryError): release.authorize(api, REPO, 3, SHA, '1.0.0')
 
+class VersionOnlyReleaseTest(unittest.TestCase):
+    def test_resolves_exact_main_promotion_without_manual_inputs(self):
+        for api in (FakeAPI(), PromotionAPI()):
+            with self.subTest(api=type(api).__name__):
+                self.assertEqual(release.resolve_release_pr(api, REPO, SHA, '1.0.0'), 3)
+                self.assertEqual(api.writes, [])
+
+    def test_resolution_rejects_missing_ambiguous_or_unrelated_pr(self):
+        for candidates in ([], [dict(FakeAPI().pr, merge_commit_sha=HEAD)],
+                           [FakeAPI().pr, dict(FakeAPI().pr, number=4)]):
+            api = FakeAPI(); api.associated = candidates
+            with self.subTest(candidates=candidates), self.assertRaises(release.DeliveryError):
+                release.resolve_release_pr(api, REPO, SHA, '1.0.0')
+        api = FakeAPI(); api.main = HEAD
+        with self.assertRaisesRegex(release.DeliveryError, 'main'):
+            release.resolve_release_pr(api, REPO, SHA, '1.0.0')
+
+    def test_resolution_ignores_backmerge_associations_and_refuses_foreign_source(self):
+        api = FakeAPI()
+        backmerge = copy.deepcopy(api.pr)
+        backmerge.update(number=4)
+        backmerge['base']['ref'] = 'develop'
+        api.associated = [api.pr, backmerge]
+        self.assertEqual(release.resolve_release_pr(api, REPO, SHA, '1.0.0'), 3)
+        api.pr['head']['repo']['full_name'] = 'outsider/wfform'
+        with self.assertRaises(release.DeliveryError):
+            release.resolve_release_pr(api, REPO, SHA, '1.0.0')
+
+    def test_version_format_is_checked_before_api_access(self):
+        for version in ['', 'v1.0.0', '01.0.0', '1.0', '1.0.0-rc.1', '1.0.0+1', '1.0.0\n']:
+            with self.subTest(version=version), self.assertRaisesRegex(release.DeliveryError, 'MAJOR.MINOR.PATCH'):
+                release.resolve_release_pr(None, REPO, SHA, version)
+
+    def test_semver_progression_is_numeric_and_preserves_same_source_resume(self):
+        api = FakeAPI()
+        api.previous_releases = [{'tag_name': '1.9.0', 'draft': False, 'prerelease': False,
+                                  'target_commitish': HEAD}]
+        release.authorize(api, REPO, 3, SHA, '1.10.0')
+        for version in ['1.8.0', '1.9.0']:
+            with self.subTest(version=version), self.assertRaisesRegex(release.DeliveryError, 'version'):
+                release.authorize(api, REPO, 3, SHA, version)
+        api.previous_releases[0]['target_commitish'] = SHA
+        release.authorize(api, REPO, 3, SHA, '1.9.0')
+
+    def test_develop_changes_ahead_require_promotion(self):
+        api = FakeAPI(); api.develop = 'c' * 40
+        api.trees[api.develop] = 'e' * 40
+        api.comparison = {'ahead_by': 2, 'merge_base_commit': {'sha': HEAD}}
+        with self.assertRaisesRegex(release.DeliveryError, 'develop.*promot'):
+            release.authorize(api, REPO, 3, SHA, '1.0.0')
+        self.assertEqual(api.writes, [])
+
+    def test_backmerge_only_commits_and_develop_behind_are_allowed(self):
+        for ahead in (0, 1):
+            api = FakeAPI(); api.comparison['ahead_by'] = ahead
+            release.authorize(api, REPO, 3, SHA, '1.0.0')
+        # A main-only hotfix with a content-neutral backmerge on develop.
+        api = FakeAPI(); api.comparison['ahead_by'] = 1
+        api.develop = 'c' * 40; api.trees[api.develop] = 'e' * 40
+        api.comparison['merge_base_commit']['sha'] = api.develop
+        release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_missing_develop_or_incomplete_comparison_fails_closed(self):
+        for develop, comparison in [('', {}), (HEAD, {}), (HEAD, {'ahead_by': -1}),
+                                    (HEAD, {'ahead_by': True}), (HEAD, None)]:
+            api = FakeAPI(); api.develop = develop; api.comparison = comparison
+            with self.subTest(develop=develop, comparison=comparison), self.assertRaises(release.DeliveryError):
+                release.authorize(api, REPO, 3, SHA, '1.0.0')
+
+    def test_cli_derives_identity_and_exports_pr_for_container_and_summary(self):
+        api = FakeAPI()
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory) / 'env'
+            env = {'GITHUB_ACTIONS': 'true', 'GITHUB_EVENT_NAME': 'workflow_dispatch',
+                   'GITHUB_REF': 'refs/heads/main', 'GITHUB_SHA': SHA,
+                   'GITHUB_REPOSITORY': REPO, 'WFFORM_RELEASE_VERSION': '1.0.0',
+                   'GH_TOKEN': 'test-only', 'GITHUB_ENV': str(env_file)}
+            with (patch.dict(release.os.environ, env, clear=True),
+                  patch.object(release.sys, 'argv', ['release_delivery.py', 'authorize']),
+                  patch.object(release, 'API', return_value=api),
+                  patch.object(release, 'release_notes', return_value='Notes')):
+                release.main()
+            self.assertIn('WFFORM_RELEASE_PR=3\n', env_file.read_text())
+            env.update(GITHUB_RUN_ID='44', WFFORM_RELEASE_PR='999', WFFORM_RELEASE_SHA=HEAD)
+            with (patch.dict(release.os.environ, env, clear=True),
+                  patch.object(release.sys, 'argv', ['release_delivery.py', 'approval']),
+                  patch.object(release, 'API', return_value=api),
+                  patch.object(release, 'release_notes', return_value='Notes')):
+                release.main()
+                api.approvals = []
+                with self.assertRaises(release.DeliveryError):
+                    release.main()
+            self.assertEqual(api.writes, [])
+
+
 class ReleaseNotesTest(unittest.TestCase):
     def setUp(self):
         scratch = tempfile.TemporaryDirectory()
@@ -555,6 +659,19 @@ class ReleasePublicationTest(unittest.TestCase):
             return result
         self.api.upload = advance
         with self.assertRaisesRegex(release.DeliveryError, 'main'): self.publish()
+        self.assertTrue(self.api.release['draft'])
+
+    def test_develop_advancing_during_upload_keeps_release_draft(self):
+        upload = self.api.upload
+        def advance(repo, release_id, path):
+            result = upload(repo, release_id, path)
+            self.api.develop = 'c' * 40
+            self.api.trees[self.api.develop] = 'e' * 40
+            self.api.comparison = {'ahead_by': 1, 'merge_base_commit': {'sha': HEAD}}
+            return result
+        self.api.upload = advance
+        with self.assertRaisesRegex(release.DeliveryError, 'develop.*promot'):
+            self.publish()
         self.assertTrue(self.api.release['draft'])
 
     def test_no_approval_means_no_tag_release_or_upload(self):

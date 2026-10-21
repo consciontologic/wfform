@@ -27,8 +27,8 @@ alternative. No routine workflow dispatches or retries tasks.
    and native GitHub constraints. Configured human PR approvals are zero; never
    bypass an actual gate or impersonate a human reviewer.
 7. Once the validated promotion is on main, explicitly dispatch **Packages and
-   release** on main with `version`, `release_sha` and `release_pr`. Trusted CI
-   prepares artifacts and waits for **consciontologic** to approve the `production`
+   release** on main with only plain SemVer `version`; promote any changes ahead
+   on develop first. Trusted CI prepares artifacts and waits for **consciontologic** to approve the `production`
    deployment. No agent may submit that approval. The combined publication job
    then tags, publishes packages/container and deploys the website. Open the
    back-merge PR explicitly. Inspect evidence without duplicating PRs, overwriting

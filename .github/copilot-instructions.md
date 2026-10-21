@@ -122,7 +122,9 @@ authorizer checks its evidence before publication. Release preparation targets
 `develop`. Coordinate protected promotion and back-merge PRs explicitly and
 respect resolved conversations and native GitHub constraints; configured human
 PR approvals are zero. Start releases using **Packages and release → Run workflow**
-on `main` with the version, current main SHA and merged PR number.
+on `main` with only the plain SemVer version. CI resolves the current commit and
+merged PR, checks version progression, and rejects unpromoted content ahead on
+`develop` (content-neutral backmerges are allowed).
 The sole human release gate is **consciontologic** approving the `production`
 deployment before the combined tag/release/website job. Never approve that
 deployment, call its approval API, bypass protection or push source directly to

@@ -587,7 +587,7 @@ def dispatch_release(api, pull, version, authorize=None):
     comment_id = write_receipt(api, number, 'release', key, record)
     try:
         api.request('POST', f'/repos/{REPO}/actions/workflows/companion.yml/dispatches', {
-            'ref': 'main', 'inputs': {'version': version, 'release_sha': sha, 'release_pr': str(number)}})
+            'ref': 'main', 'inputs': {'version': version}})
         record['state'] = 'dispatched'
         write_receipt(api, number, 'release', key, record, comment_id)
         return record
