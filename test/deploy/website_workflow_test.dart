@@ -52,6 +52,40 @@ void main() {
     }
   });
 
+  test(
+    'manual publication accepts only version and derives source identity',
+    () {
+      final workflow = File(
+        '.github/workflows/companion.yml',
+      ).readAsStringSync();
+      final inputs = workflow
+          .split('  workflow_dispatch:')
+          .last
+          .split('permissions:')
+          .first;
+      expect(inputs, contains('      version:'));
+      expect(inputs, isNot(contains('release_sha:')));
+      expect(inputs, isNot(contains('release_pr:')));
+      expect(workflow, isNot(contains('inputs.release_sha')));
+      expect(workflow, isNot(contains('inputs.release_pr')));
+      expect(workflow, contains(r'WFFORM_RELEASE_SHA: ${{ github.sha }}'));
+      final authorization = workflow
+          .split('  authorization:')
+          .last
+          .split('  linux:')
+          .first;
+      expect(authorization, contains("inputs.version != ''"));
+      expect(authorization, contains('release_delivery.py authorize'));
+      final publication = workflow.split('  publish:').last;
+      expect(publication, contains("inputs.version != ''"));
+      expect(publication, contains('environment: production'));
+      expect(
+        publication.indexOf('release_delivery.py approval'),
+        lessThan(publication.indexOf('container_package.py publish')),
+      );
+    },
+  );
+
   test('quality jobs admit every develop PR and only hotfixes into main', () {
     const lane =
         "github.event_name == 'pull_request' && (\n"

@@ -65,8 +65,10 @@ An author cannot approve their own PR; Copilot may impose independent-review rul
    Run `make version.sync`, `make verify` and the required native checks.
 2. Promote the validated tree to `main` through a PR. A conflict resolution changing
    that tree needs fresh validation through `develop`.
-3. Dispatch **Packages and release** on `main` with matching `version`, current full
-   `release_sha` and merged `release_pr` number. Empty inputs build artifacts only.
+3. Dispatch **Packages and release** on `main` with only the matching plain SemVer
+   `version`. CI resolves the commit/merged PR and checks version progression and
+   unpromoted changes ahead on `develop`; promote those changes first. Empty version
+   builds artifacts only. Content-neutral backmerge commits do not block releases.
 4. **consciontologic** approves `production`. No agent may approve by API/UI or bypass
    this gate. CI validates the real approval receipt and source before publishing.
 5. Verify tag, downloads, container and website/PWA, then back-merge main into develop

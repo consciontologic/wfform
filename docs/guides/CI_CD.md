@@ -51,14 +51,20 @@ in the release preparation PR. The authorizer rejects missing, invalid or
 
 Dispatch **Actions → Packages and release → Run workflow** on `main`:
 
-| Input | Required publication value |
-|---|---|
-| `version` | Plain SemVer matching root pubspec |
-| `release_sha` | Full 40-character current-main SHA |
-| `release_pr` | Merged same-repository promotion/hotfix PR number |
+Enter only `version`: plain `MAJOR.MINOR.PATCH` matching the root pubspec and
+its dated changelog section. Prefixes (`v`), leading zeroes, prerelease suffixes
+and build metadata are rejected. The version must be newer than published stable
+releases; recovery of the same version and source remains allowed. Empty `version`
+builds artifacts only.
 
-All empty means artifacts only; partially filled inputs fail. Copilot hotfixes use
-`work:hotfix`. A tag push, PR comment or dispatch input cannot replace approval.
+The workflow captures its immutable `main` commit and resolves its unique merged
+same-repository promotion/hotfix PR automatically, then verifies the existing
+quality evidence. It stops if `main` advances or provenance is missing/ambiguous.
+Before release, it checks `develop` for unpromoted content ahead of that commit:
+promote those changes through a PR first. Content-neutral backmerge commits do
+not block publication, and a develop branch behind main permits a tested hotfix.
+These checks run again before publication. Copilot hotfixes use `work:hotfix`.
+A tag push, PR comment or version input cannot replace production approval.
 
 The **Approve and publish release** job waits for both native packages and
 **consciontologic**'s `production` approval. It checks actual human receipt/current
