@@ -6,7 +6,7 @@ import 'stdio_mcp.dart';
 import 'static_host.dart';
 import 'process_group.dart';
 
-const companionVersion = '1.0.1';
+const companionVersion = '1.0.2';
 const supportedProtocols = ['2025-11-25', '2025-06-18', '2025-03-26'];
 const _maxBodyBytes = 256 * 1024;
 
