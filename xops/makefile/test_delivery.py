@@ -397,7 +397,7 @@ class DeliverySafetyTest(unittest.TestCase):
         delivery.dispatch_release(api, pull, '1.0.0', authorize)
         dispatches = [write for write in api.writes if write[1].endswith('/dispatches')]
         self.assertEqual(len(dispatches), 1)
-        self.assertEqual(dispatches[0][2], {'ref': 'main', 'inputs': {'version': '1.0.0', 'release_sha': SHA, 'release_pr': '7'}})
+        self.assertEqual(dispatches[0][2], {'ref': 'main', 'inputs': {'version': '1.0.0'}})
         blocked = FakeAPI()
         def reject(*args):
             raise delivery.DeliveryError('No eligible approval')

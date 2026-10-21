@@ -1,6 +1,6 @@
 name: 📦 Packages and release
 
-run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_pr != '' && format('wfform-release:{0}:{1}', inputs.release_pr, inputs.version) || 'Packages and release' }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && format('wfform-release:{0}', inputs.version) || 'Packages and release' }}
 
 on:
   pull_request:
@@ -9,15 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Approved plain SemVer (leave all inputs empty for a read-only build)'
-        type: string
-        default: ''
-      release_sha:
-        description: 'Approved merged commit, exactly current main'
-        type: string
-        default: ''
-      release_pr:
-        description: 'Merged release promotion PR; final human approval occurs on deployment'
+        description: 'Plain MAJOR.MINOR.PATCH matching main (leave empty for artifacts only)'
         type: string
         default: ''
 
@@ -26,12 +18,11 @@ permissions:
 
 # Values are data; the trusted authorizer verifies every field before writes.
 env:
-  WFFORM_RELEASE_SHA: ${{ inputs.release_sha }}
-  WFFORM_RELEASE_PR: ${{ inputs.release_pr }}
+  WFFORM_RELEASE_SHA: ${{ github.sha }}
   WFFORM_RELEASE_VERSION: ${{ inputs.version }}
 
 concurrency:
-  group: wfformcomp-${{ inputs.release_sha || github.event.pull_request.number || github.ref }}
+  group: wfformcomp-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -63,7 +54,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Verify source, checks and production approval policy
-        if: github.event_name == 'workflow_dispatch' && (inputs.release_sha != '' || inputs.version != '' || inputs.release_pr != '')
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 xops/agent/release_delivery.py authorize
@@ -264,7 +255,7 @@ jobs:
     needs: [linux, windows]
     # Tags never grant release authority. Dispatch explicitly because a tag made
     # by GITHUB_TOKEN does not trigger another push workflow.
-    if: github.repository == 'consciontologic/wfform' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_sha != ''
+    if: github.repository == 'consciontologic/wfform' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.version != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
