@@ -76,7 +76,7 @@ jobs:
         # The pinned action downloads wheels with --require-hashes on every run.
         env:
           PIP_CACHE_DIR: ${{ runner.temp }}/security-pip-cache
-        uses: zizmorcore/zizmor-action@27d989be9329e6cff7f80baf450ca83bf4c94898 # reviewed 2026-10-09
+        uses: zizmorcore/zizmor-action@fb1d87ba4b2f888025015a269a94ad7e991f6a7b # reviewed 2026-10-09
         with:
           version: '1.30.1'
           advanced-security: false
