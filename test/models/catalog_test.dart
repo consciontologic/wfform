@@ -53,40 +53,36 @@ class FakeTransport implements ApiTransport {
 }
 
 void main() {
-  test(
-    'opt-in live public catalog adapter check',
-    () async {
-      const config = AppConfig(requestTimeout: Duration(seconds: 25));
-      final diagnostics = Diagnostics(config);
-      final catalog = CatalogController(
-        config: config,
-        transport: HttpApiTransport(),
-        store: MemoryStore(),
-        diagnostics: diagnostics,
-      );
-      addTearDown(catalog.dispose);
-      await catalog.initialize();
-      expect(
-        catalog.error,
-        null,
-        reason: '${catalog.error?.message}: ${catalog.error?.details}',
-      );
-      expect(catalog.lastSuccess, isNotNull);
-      // No brittle live counts or hardcoded selection. This also permits a truly
-      // empty free catalog if the upstream service changes its offerings.
-      expect(catalog.scannedCount, greaterThanOrEqualTo(catalog.models.length));
-      // ignore: avoid_print
-      print(
-        'LIVE CATALOG: scanned=${catalog.scannedCount}; '
-        'free-price candidates=${catalog.models.length}; '
-        'chat-compatible=${catalog.models.where((m) => m.chatCompatible).length}; '
-        'unresolved-pricing=${catalog.unresolvedPricingCount}; '
-        'quarantined=${catalog.issueCount}; '
-        'checked=${catalog.lastSuccess?.toIso8601String()}',
-      );
-    },
-    skip: !const bool.fromEnvironment('RUN_LIVE_CATALOG'),
-  );
+  test('opt-in live public catalog adapter check', () async {
+    const config = AppConfig(requestTimeout: Duration(seconds: 25));
+    final diagnostics = Diagnostics(config);
+    final catalog = CatalogController(
+      config: config,
+      transport: HttpApiTransport(),
+      store: MemoryStore(),
+      diagnostics: diagnostics,
+    );
+    addTearDown(catalog.dispose);
+    await catalog.initialize();
+    expect(
+      catalog.error,
+      null,
+      reason: '${catalog.error?.message}: ${catalog.error?.details}',
+    );
+    expect(catalog.lastSuccess, isNotNull);
+    // No brittle live counts or hardcoded selection. This also permits a truly
+    // empty free catalog if the upstream service changes its offerings.
+    expect(catalog.scannedCount, greaterThanOrEqualTo(catalog.models.length));
+    // ignore: avoid_print
+    print(
+      'LIVE CATALOG: scanned=${catalog.scannedCount}; '
+      'free-price candidates=${catalog.models.length}; '
+      'chat-compatible=${catalog.models.where((m) => m.chatCompatible).length}; '
+      'unresolved-pricing=${catalog.unresolvedPricingCount}; '
+      'quarantined=${catalog.issueCount}; '
+      'checked=${catalog.lastSuccess?.toIso8601String()}',
+    );
+  }, skip: !const bool.fromEnvironment('RUN_LIVE_CATALOG'));
 
   group('Pricing and forward-compatible model DTOs', () {
     test(

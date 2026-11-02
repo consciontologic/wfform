@@ -211,7 +211,7 @@ Future<void> main() async {
         await lines!.moveNext().timeout(const Duration(seconds: 5)),
         'Example stdio server exited without a response.',
       );
-      return jsonDecode(lines.current) as Map;
+      return jsonDecode(lines!.current) as Map;
     }
 
     check(

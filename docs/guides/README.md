@@ -1,7 +1,6 @@
 # Development setup
 
-Use Flutter **3.38.10 / Dart 3.10.9**. Make targets prefer ignored
-`.local/flutter-sdk`; for direct commands, add that SDK's `bin` to your process PATH.
+Use Flutter **3.47.9 / Dart 3.13.7** from `PATH`.
 Run `make help` for project commands.
 
 ```sh

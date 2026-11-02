@@ -144,7 +144,12 @@ void main() {
       ),
     );
     tester
-        .state<TooltipState>(find.byTooltip('Copy this helpful hint'))
+        .state<TooltipState>(
+          find.ancestor(
+            of: find.byTooltip('Copy this helpful hint'),
+            matching: find.byType(Tooltip),
+          ),
+        )
         .ensureTooltipVisible();
     await tester.pumpAndSettle();
     await _selectText(tester, 'Copy this helpful hint');
@@ -179,7 +184,12 @@ void main() {
       await h.state.flushHistory();
       await tester.pumpAndSettle();
       tester
-          .state<TooltipState>(find.byTooltip(fullTitle))
+          .state<TooltipState>(
+            find.ancestor(
+              of: find.byTooltip(fullTitle),
+              matching: find.byType(Tooltip),
+            ),
+          )
           .ensureTooltipVisible();
       await tester.pumpAndSettle();
       await _selectText(tester, fullTitle);

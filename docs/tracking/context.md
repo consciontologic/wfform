@@ -1,7 +1,7 @@
 # Project context
 
-- **wfform** means Wrapper for Free Open Router Models. Flutter **3.38.10** / Dart
-  **3.10.9**; package `wfform`; native host IDs `com.wfform`.
+- **wfform** means Wrapper for Free Open Router Models. Flutter **3.47.9** / Dart
+  **3.13.7**; package `wfform`; native host IDs `com.wfform`.
 - Source: `consciontologic/wfform`. Static publication: `consciontologic/wfform.com`.
   Canonical site: **https://wfform.com/**. Work from this checkout's root.
 - Web/PWA is the application release target. Linux/Windows **wfformcomp** is a
@@ -28,8 +28,7 @@ local programs require companion allowlists.
 
 ## Work and evidence
 
-Use `make help`, `make verify` and `make repository.check`. Make prefers the ignored
-`.local/flutter-sdk` when present. CodeGraph is enabled through the pinned project
+Use `make help`, `make verify` and `make repository.check`. CodeGraph is enabled through the pinned project
 launcher: `make codeg`, then use advertised graph tools or the CLI. Report unavailable
 or stale graph results and use source reads as needed.
 
