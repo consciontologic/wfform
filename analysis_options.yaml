@@ -3,3 +3,6 @@ analyzer:
   exclude:
     - work/**
     - build/**
+    - android/**
+    - ios/**
+    - web/**

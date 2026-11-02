@@ -12,7 +12,7 @@ dart run tool/build.dart
 dart run tool/serve.dart --port=8765
 ```
 
-Use Flutter **3.38.10 / Dart 3.10.9**. The builder disables Flutter's generated worker
+Use Flutter **3.47.9 / Dart 3.13.7**. The builder disables Flutter's generated worker
 and assembles this app's explicit verified shell. A raw Flutter build alone does not
 provide the release cache/update contract. The Dart host serves static files only.
 HTTPS or localhost is needed for service workers; first load must complete online.

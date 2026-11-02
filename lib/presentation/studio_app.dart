@@ -458,20 +458,23 @@ class _StudioScreenState extends State<StudioScreen> {
                                   ),
                                 ),
                               ),
-                              child: state.catalog.selected == null
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(24),
-                                      child: Text(
-                                        'Choose a model to inspect its capabilities and availability.',
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: state.catalog.selected == null
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(24),
+                                        child: Text(
+                                          'Choose a model to inspect its capabilities and availability.',
+                                        ),
+                                      )
+                                    : SingleChildScrollView(
+                                        padding: const EdgeInsets.all(22),
+                                        child: ModelDetails(
+                                          state: state,
+                                          model: state.catalog.selected!,
+                                        ),
                                       ),
-                                    )
-                                  : SingleChildScrollView(
-                                      padding: const EdgeInsets.all(22),
-                                      child: ModelDetails(
-                                        state: state,
-                                        model: state.catalog.selected!,
-                                      ),
-                                    ),
+                              ),
                             ),
                         ],
                       ),
@@ -667,12 +670,15 @@ class _UtilityActions extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: SelectableTooltip(
                 message: label,
-                child: ListTile(
-                  dense: true,
-                  minVerticalPadding: 8,
-                  leading: BrandIcon(glyph),
-                  title: Text(label),
-                  onTap: invoke,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ListTile(
+                    dense: true,
+                    minVerticalPadding: 8,
+                    leading: BrandIcon(glyph),
+                    title: Text(label),
+                    onTap: invoke,
+                  ),
                 ),
               ),
             )

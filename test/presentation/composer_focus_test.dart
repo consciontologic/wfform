@@ -35,23 +35,21 @@ void main() {
       await h.dispose(tester);
     });
   }
-  testWidgets(
-    'touching an outside action stops the composer caret',
-    (tester) async {
-      final h = fixture.Harness();
-      await h.mount(tester, const Size(1440, 1000));
-      await tester.enterText(fixture.composer, 'Unsent draft');
-      await tester.pump();
-      final field = tester.widget<TextField>(fixture.composer);
-      await tester.tap(find.byTooltip('Toggle model inspector'));
-      await tester.pump();
-      expect(field.focusNode!.hasFocus, isFalse);
-      expect(tester.testTextInput.hasAnyClients, isFalse);
-      expect(h.state.draft, 'Unsent draft');
-      await h.dispose(tester);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+  testWidgets('touching an outside action stops the composer caret', (
+    tester,
+  ) async {
+    final h = fixture.Harness();
+    await h.mount(tester, const Size(1440, 1000));
+    await tester.enterText(fixture.composer, 'Unsent draft');
+    await tester.pump();
+    final field = tester.widget<TextField>(fixture.composer);
+    await tester.tap(find.byTooltip('Toggle model inspector'));
+    await tester.pump();
+    expect(field.focusNode!.hasFocus, isFalse);
+    expect(tester.testTextInput.hasAnyClients, isFalse);
+    expect(h.state.draft, 'Unsent draft');
+    await h.dispose(tester);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   for (final kind in [PointerDeviceKind.mouse, PointerDeviceKind.touch]) {
     testWidgets('$kind divider drag preserves composer focus and draft', (

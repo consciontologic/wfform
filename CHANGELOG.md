@@ -4,6 +4,17 @@ User-visible changes to wfform are recorded here, starting with 0.3.0.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-02
+
+### 🔄 Changed
+
+- 🛠️ The project now builds and is verified with Flutter 3.47.9 / Dart 3.13.7.
+
+### 🩹 Fixed
+
+- 🧪 Widget tests and layouts now satisfy the stricter Material-ancestor and
+  tooltip rules of the newer SDK.
+
 ## [1.0.2] - 2026-10-21
 
 ### 🔄 Changed

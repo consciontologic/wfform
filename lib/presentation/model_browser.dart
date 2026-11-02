@@ -52,7 +52,8 @@ class PaperPanel extends StatelessWidget {
             ]
           : [],
     ),
-    child: child,
+    // A Material ancestor below the decorated box keeps ListTile ink visible.
+    child: Material(type: MaterialType.transparency, child: child),
   );
 }
 
