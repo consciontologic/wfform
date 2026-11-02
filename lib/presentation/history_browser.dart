@@ -311,52 +311,57 @@ class _ConversationHistoryState extends State<ConversationHistory> {
                             // buttons inside a larger button on Flutter web.
                             Semantics(
                               container: true,
-                              child: ListTile(
-                                selected: active,
-                                selectedColor: colors.ink,
-                                enabled: !busy && !deleting,
-                                leading:
-                                    state.isConversationResponding(entry.id)
-                                    ? _RespondingIndicator(id: entry.id)
-                                    : null,
-                                minLeadingWidth: 16,
-                                contentPadding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  4,
-                                  12,
-                                  0,
-                                ),
-                                title: SelectableTooltip(
-                                  message: entry.title,
-                                  child: Text(
-                                    entry.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: ListTile(
+                                  selected: active,
+                                  selectedColor: colors.ink,
+                                  enabled: !busy && !deleting,
+                                  leading:
+                                      state.isConversationResponding(entry.id)
+                                      ? _RespondingIndicator(id: entry.id)
+                                      : null,
+                                  minLeadingWidth: 16,
+                                  contentPadding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    4,
+                                    12,
+                                    0,
+                                  ),
+                                  title: SelectableTooltip(
+                                    message: entry.title,
+                                    child: Text(
+                                      entry.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 5),
-                                  child: Text(
-                                    '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.isDraft ? 'Draft' : '${entry.messageCount} messages'}',
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: colors.muted,
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 5),
+                                    child: Text(
+                                      '${entry.modelName ?? entry.modelId ?? 'No model selected'}\n${timeLabel(entry.updatedAt)} · ${entry.isDraft ? 'Draft' : '${entry.messageCount} messages'}',
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: colors.muted,
+                                      ),
                                     ),
                                   ),
+                                  onTap: () async {
+                                    widget.onInteracted?.call();
+                                    if (await state.openConversation(
+                                          entry.id,
+                                        ) &&
+                                        mounted) {
+                                      widget.onOpened?.call();
+                                    }
+                                  },
                                 ),
-                                onTap: () async {
-                                  widget.onInteracted?.call();
-                                  if (await state.openConversation(entry.id) &&
-                                      mounted) {
-                                    widget.onOpened?.call();
-                                  }
-                                },
                               ),
                             ),
                             Align(

@@ -5,9 +5,7 @@ server, a local program, and sample JSON, YAML and CSV files. Tools are disabled
 on phones and tablets; ordinary chat still works there.
 
 You need this checkout and its Dart SDK first. Run commands from the repository
-root. `dart` below means the Dart shipped with your Flutter SDK; on a checkout
-using the local SDK, use `.local/flutter-sdk/bin/dart` on Linux or
-`.local\flutter-sdk\bin\dart.bat` on Windows to start these commands.
+root. `dart` below means the Dart shipped with your Flutter SDK.
 
 ## 1. Start it
 

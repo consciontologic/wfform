@@ -16,7 +16,7 @@ Other PR destinations and ordinary/tag pushes run no quality/security pipelines.
 Normal main promotions preserve the **exact tree validated on develop**. Skipped
 native check contexts alone are not proof; publication revalidates prior PR evidence.
 Release dispatch builds already-validated source without repeating quality/security.
-Third-party Actions and Flutter **3.38.10** are pinned; enforce lockfiles. CI sends no
+Third-party Actions and Flutter **3.47.9** are pinned; enforce lockfiles. CI sends no
 live OpenRouter inference and exposes no website token to PR jobs.
 
 Cache SDKs, Dart dependencies and scanner tools by OS/version/lockfile. Verify scanner

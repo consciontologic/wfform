@@ -14,8 +14,8 @@ class ConversationSummary {
     this.modelName,
     this.archived = false,
     this.messageCount = 0,
-    bool? isDraft,
-  }) : _isDraft = isDraft;
+    this._isDraft,
+  });
   final String id, title;
   final String? modelId, modelName;
   final DateTime createdAt, updatedAt;

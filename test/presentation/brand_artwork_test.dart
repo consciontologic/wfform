@@ -131,11 +131,12 @@ void main() {
       for (final (x, y) in [(40, 52), (64, 35)]) {
         final offset =
             (y * size ~/ 100) * (1 + size * 4) + 1 + (x * size ~/ 100) * 4;
-        expect(
-          pixels.sublist(offset, offset + 4),
-          [183, 168, 201, 255],
-          reason: 'Both node centers remain opaque lavender at $size pixels',
-        );
+        expect(pixels.sublist(offset, offset + 4), [
+          183,
+          168,
+          201,
+          255,
+        ], reason: 'Both node centers remain opaque lavender at $size pixels');
       }
     }
   });

@@ -14,9 +14,9 @@ topics:
 publish_to: none
 version: 1.0.2
 environment:
-  sdk: ^3.10.9
+  sdk: ^3.13.7
   # Includes Flutter's Android web keyboard-dismissal engine fix (3.38.6).
-  flutter: '>=3.38.10'
+  flutter: '>=3.47.9'
 dependencies:
   flutter:
     sdk: flutter
